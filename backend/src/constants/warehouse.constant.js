@@ -1,0 +1,10 @@
+const WAREHOUSE_TYPES = {
+  CENTRAL: "CENTRAL",
+  REGIONAL: "REGIONAL",
+  STORE: "STORE",
+  REPAIR: "REPAIR",
+};
+
+module.exports = {
+  WAREHOUSE_TYPES,
+};
