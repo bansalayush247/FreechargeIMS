@@ -40,6 +40,24 @@ const ENDPOINTS = Object.freeze({
   }),
 
   SPACE_MEMBERS: `${API_VERSION}/space-members`,
+  SPACE_MEMBER_ROUTES: Object.freeze({
+    CREATE: "/",
+    LIST: "/",
+    UPDATE: "/:id",
+    DELETE: "/:id",
+    USER_ROLES: "/user-roles",
+    ASSIGN_ROLE: "/user-roles",
+    REPLACE_ROLE: "/user-roles/replace",
+    REMOVE_ROLE: "/user-roles/:id",
+  }),
+
+  INVENTORY_ROUTES: Object.freeze({
+    CREATE: "/",
+    LIST: "/",
+    GET_BY_ID: "/:id",
+    UPDATE: "/:id",
+    DELETE: "/:id",
+  }),
 
   PRODUCTS: Object.freeze({
     BASE: `${API_VERSION}/product`,
@@ -67,9 +85,24 @@ const ENDPOINTS = Object.freeze({
     GET_BY_ID: "/:id",
     ITEM_AUDIT_TRAIL: "/item/:inventoryItemId",
   }),
+  INVENTORY_TRANSACTION_ROUTES: Object.freeze({
+    CREATE: "/",
+    LIST: "/",
+    GET_BY_ID: "/:id",
+    ITEM_AUDIT_TRAIL: "/item/:inventoryItemId",
+  }),
 
   ASSET_REQUESTS: Object.freeze({
     BASE: `${API_VERSION}/asset-requests`,
+    CREATE: "/",
+    LIST: "/",
+    GET_BY_ID: "/:id",
+    MANAGER_APPROVE: "/:id/manager-approve",
+    IT_APPROVE: "/:id/it-approve",
+    REJECT: "/:id/reject",
+    CANCEL: "/:id/cancel",
+  }),
+  ASSET_REQUEST_ROUTES: Object.freeze({
     CREATE: "/",
     LIST: "/",
     GET_BY_ID: "/:id",
@@ -88,9 +121,22 @@ const ENDPOINTS = Object.freeze({
     COMPLETE: "/:id/complete",
     CANCEL: "/:id/cancel",
   }),
+  REPAIR_ROUTES: Object.freeze({
+    CREATE: "/",
+    LIST: "/",
+    GET_BY_ID: "/:id",
+    UPDATE: "/:id",
+    COMPLETE: "/:id/complete",
+    CANCEL: "/:id/cancel",
+  }),
 
   NOTIFICATIONS: Object.freeze({
     BASE: `${API_VERSION}/notifications`,
+    SEND_EMAIL: "/email",
+    LIST: "/",
+    GET_BY_ID: "/:id",
+  }),
+  NOTIFICATION_ROUTES: Object.freeze({
     SEND_EMAIL: "/email",
     LIST: "/",
     GET_BY_ID: "/:id",
@@ -104,9 +150,20 @@ const ENDPOINTS = Object.freeze({
     INSTANCE_BY_ID: "/instances/:id",
     INSTANCE_TRANSITION: "/instances/:id/transition",
   }),
+  WORKFLOW_ROUTES: Object.freeze({
+    DEFINITIONS: "/definitions",
+    DEFINITION_BY_ID: "/definitions/:id",
+    INSTANCES: "/instances",
+    INSTANCE_BY_ID: "/instances/:id",
+    INSTANCE_TRANSITION: "/instances/:id/transition",
+  }),
 
   AUDIT_LOGS: Object.freeze({
     BASE: `${API_VERSION}/audit-logs`,
+    LIST: "/",
+    GET_BY_ID: "/:id",
+  }),
+  AUDIT_LOG_ROUTES: Object.freeze({
     LIST: "/",
     GET_BY_ID: "/:id",
   }),
