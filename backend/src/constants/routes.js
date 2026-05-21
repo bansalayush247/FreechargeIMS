@@ -17,6 +17,7 @@ const ROUTES = {
   ASSET_REQUESTS: "/asset-requests",
   REPAIRS: "/repairs",
   AUDIT_LOGS: "/audit-logs",
+  LOGS: "/logs",
 
   // Sub-routes - Auth
   AUTH_ROUTES: {
@@ -116,6 +117,15 @@ const ROUTES = {
   AUDIT_LOG_ROUTES: {
     LIST: "/",
     GET_BY_ID: "/:id",
+  },
+
+  // Sub-routes - Logs
+  LOG_ROUTES: {
+    STATUS: "/status",
+    ARCHIVES: "/archives",
+    TRIGGER_ARCHIVE: "/archive",
+    DELETE_ARCHIVE: "/archives/:filename",
+    CLEANUP: "/cleanup",
   },
 };
 

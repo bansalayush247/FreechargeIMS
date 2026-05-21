@@ -27,3 +27,12 @@ build/
 
 # OS
 Thumbs.db
+
+# Logs
+src/logs/*.log
+src/logs/combined.log
+src/logs/error.log
+
+# Log Archives
+src/logs/archives/
+src/logs/archives/**/*.zip

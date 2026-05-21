@@ -8,6 +8,7 @@ const {
   getInventoryItemsSchema,
 } = require("../validators/inventory");
 
+// Handles create inventory item.
 const createInventoryItem = asyncHandler(async (req, res) => {
   const userId = req.user._id || req.user.id;
   const { error, value } = createInventoryItemSchema.validate(req.body);
@@ -36,6 +37,7 @@ const createInventoryItem = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get inventory items.
 const getInventoryItems = asyncHandler(async (req, res) => {
   const { error, value } = getInventoryItemsSchema.validate(req.query);
 
@@ -55,6 +57,7 @@ const getInventoryItems = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get inventory item by id.
 const getInventoryItemById = asyncHandler(async (req, res) => {
   const inventoryItem = await inventoryService.getInventoryItemById(
     req.params.id
@@ -67,6 +70,7 @@ const getInventoryItemById = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles update inventory item.
 const updateInventoryItem = asyncHandler(async (req, res) => {
   const userId = req.user._id || req.user.id;
   const { error, value } = updateInventoryItemSchema.validate(req.body);
@@ -96,6 +100,7 @@ const updateInventoryItem = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles delete inventory item.
 const deleteInventoryItem = asyncHandler(async (req, res) => {
   const userId = req.user._id || req.user.id;
   await inventoryService.deleteInventoryItem(

@@ -3,6 +3,7 @@ const AppError = require("../utils/appError");
 const { HTTP_STATUS } = require("../constants/http");
 const { USER_TYPES } = require("../constants/user");
 
+// Handles require admin.
 const requireAdmin = (req, res, next) => {
   if (!req.user || req.user.userType !== USER_TYPES.ADMIN) {
     throw new AppError(

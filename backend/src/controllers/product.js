@@ -2,6 +2,7 @@ const productService = require("../services/product");
 
 const asyncHandler = require("../utils/asyncHandler");
 
+// Handles create product.
 const createProduct = asyncHandler(async (req, res) => {
   const product = await productService.createProduct({
     body: req.body,
@@ -20,6 +21,7 @@ const createProduct = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get products.
 const getProducts = asyncHandler(async (req, res) => {
   const page = Number(req.query.page) || 1;
 
@@ -37,6 +39,7 @@ const getProducts = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles update product.
 const updateProduct = asyncHandler(async (req, res) => {
   const product = await productService.updateProduct({
     productId: req.params.id,
@@ -55,6 +58,7 @@ const updateProduct = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles delete product.
 const deleteProduct = asyncHandler(async (req, res) => {
   await productService.deleteProduct({
     productId: req.params.id,

@@ -1,9 +1,11 @@
 const Space = require("../models/space");
 
+// Handles create.
 const create = async (payload) => {
   return Space.create(payload);
 };
 
+// Handles find by id.
 const findById = async (id) => {
   return Space.findOne({
     _id: id,
@@ -11,6 +13,7 @@ const findById = async (id) => {
   }).lean();
 };
 
+// Handles find by code.
 const findByCode = async (code) => {
   return Space.findOne({
     code,
@@ -18,6 +21,7 @@ const findByCode = async (code) => {
   }).lean();
 };
 
+// Handles find by name.
 const findByName = async (name) => {
   return Space.findOne({
     name,
@@ -25,6 +29,7 @@ const findByName = async (name) => {
   }).lean();
 };
 
+// Handles update by id.
 const updateById = async (id, payload) => {
   return Space.findOneAndUpdate(
     {
@@ -38,6 +43,7 @@ const updateById = async (id, payload) => {
   ).lean();
 };
 
+// Handles paginate.
 const paginate = async (filters) => {
   const { page, limit, search, isActive } = filters;
 

@@ -20,6 +20,7 @@ const {
 } = require("../constants/auditLog");
 const { ROLE_CODES } = require("../constants/role");
 
+// Handles assert space exists.
 const assertSpaceExists = async (spaceId) => {
   const space = await spaceRepository.findById(spaceId);
 
@@ -30,6 +31,7 @@ const assertSpaceExists = async (spaceId) => {
   return space;
 };
 
+// Handles assert active user.
 const assertActiveUser = async (userId) => {
   const user = await findActiveUserById(userId);
 
@@ -40,6 +42,7 @@ const assertActiveUser = async (userId) => {
   return user;
 };
 
+// Handles add member.
 const addMember = async (
   spaceId,
   payload,
@@ -181,6 +184,7 @@ const addMember = async (
   return member;
 };
 
+// Handles get members.
 const getMembers = async (spaceId, filters) => {
   await assertSpaceExists(spaceId);
 
@@ -190,6 +194,7 @@ const getMembers = async (spaceId, filters) => {
   });
 };
 
+// Handles update member.
 const updateMember = async (
   id,
   spaceId,
@@ -227,6 +232,7 @@ const updateMember = async (
   return updatedMember;
 };
 
+// Handles remove member.
 const removeMember = async (
   id,
   spaceId,
@@ -278,6 +284,7 @@ const removeMember = async (
   return removedMember;
 };
 
+// Handles assign role.
 const assignRole = async (
   spaceId,
   payload,
@@ -352,6 +359,7 @@ const assignRole = async (
   return assignment;
 };
 
+// Handles replace role.
 const replaceRole = async (
   spaceId,
   payload,
@@ -454,6 +462,7 @@ const replaceRole = async (
   };
 };
 
+// Handles get user roles.
 const getUserRoles = async (spaceId, filters) => {
   await assertSpaceExists(spaceId);
 
@@ -463,6 +472,7 @@ const getUserRoles = async (spaceId, filters) => {
   });
 };
 
+// Handles remove role.
 const removeRole = async (
   id,
   spaceId,

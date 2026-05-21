@@ -1,9 +1,11 @@
 const AssetRequest = require("../models/assetRequest");
 
+// Handles create.
 const create = async (payload) => {
   return AssetRequest.create(payload);
 };
 
+// Handles find by id.
 const findById = async (id) => {
   return AssetRequest.findOne({
     _id: id,
@@ -11,6 +13,7 @@ const findById = async (id) => {
   }).lean();
 };
 
+// Handles update by id.
 const updateById = async (id, payload) => {
   return AssetRequest.findOneAndUpdate(
     {
@@ -24,6 +27,7 @@ const updateById = async (id, payload) => {
   ).lean();
 };
 
+// Handles paginate.
 const paginate = async (filters) => {
   const {
     page,

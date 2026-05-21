@@ -1,5 +1,6 @@
 const AuditLog = require("../models/auditLog");
 
+// Handles create.
 const create = async (payload, session) => {
   if (session) {
     const [auditLog] = await AuditLog.create([payload], {
@@ -12,6 +13,7 @@ const create = async (payload, session) => {
   return AuditLog.create(payload);
 };
 
+// Handles find by id.
 const findById = async (id) => {
   return AuditLog.findOne({
     _id: id,
@@ -21,6 +23,7 @@ const findById = async (id) => {
     .lean();
 };
 
+// Handles paginate.
 const paginate = async (filters) => {
   const {
     page,

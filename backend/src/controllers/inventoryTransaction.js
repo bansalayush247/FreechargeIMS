@@ -9,6 +9,7 @@ const {
   getTransactionsSchema,
 } = require("../validators/inventoryTransaction");
 
+// Handles create transaction.
 const createTransaction = asyncHandler(async (req, res) => {
   const userId = req.user._id || req.user.id;
   const { error, value } =
@@ -39,6 +40,7 @@ const createTransaction = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get transactions.
 const getTransactions = asyncHandler(async (req, res) => {
   const { error, value } =
     getTransactionsSchema.validate(req.query);
@@ -62,6 +64,7 @@ const getTransactions = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get transaction by id.
 const getTransactionById = asyncHandler(async (req, res) => {
   const transaction =
     await inventoryTransactionService.getTransactionById(
@@ -75,6 +78,7 @@ const getTransactionById = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get item audit trail.
 const getItemAuditTrail = asyncHandler(async (req, res) => {
   const transactions =
     await inventoryTransactionService.getItemAuditTrail(

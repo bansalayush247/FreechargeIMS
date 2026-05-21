@@ -1,9 +1,11 @@
 const Repair = require("../models/repair");
 
+// Handles create.
 const create = async (payload) => {
   return Repair.create(payload);
 };
 
+// Handles find by id.
 const findById = async (id) => {
   return Repair.findOne({
     _id: id,
@@ -16,6 +18,7 @@ const findById = async (id) => {
     .lean();
 };
 
+// Handles find active by inventory item id.
 const findActiveByInventoryItemId = async (
   inventoryItemId,
   statuses
@@ -29,6 +32,7 @@ const findActiveByInventoryItemId = async (
   }).lean();
 };
 
+// Handles update by id.
 const updateById = async (id, payload) => {
   return Repair.findOneAndUpdate(
     {
@@ -42,6 +46,7 @@ const updateById = async (id, payload) => {
   ).lean();
 };
 
+// Handles paginate.
 const paginate = async (filters) => {
   const {
     page,

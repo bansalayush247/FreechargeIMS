@@ -1,5 +1,6 @@
 const RefreshToken = require("../models/refreshToken");
 
+// Handles create refresh token.
 const createRefreshToken = async (userId, token, ipAddress, userAgent) => {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
@@ -13,6 +14,7 @@ const createRefreshToken = async (userId, token, ipAddress, userAgent) => {
   });
 };
 
+// Handles find refresh token.
 const findRefreshToken = async (token) => {
   return RefreshToken.findOne({
     token,
@@ -21,6 +23,7 @@ const findRefreshToken = async (token) => {
   });
 };
 
+// Handles revoke refresh token.
 const revokeRefreshToken = async (token) => {
   return RefreshToken.updateOne(
     { token },
@@ -33,6 +36,7 @@ const revokeRefreshToken = async (token) => {
   );
 };
 
+// Handles revoke all user tokens.
 const revokeAllUserTokens = async (userId) => {
   return RefreshToken.updateMany(
     { userId, isRevoked: false },

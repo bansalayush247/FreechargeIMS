@@ -32,6 +32,7 @@ const {
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
 
+// Handles generate request number.
 const generateRequestNumber = async () => {
   const count = await AssetRequest.countDocuments();
 
@@ -40,6 +41,7 @@ const generateRequestNumber = async () => {
   return `AR-${new Date().getFullYear()}-${sequence}`;
 };
 
+// Handles create asset request.
 const createAssetRequest = async (
   payload,
   userId,
@@ -88,10 +90,12 @@ const createAssetRequest = async (
   return request;
 };
 
+// Handles get asset requests.
 const getAssetRequests = async (filters) => {
   return assetRequestRepository.paginate(filters);
 };
 
+// Handles get asset request by id.
 const getAssetRequestById = async (id) => {
   const request = await assetRequestRepository.findById(id);
 
@@ -102,6 +106,7 @@ const getAssetRequestById = async (id) => {
   return request;
 };
 
+// Handles manager approve request.
 const managerApproveRequest = async (
   id,
   payload,
@@ -147,6 +152,7 @@ const managerApproveRequest = async (
   return updatedRequest;
 };
 
+// Handles it approve request.
 const itApproveRequest = async (
   id,
   payload,
@@ -224,6 +230,7 @@ const itApproveRequest = async (
   return updatedRequest;
 };
 
+// Handles reject request.
 const rejectRequest = async (
   id,
   payload,
@@ -267,6 +274,7 @@ const rejectRequest = async (
   return updatedRequest;
 };
 
+// Handles cancel request.
 const cancelRequest = async (
   id,
   userId,

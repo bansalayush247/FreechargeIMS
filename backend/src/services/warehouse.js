@@ -11,6 +11,7 @@ const {
   AUDIT_ENTITY_TYPES,
 } = require("../constants/auditLog");
 
+// Handles create warehouse.
 const createWarehouse = async ({
   body,
   userId,
@@ -60,6 +61,7 @@ const createWarehouse = async ({
   return warehouse;
 };
 
+// Handles get warehouses.
 const getWarehouses = async ({
   spaceId,
   page,
@@ -72,6 +74,7 @@ const getWarehouses = async ({
   });
 };
 
+// Handles update warehouse.
 const updateWarehouse = async ({
   warehouseId,
   body,
@@ -119,6 +122,7 @@ const updateWarehouse = async ({
   return updatedWarehouse;
 };
 
+// Handles delete warehouse.
 const deleteWarehouse = async ({
   warehouseId,
   userId,

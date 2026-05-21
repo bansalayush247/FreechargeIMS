@@ -1,5 +1,6 @@
 const InventoryTransaction = require("../models/inventoryTransaction");
 
+// Handles create.
 const create = async (payload, session) => {
   const [transaction] = await InventoryTransaction.create([payload], {
     session,
@@ -8,6 +9,7 @@ const create = async (payload, session) => {
   return transaction;
 };
 
+// Handles find by id.
 const findById = async (id) => {
   return InventoryTransaction.findOne({
     _id: id,
@@ -19,6 +21,7 @@ const findById = async (id) => {
     .lean();
 };
 
+// Handles paginate.
 const paginate = async (filters) => {
   const {
     page,
@@ -92,6 +95,7 @@ const paginate = async (filters) => {
   };
 };
 
+// Handles get item audit trail.
 const getItemAuditTrail = async (inventoryItemId) => {
   return InventoryTransaction.find({
     inventoryItemId,

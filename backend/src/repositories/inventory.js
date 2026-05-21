@@ -1,9 +1,11 @@
 const InventoryItem = require("../models/inventory");
 
+// Handles create.
 const create = async (payload) => {
   return InventoryItem.create(payload);
 };
 
+// Handles find by id.
 const findById = async (id) => {
   return InventoryItem.findOne({
     _id: id,
@@ -11,10 +13,12 @@ const findById = async (id) => {
   }).lean();
 };
 
+// Handles find one.
 const findOne = async (filter) => {
   return InventoryItem.findOne(filter).lean();
 };
 
+// Handles update by id.
 const updateById = async (id, payload) => {
   return InventoryItem.findOneAndUpdate(
     {
@@ -28,6 +32,7 @@ const updateById = async (id, payload) => {
   ).lean();
 };
 
+// Handles paginate.
 const paginate = async ({
   page,
   limit,

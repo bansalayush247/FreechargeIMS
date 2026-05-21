@@ -1,9 +1,11 @@
 const Warehouse = require("../models/warehouse");
 
+// Handles create warehouse.
 const createWarehouse = async (payload) => {
   return Warehouse.create(payload);
 };
 
+// Handles find warehouse by code.
 const findWarehouseByCode = async (
   spaceId,
   code
@@ -15,6 +17,7 @@ const findWarehouseByCode = async (
   }).lean();
 };
 
+// Handles find warehouse by id.
 const findWarehouseById = async (id) => {
   return Warehouse.findOne({
     _id: id,
@@ -22,6 +25,7 @@ const findWarehouseById = async (id) => {
   }).lean();
 };
 
+// Handles get warehouses.
 const getWarehouses = async ({
   spaceId,
   page,
@@ -57,6 +61,7 @@ const getWarehouses = async ({
   };
 };
 
+// Handles update warehouse.
 const updateWarehouse = async (
   id,
   updateData
@@ -70,6 +75,7 @@ const updateWarehouse = async (
   ).lean();
 };
 
+// Handles soft delete warehouse.
 const softDeleteWarehouse = async (
   id,
   deletedBy

@@ -24,6 +24,7 @@ const {
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
 
+// Handles create transaction.
 const createTransaction = async (
   payload,
   userId,
@@ -192,10 +193,12 @@ const createTransaction = async (
   }
 };
 
+// Handles get transactions.
 const getTransactions = async (filters) => {
   return inventoryTransactionRepository.paginate(filters);
 };
 
+// Handles get transaction by id.
 const getTransactionById = async (id) => {
   const transaction =
     await inventoryTransactionRepository.findById(id);
@@ -207,6 +210,7 @@ const getTransactionById = async (id) => {
   return transaction;
 };
 
+// Handles get item audit trail.
 const getItemAuditTrail = async (inventoryItemId) => {
   return inventoryTransactionRepository.getItemAuditTrail(
     inventoryItemId

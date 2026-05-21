@@ -34,6 +34,7 @@ const ensureSpaceScopedReferences = (
   }
 };
 
+// Handles sanitize identifier.
 const sanitizeIdentifier = (value) => {
   if (value === undefined || value === null) {
     return null;
@@ -44,8 +45,10 @@ const sanitizeIdentifier = (value) => {
   return trimmed || null;
 };
 
+// Handles is positive integer.
 const isPositiveInteger = (value) => Number.isInteger(value) && value > 0;
 
+// Handles assert consumable payload.
 const assertConsumablePayload = (payload) => {
   if (
     payload.serialNumber !== undefined ||
@@ -60,6 +63,7 @@ const assertConsumablePayload = (payload) => {
   }
 };
 
+// Handles assert serialized payload.
 const assertSerializedPayload = (payload) => {
   const serialNumber = sanitizeIdentifier(payload.serialNumber);
   const assetTag = sanitizeIdentifier(payload.assetTag);
@@ -79,6 +83,7 @@ const assertSerializedPayload = (payload) => {
   };
 };
 
+// Handles create inventory item.
 const createInventoryItem = async (
   payload,
   userId,
@@ -244,12 +249,14 @@ const createInventoryItem = async (
   return inventoryItem;
 };
 
+// Handles get inventory items.
 const getInventoryItems = async (query) => {
   logger.info("Fetching inventory items");
 
   return inventoryRepository.paginate(query);
 };
 
+// Handles get inventory item by id.
 const getInventoryItemById = async (id) => {
   logger.info("Fetching inventory item by id", { id });
 
@@ -264,6 +271,7 @@ const getInventoryItemById = async (id) => {
   return inventoryItem;
 };
 
+// Handles update inventory item.
 const updateInventoryItem = async (
   id,
   payload,
@@ -398,6 +406,7 @@ const updateInventoryItem = async (
   return updatedInventoryItem;
 };
 
+// Handles delete inventory item.
 const deleteInventoryItem = async (
   id,
   userId,

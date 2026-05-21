@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const AppError = require("../utils/appError");
 const { HTTP_STATUS } = require("../constants/http");
 
+// Handles validate space id.
 const validateSpaceId = (req, res, next) => {
   const spaceId = req.headers["x-space-id"];
 

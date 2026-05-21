@@ -35,6 +35,7 @@ const {
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
 
+// Handles generate repair number.
 const generateRepairNumber = async () => {
   const count = await Repair.countDocuments();
   const sequence = String(count + 1).padStart(5, "0");
@@ -42,6 +43,7 @@ const generateRepairNumber = async () => {
   return `RP-${new Date().getFullYear()}-${sequence}`;
 };
 
+// Handles create repair.
 const createRepair = async (
   payload,
   userId,
@@ -130,10 +132,12 @@ const createRepair = async (
   return updatedRepair;
 };
 
+// Handles get repairs.
 const getRepairs = async (filters) => {
   return repairRepository.paginate(filters);
 };
 
+// Handles get repair by id.
 const getRepairById = async (id) => {
   const repair = await repairRepository.findById(id);
 
@@ -144,6 +148,7 @@ const getRepairById = async (id) => {
   return repair;
 };
 
+// Handles update repair.
 const updateRepair = async (
   id,
   payload,
@@ -185,6 +190,7 @@ const updateRepair = async (
   return updatedRepair;
 };
 
+// Handles complete repair.
 const completeRepair = async (
   id,
   payload,
@@ -243,6 +249,7 @@ const completeRepair = async (
   return completedRepair;
 };
 
+// Handles cancel repair.
 const cancelRepair = async (
   id,
   payload,

@@ -8,6 +8,7 @@ const {
   getAuditLogsSchema,
 } = require("../validators/auditLog");
 
+// Handles get audit logs.
 const getAuditLogs = asyncHandler(async (req, res) => {
   const { error, value } =
     getAuditLogsSchema.validate({
@@ -35,6 +36,7 @@ const getAuditLogs = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get audit log by id.
 const getAuditLogById = asyncHandler(async (req, res) => {
   const auditLog =
     await auditLogService.getAuditLogById(req.params.id);

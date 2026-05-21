@@ -4,14 +4,17 @@ const { loginUser, signupUser, refreshAccessToken, logoutUser } = require("../se
 const { HTTP_STATUS } = require("../constants/http");
 const AppError = require("../utils/appError");
 
+// Handles get ip address.
 const getIpAddress = (req) => {
   return req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
 };
 
+// Handles get user agent.
 const getUserAgent = (req) => {
   return req.get("user-agent") || "Unknown";
 };
 
+// Handles login.
 const login = asyncHandler(async (req, res) => {
   const ipAddress = getIpAddress(req);
   const userAgent = getUserAgent(req);
@@ -30,6 +33,7 @@ const login = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles signup.
 const signup = asyncHandler(async (req, res) => {
   const ipAddress = getIpAddress(req);
   const userAgent = getUserAgent(req);
@@ -48,6 +52,7 @@ const signup = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles refresh.
 const refresh = asyncHandler(async (req, res) => {
   const { refreshToken } = req.body;
 
@@ -69,6 +74,7 @@ const refresh = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles logout.
 const logout = asyncHandler(async (req, res) => {
   const { refreshToken } = req.body;
 
@@ -87,6 +93,7 @@ const logout = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles me.
 const me = asyncHandler(async (req, res) => {
   logger.info("Fetched current user", {
     userId: req.user?._id || req.user?.id,

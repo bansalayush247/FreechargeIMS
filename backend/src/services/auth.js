@@ -22,6 +22,7 @@ const {
   revokeRefreshToken,
 } = require("../repositories/refreshToken");
 
+// Handles generate tokens.
 const generateTokens = async (user, ipAddress, userAgent) => {
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
@@ -34,6 +35,7 @@ const generateTokens = async (user, ipAddress, userAgent) => {
   };
 };
 
+// Handles login user.
 const loginUser = async ({ email, password }, ipAddress, userAgent) => {
   const user = await findActiveUserByEmailWithPassword(email);
 
@@ -62,6 +64,7 @@ const loginUser = async ({ email, password }, ipAddress, userAgent) => {
   };
 };
 
+// Handles signup user.
 const signupUser = async (userData, ipAddress, userAgent) => {
   const existingUser = await findUserByEmail(userData.email);
 
@@ -93,6 +96,7 @@ const signupUser = async (userData, ipAddress, userAgent) => {
   };
 };
 
+// Handles refresh access token.
 const refreshAccessToken = async (refreshToken) => {
   const tokenResult = verifyRefreshToken(refreshToken);
 
@@ -123,6 +127,7 @@ const refreshAccessToken = async (refreshToken) => {
   };
 };
 
+// Handles logout user.
 const logoutUser = async (refreshToken) => {
   await revokeRefreshToken(refreshToken);
 };

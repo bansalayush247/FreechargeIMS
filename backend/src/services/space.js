@@ -54,6 +54,7 @@ const DEFAULT_SYSTEM_ROLES = [
   },
 ];
 
+// Handles assert unique space fields.
 const assertUniqueSpaceFields = async (
   payload,
   existingSpaceId
@@ -83,6 +84,7 @@ const assertUniqueSpaceFields = async (
   }
 };
 
+// Handles create space.
 const createSpace = async (payload, userId, context = {}) => {
   logger.info("Creating space");
 
@@ -183,10 +185,12 @@ const createSpace = async (payload, userId, context = {}) => {
   return space;
 };
 
+// Handles get spaces.
 const getSpaces = async (filters) => {
   return spaceRepository.paginate(filters);
 };
 
+// Handles get space by id.
 const getSpaceById = async (id) => {
   const space = await spaceRepository.findById(id);
 
@@ -197,6 +201,7 @@ const getSpaceById = async (id) => {
   return space;
 };
 
+// Handles update space.
 const updateSpace = async (
   id,
   payload,
@@ -232,6 +237,7 @@ const updateSpace = async (
   return updatedSpace;
 };
 
+// Handles delete space.
 const deleteSpace = async (id, userId, context = {}) => {
   const space = await getSpaceById(id);
 

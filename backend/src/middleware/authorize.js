@@ -22,6 +22,7 @@ const SYSTEM_LEVEL_PERMISSIONS = [
   PERMISSIONS.CREATE_USER,
 ];
 
+// Handles authorize.
 const authorize = (...requiredPermissions) => {
   return async (req, res, next) => {
     try {
@@ -58,6 +59,7 @@ const authorize = (...requiredPermissions) => {
           throw new AppError("Access denied", HTTP_STATUS.FORBIDDEN);
         }
 
+        // Handles role ids.
         const roleIds = userRoles.map((item) => item.roleId);
 
         const roles = await findActiveRolesByIds(roleIds);
@@ -65,6 +67,7 @@ const authorize = (...requiredPermissions) => {
         permissions = roles.flatMap((role) => role.permissions);
       }
 
+      // Handles has permission.
       const hasPermission = requiredPermissions.every((permission) =>
         permissions.includes(permission)
       );

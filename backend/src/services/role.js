@@ -13,6 +13,7 @@ const {
   AUDIT_ENTITY_TYPES,
 } = require("../constants/auditLog");
 
+// Handles assert space exists.
 const assertSpaceExists = async (spaceId) => {
   const space = await spaceRepository.findById(spaceId);
 
@@ -23,6 +24,7 @@ const assertSpaceExists = async (spaceId) => {
   return space;
 };
 
+// Handles create role.
 const createRole = async (
   spaceId,
   payload,
@@ -71,6 +73,7 @@ const createRole = async (
   return role;
 };
 
+// Handles get roles.
 const getRoles = async (spaceId, filters) => {
   await assertSpaceExists(spaceId);
 
@@ -80,6 +83,7 @@ const getRoles = async (spaceId, filters) => {
   });
 };
 
+// Handles get role by id.
 const getRoleById = async (id, spaceId) => {
   const role = await roleRepository.findById(id);
 
@@ -90,6 +94,7 @@ const getRoleById = async (id, spaceId) => {
   return role;
 };
 
+// Handles update role.
 const updateRole = async (
   id,
   spaceId,
@@ -131,6 +136,7 @@ const updateRole = async (
   return updatedRole;
 };
 
+// Handles delete role.
 const deleteRole = async (
   id,
   spaceId,

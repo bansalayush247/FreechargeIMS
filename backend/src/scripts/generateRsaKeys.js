@@ -2,6 +2,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
+const logger = require('../config/logger');
+
 // Generate RSA key pair
 const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
   modulusLength: 2048,
@@ -33,8 +35,7 @@ JWT_REFRESH_TOKEN_SECRET=${refreshTokenSecret}
 
 fs.writeFileSync(envPath, updatedEnv);
 
-console.log('✅ RSA keys generated and saved to .env');
-console.log('\nPrivate Key (first 100 chars):');
-console.log(privateKey.substring(0, 100) + '...');
-console.log('\nPublic Key (first 100 chars):');
-console.log(publicKey.substring(0, 100) + '...');
+logger.info('RSA keys generated and saved to .env', {
+  privateKeyPreview: privateKey.substring(0, 100) + '...',
+  publicKeyPreview: publicKey.substring(0, 100) + '...',
+});

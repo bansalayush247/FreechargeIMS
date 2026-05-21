@@ -10,6 +10,7 @@ const {
   getRepairsSchema,
 } = require("../validators/repair");
 
+// Handles create repair.
 const createRepair = asyncHandler(async (req, res) => {
   const userId = req.user._id || req.user.id;
   const { error, value } =
@@ -39,6 +40,7 @@ const createRepair = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get repairs.
 const getRepairs = asyncHandler(async (req, res) => {
   const { error, value } =
     getRepairsSchema.validate({
@@ -64,6 +66,7 @@ const getRepairs = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get repair by id.
 const getRepairById = asyncHandler(async (req, res) => {
   const repair = await repairService.getRepairById(
     req.params.id
@@ -76,6 +79,7 @@ const getRepairById = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles update repair.
 const updateRepair = asyncHandler(async (req, res) => {
   const userId = req.user._id || req.user.id;
   const { error, value } =
@@ -106,6 +110,7 @@ const updateRepair = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles complete repair.
 const completeRepair = asyncHandler(async (req, res) => {
   const userId = req.user._id || req.user.id;
   const { error, value } =
@@ -136,6 +141,7 @@ const completeRepair = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles cancel repair.
 const cancelRepair = asyncHandler(async (req, res) => {
   const userId = req.user._id || req.user.id;
   const { error, value } =

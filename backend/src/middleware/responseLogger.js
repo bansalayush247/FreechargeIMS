@@ -1,5 +1,6 @@
 const logger = require("../config/logger");
 
+// Handles response logger.
 const responseLogger = (req, res, next) => {
   const originalJson = res.json;
 

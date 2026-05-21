@@ -1,9 +1,11 @@
 const Role = require("../models/role");
 
+// Handles create.
 const create = async (payload) => {
   return Role.create(payload);
 };
 
+// Handles find by id.
 const findById = async (id) => {
   return Role.findOne({
     _id: id,
@@ -11,6 +13,7 @@ const findById = async (id) => {
   }).lean();
 };
 
+// Handles find by space and code.
 const findBySpaceAndCode = async (spaceId, code) => {
   return Role.findOne({
     spaceId,
@@ -19,6 +22,7 @@ const findBySpaceAndCode = async (spaceId, code) => {
   }).lean();
 };
 
+// Handles find active roles by ids.
 const findActiveRolesByIds = async (roleIds) => {
   return Role.find({
     _id: {
@@ -31,6 +35,7 @@ const findActiveRolesByIds = async (roleIds) => {
     .lean();
 };
 
+// Handles update by id.
 const updateById = async (id, payload) => {
   return Role.findOneAndUpdate(
     {
@@ -44,6 +49,7 @@ const updateById = async (id, payload) => {
   ).lean();
 };
 
+// Handles paginate.
 const paginate = async (filters) => {
   const {
     page,

@@ -11,6 +11,7 @@ const {
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
 
+// Handles validate inventory transaction.
 const validateInventoryTransaction = async (
   req,
   res,

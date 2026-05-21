@@ -20,6 +20,7 @@ require("../models/repair");
 require("../models/auditLog");
 require("../models/inventoryTransaction");
 
+// Handles sync indexes.
 const syncIndexes = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);

@@ -6,6 +6,7 @@ const { findActiveUserById } = require("../repositories/user");
 
 const { verifyAccessToken } = require("../services/auth.tokens");
 
+// Handles auth middleware.
 const authMiddleware = async (req, res, next) => {
   try {
     const authorization = req.headers.authorization;

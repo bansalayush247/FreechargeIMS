@@ -9,6 +9,7 @@ const {
   AUDIT_ENTITY_TYPES,
 } = require("../constants/auditLog");
 
+// Handles create product.
 const createProduct = async ({
   body,
   userId,
@@ -46,8 +47,10 @@ const createProduct = async ({
   return product;
 };
 
+// Handles get products.
 const getProducts = async ({ spaceId, page, limit }) => productRepository.getProducts({ spaceId, page, limit });
 
+// Handles update product.
 const updateProduct = async ({
   productId,
   body,
@@ -81,6 +84,7 @@ const updateProduct = async ({
   return updatedProduct;
 };
 
+// Handles delete product.
 const deleteProduct = async ({
   productId,
   userId,

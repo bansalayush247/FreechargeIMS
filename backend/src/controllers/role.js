@@ -8,13 +8,16 @@ const {
   getRolesSchema,
 } = require("../validators/role");
 
+// Handles get user id.
 const getUserId = (req) => req.user._id || req.user.id;
 
+// Handles get request context.
 const getRequestContext = (req) => ({
   ipAddress: req.ip,
   userAgent: req.get("user-agent"),
 });
 
+// Handles create role.
 const createRole = asyncHandler(async (req, res) => {
   const { error, value } = createRoleSchema.validate(
     req.body
@@ -41,6 +44,7 @@ const createRole = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get roles.
 const getRoles = asyncHandler(async (req, res) => {
   const { error, value } = getRolesSchema.validate(
     req.query
@@ -65,6 +69,7 @@ const getRoles = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get role by id.
 const getRoleById = asyncHandler(async (req, res) => {
   const role = await roleService.getRoleById(
     req.params.id,
@@ -78,6 +83,7 @@ const getRoleById = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles update role.
 const updateRole = asyncHandler(async (req, res) => {
   const { error, value } = updateRoleSchema.validate(
     req.body
@@ -105,6 +111,7 @@ const updateRole = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles delete role.
 const deleteRole = asyncHandler(async (req, res) => {
   const role = await roleService.deleteRole(
     req.params.id,

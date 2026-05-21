@@ -67,6 +67,7 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// Handles user.
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) {
     return;
@@ -78,6 +79,7 @@ userSchema.pre("save", async function () {
   );
 });
 
+// Handles user.
 userSchema.methods.comparePassword = async function (password) {
   return bcrypt.compare(password, this.password);
 };

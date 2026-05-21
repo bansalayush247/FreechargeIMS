@@ -1,5 +1,6 @@
 const logger = require("../config/logger");
 
+// Handles error middleware.
 function errorMiddleware(err, req, res, next) {
 
   logger.error({

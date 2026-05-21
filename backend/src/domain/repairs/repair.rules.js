@@ -18,6 +18,7 @@ const NON_REPAIRABLE_INVENTORY_STATUSES = [
   INVENTORY_STATUS.RETIRED,
 ];
 
+// Handles can create repair.
 const canCreateRepair = (inventoryItem, activeRepair) => {
   if (!inventoryItem || inventoryItem.isDeleted) {
     return {
@@ -49,6 +50,7 @@ const canCreateRepair = (inventoryItem, activeRepair) => {
   };
 };
 
+// Handles can complete repair.
 const canCompleteRepair = (repair) => {
   if (!repair || repair.isDeleted) {
     return {
@@ -74,6 +76,7 @@ const canCompleteRepair = (repair) => {
   };
 };
 
+// Handles can cancel repair.
 const canCancelRepair = (repair) => {
   if (!repair || repair.isDeleted) {
     return {

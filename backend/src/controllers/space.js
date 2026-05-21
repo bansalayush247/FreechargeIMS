@@ -8,13 +8,16 @@ const {
   getSpacesSchema,
 } = require("../validators/space");
 
+// Handles get user id.
 const getUserId = (req) => req.user._id || req.user.id;
 
+// Handles get request context.
 const getRequestContext = (req) => ({
   ipAddress: req.ip,
   userAgent: req.get("user-agent"),
 });
 
+// Handles create space.
 const createSpace = asyncHandler(async (req, res) => {
   const { error, value } = createSpaceSchema.validate(
     req.body
@@ -40,6 +43,7 @@ const createSpace = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get spaces.
 const getSpaces = asyncHandler(async (req, res) => {
   const { error, value } = getSpacesSchema.validate(
     req.query
@@ -61,6 +65,7 @@ const getSpaces = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get space by id.
 const getSpaceById = asyncHandler(async (req, res) => {
   const space = await spaceService.getSpaceById(
     req.params.id
@@ -73,6 +78,7 @@ const getSpaceById = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles update space.
 const updateSpace = asyncHandler(async (req, res) => {
   const { error, value } = updateSpaceSchema.validate(
     req.body
@@ -99,6 +105,7 @@ const updateSpace = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles delete space.
 const deleteSpace = asyncHandler(async (req, res) => {
   const space = await spaceService.deleteSpace(
     req.params.id,

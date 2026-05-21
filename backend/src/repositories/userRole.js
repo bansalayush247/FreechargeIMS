@@ -1,9 +1,11 @@
 const UserRole = require("../models/userRole");
 
+// Handles create.
 const create = async (payload) => {
   return UserRole.create(payload);
 };
 
+// Handles find by id.
 const findById = async (id) => {
   return UserRole.findOne({
     _id: id,
@@ -16,6 +18,7 @@ const findById = async (id) => {
     .lean();
 };
 
+// Handles find user roles by user and space.
 const findUserRolesByUserAndSpace = async (userId, spaceId) => {
   return UserRole.find({
     userId,
@@ -28,6 +31,7 @@ const findUserRolesByUserAndSpace = async (userId, spaceId) => {
     .lean();
 };
 
+// Handles find by user role and space.
 const findByUserRoleAndSpace = async (
   userId,
   roleId,
@@ -43,6 +47,7 @@ const findByUserRoleAndSpace = async (
   }).lean();
 };
 
+// Handles soft delete by id.
 const softDeleteById = async (id, payload) => {
   return UserRole.findOneAndUpdate(
     {
@@ -58,6 +63,7 @@ const softDeleteById = async (id, payload) => {
   ).lean();
 };
 
+// Handles soft delete by user and space.
 const softDeleteByUserAndSpace = async (
   userId,
   spaceId,
@@ -75,6 +81,7 @@ const softDeleteByUserAndSpace = async (
   );
 };
 
+// Handles soft delete by role and space.
 const softDeleteByRoleAndSpace = async (
   roleId,
   spaceId,
@@ -92,6 +99,7 @@ const softDeleteByRoleAndSpace = async (
   );
 };
 
+// Handles paginate.
 const paginate = async (filters) => {
   const { page, limit, spaceId, userId, roleId } = filters;
 

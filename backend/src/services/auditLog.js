@@ -5,6 +5,7 @@ const auditLogRepository = require(
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
 
+// Handles record audit log.
 const recordAuditLog = async (payload, session) => {
   logger.info("Recording audit log", {
     action: payload.action,
@@ -21,10 +22,12 @@ const recordAuditLog = async (payload, session) => {
   );
 };
 
+// Handles get audit logs.
 const getAuditLogs = async (filters) => {
   return auditLogRepository.paginate(filters);
 };
 
+// Handles get audit log by id.
 const getAuditLogById = async (id) => {
   const auditLog = await auditLogRepository.findById(id);
 

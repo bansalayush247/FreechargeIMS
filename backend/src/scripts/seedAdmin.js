@@ -60,6 +60,7 @@ const SYSTEM_ROLES = [
   },
 ];
 
+// Handles upsert super admin space.
 const upsertSuperAdminSpace = async (adminId) => {
   let space = await Space.findOne({
     code: SUPER_ADMIN_SPACE.code,
@@ -86,6 +87,7 @@ const upsertSuperAdminSpace = async (adminId) => {
   return space;
 };
 
+// Handles upsert system roles.
 const upsertSystemRoles = async (spaceId, adminId) => {
   const roles = [];
 
@@ -126,6 +128,7 @@ const upsertSystemRoles = async (spaceId, adminId) => {
   return roles;
 };
 
+// Handles upsert admin.
 const upsertAdmin = async () => {
   let admin = await User.findOne({
     email: "admin@freecharge.com",
@@ -158,6 +161,7 @@ const upsertAdmin = async () => {
   return admin;
 };
 
+// Handles upsert admin membership.
 const upsertAdminMembership = async (
   spaceId,
   adminId,
@@ -214,6 +218,7 @@ const upsertAdminMembership = async (
   });
 };
 
+// Handles seed admin.
 const seedAdmin = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);

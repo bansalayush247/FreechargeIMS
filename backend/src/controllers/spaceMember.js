@@ -13,13 +13,16 @@ const {
   getUserRolesSchema,
 } = require("../validators/spaceMember");
 
+// Handles get user id.
 const getUserId = (req) => req.user._id || req.user.id;
 
+// Handles get request context.
 const getRequestContext = (req) => ({
   ipAddress: req.ip,
   userAgent: req.get("user-agent"),
 });
 
+// Handles add member.
 const addMember = asyncHandler(async (req, res) => {
   const { error, value } = addSpaceMemberSchema.validate(req.body);
 
@@ -44,6 +47,7 @@ const addMember = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get members.
 const getMembers = asyncHandler(async (req, res) => {
   const { error, value } = getSpaceMembersSchema.validate(req.query);
 
@@ -63,6 +67,7 @@ const getMembers = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles update member.
 const updateMember = asyncHandler(async (req, res) => {
   const { error, value } = updateSpaceMemberSchema.validate(req.body);
 
@@ -88,6 +93,7 @@ const updateMember = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles remove member.
 const removeMember = asyncHandler(async (req, res) => {
   const member = await spaceMemberService.removeMember(
     req.params.id,
@@ -103,6 +109,7 @@ const removeMember = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles assign role.
 const assignRole = asyncHandler(async (req, res) => {
   const { error, value } = assignUserRoleSchema.validate(req.body);
 
@@ -127,6 +134,7 @@ const assignRole = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles replace role.
 const replaceRole = asyncHandler(async (req, res) => {
   const { error, value } = replaceUserRoleSchema.validate(req.body);
 
@@ -151,6 +159,7 @@ const replaceRole = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get user roles.
 const getUserRoles = asyncHandler(async (req, res) => {
   const { error, value } = getUserRolesSchema.validate(req.query);
 
@@ -174,6 +183,7 @@ const getUserRoles = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles remove role.
 const removeRole = asyncHandler(async (req, res) => {
   const assignment = await spaceMemberService.removeRole(
     req.params.id,
