@@ -22,19 +22,19 @@ const router = express.Router();
 
 router.get(ROUTES.BASE, getApiStatus);
 
-router.use(ROUTES.AUTH, authRoutes);
-router.use(ROUTES.SPACES, spaceRoutes);
-router.use(ROUTES.ROLES, roleRoutes);
+router.use(ROUTES.AUTH.BASE, authRoutes);
+router.use(ROUTES.SPACES.BASE, spaceRoutes);
+router.use(ROUTES.ROLES.BASE, roleRoutes);
 router.use(ROUTES.SPACE_MEMBERS, spaceMemberRoutes);
-router.use(ROUTES.PRODUCTS, productRoutes);
-router.use(ROUTES.WAREHOUSE, warehouseRoutes);
+router.use(ROUTES.PRODUCTS.BASE, productRoutes);
+router.use(ROUTES.WAREHOUSE.BASE, warehouseRoutes);
 router.use(ROUTES.INVENTORY_ITEMS, inventoryRoutes);
-router.use(ROUTES.INVENTORY_TRANSACTIONS, inventoryTransactionRoutes);
-router.use(ROUTES.ASSET_REQUESTS, assetRequestRoutes);
-router.use(ROUTES.REPAIRS, repairRoutes);
-router.use(ROUTES.NOTIFICATIONS, notificationRoutes);
-router.use(ROUTES.WORKFLOWS, workflowRoutes);
-router.use(ROUTES.AUDIT_LOGS, auditLogRoutes);
-router.use(ROUTES.LOGS, logsRoutes);
+router.use(ROUTES.INVENTORY_TRANSACTIONS.BASE, inventoryTransactionRoutes);
+router.use(ROUTES.ASSET_REQUESTS.BASE, assetRequestRoutes);
+router.use(ROUTES.REPAIRS.BASE, repairRoutes);
+router.use(ROUTES.NOTIFICATIONS.BASE, notificationRoutes);
+router.use(ROUTES.WORKFLOWS.BASE, workflowRoutes);
+router.use(ROUTES.AUDIT_LOGS.BASE, auditLogRoutes);
+router.use(ROUTES.LOGS.BASE, logsRoutes);
 
 module.exports = router;

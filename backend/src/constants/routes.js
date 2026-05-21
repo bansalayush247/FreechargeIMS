@@ -3,99 +3,73 @@
  * Centralized location for all route paths used in the application
  */
 
-const ROUTES = {
-  // Base paths
-  BASE: "/",
-  AUTH: "/auth",
-  SPACES: "/spaces",
-  ROLES: "/roles",
-  SPACE_MEMBERS: "/space-members",
-  PRODUCTS: "/product",
-  WAREHOUSE: "/warehouse",
-  INVENTORY_ITEMS: "/inventory-items",
-  INVENTORY_TRANSACTIONS: "/inventoryTransactions",
-  ASSET_REQUESTS: "/asset-requests",
-  REPAIRS: "/repairs",
-  NOTIFICATIONS: "/notifications",
-  WORKFLOWS: "/workflows",
-  AUDIT_LOGS: "/audit-logs",
-  LOGS: "/logs",
+const API_VERSION = "/api/v1";
 
-  // Sub-routes - Auth
-  AUTH_ROUTES: {
+const ENDPOINTS = Object.freeze({
+  HEALTH: `${API_VERSION}/health`,
+  TEST_ERROR: `${API_VERSION}/test-error`,
+
+  BASE: API_VERSION,
+
+  AUTH: Object.freeze({
+    BASE: `${API_VERSION}/auth`,
     SIGNUP: "/signup",
+    REGISTER: "/signup",
     LOGIN: "/login",
     REFRESH: "/refresh",
     LOGOUT: "/logout",
     ME: "/me",
-  },
+  }),
 
-  // Sub-routes - Products
-  PRODUCT_ROUTES: {
-    CREATE: "/",
-    LIST: "/",
-    UPDATE: "/:id",
-    DELETE: "/:id",
-  },
-
-  // Sub-routes - Warehouse
-  WAREHOUSE_ROUTES: {
+  SPACES: Object.freeze({
+    BASE: `${API_VERSION}/spaces`,
     CREATE: "/",
     LIST: "/",
     GET_BY_ID: "/:id",
     UPDATE: "/:id",
     DELETE: "/:id",
-  },
+  }),
 
-  // Sub-routes - Space
-  SPACE_ROUTES: {
+  ROLES: Object.freeze({
+    BASE: `${API_VERSION}/roles`,
     CREATE: "/",
     LIST: "/",
     GET_BY_ID: "/:id",
     UPDATE: "/:id",
     DELETE: "/:id",
-  },
+  }),
 
-  // Sub-routes - Role
-  ROLE_ROUTES: {
+  SPACE_MEMBERS: `${API_VERSION}/space-members`,
+
+  PRODUCTS: Object.freeze({
+    BASE: `${API_VERSION}/product`,
+    CREATE: "/",
+    LIST: "/",
+    UPDATE: "/:id",
+    DELETE: "/:id",
+  }),
+
+  WAREHOUSE: Object.freeze({
+    BASE: `${API_VERSION}/warehouse`,
     CREATE: "/",
     LIST: "/",
     GET_BY_ID: "/:id",
     UPDATE: "/:id",
     DELETE: "/:id",
-  },
+  }),
 
-  // Sub-routes - Space Members
-  SPACE_MEMBER_ROUTES: {
-    USER_ROLES: "/user-roles",
-    ASSIGN_ROLE: "/user-roles",
-    REPLACE_ROLE: "/user-roles/replace",
-    REMOVE_ROLE: "/user-roles/:id",
-    CREATE: "/",
-    LIST: "/",
-    UPDATE: "/:id",
-    DELETE: "/:id",
-  },
+  INVENTORY_ITEMS: `${API_VERSION}/inventory-items`,
 
-  // Sub-routes - Inventory
-  INVENTORY_ROUTES: {
-    CREATE: "/",
-    LIST: "/",
-    GET_BY_ID: "/:id",
-    UPDATE: "/:id",
-    DELETE: "/:id",
-  },
-
-  // Sub-routes - Inventory Transactions
-  INVENTORY_TRANSACTION_ROUTES: {
+  INVENTORY_TRANSACTIONS: Object.freeze({
+    BASE: `${API_VERSION}/inventoryTransactions`,
     CREATE: "/",
     LIST: "/",
     GET_BY_ID: "/:id",
     ITEM_AUDIT_TRAIL: "/item/:inventoryItemId",
-  },
+  }),
 
-  // Sub-routes - Asset Requests
-  ASSET_REQUEST_ROUTES: {
+  ASSET_REQUESTS: Object.freeze({
+    BASE: `${API_VERSION}/asset-requests`,
     CREATE: "/",
     LIST: "/",
     GET_BY_ID: "/:id",
@@ -103,48 +77,48 @@ const ROUTES = {
     IT_APPROVE: "/:id/it-approve",
     REJECT: "/:id/reject",
     CANCEL: "/:id/cancel",
-  },
+  }),
 
-  // Sub-routes - Repairs
-  REPAIR_ROUTES: {
+  REPAIRS: Object.freeze({
+    BASE: `${API_VERSION}/repairs`,
     CREATE: "/",
     LIST: "/",
     GET_BY_ID: "/:id",
     UPDATE: "/:id",
     COMPLETE: "/:id/complete",
     CANCEL: "/:id/cancel",
-  },
+  }),
 
-  // Sub-routes - Workflows
-  WORKFLOW_ROUTES: {
+  NOTIFICATIONS: Object.freeze({
+    BASE: `${API_VERSION}/notifications`,
+    SEND_EMAIL: "/email",
+    LIST: "/",
+    GET_BY_ID: "/:id",
+  }),
+
+  WORKFLOWS: Object.freeze({
+    BASE: `${API_VERSION}/workflows`,
     DEFINITIONS: "/definitions",
     DEFINITION_BY_ID: "/definitions/:id",
     INSTANCES: "/instances",
     INSTANCE_BY_ID: "/instances/:id",
     INSTANCE_TRANSITION: "/instances/:id/transition",
-  },
+  }),
 
-  // Sub-routes - Notifications
-  NOTIFICATION_ROUTES: {
-    SEND_EMAIL: "/email",
+  AUDIT_LOGS: Object.freeze({
+    BASE: `${API_VERSION}/audit-logs`,
     LIST: "/",
     GET_BY_ID: "/:id",
-  },
+  }),
 
-  // Sub-routes - Audit Logs
-  AUDIT_LOG_ROUTES: {
-    LIST: "/",
-    GET_BY_ID: "/:id",
-  },
-
-  // Sub-routes - Logs
-  LOG_ROUTES: {
+  LOGS: Object.freeze({
+    BASE: `${API_VERSION}/logs`,
     STATUS: "/status",
     ARCHIVES: "/archives",
     TRIGGER_ARCHIVE: "/archive",
     DELETE_ARCHIVE: "/archives/:filename",
     CLEANUP: "/cleanup",
-  },
-};
+  }),
+});
 
-module.exports = ROUTES;
+module.exports = ENDPOINTS;
