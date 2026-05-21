@@ -16,6 +16,7 @@ const ROUTES = {
   INVENTORY_TRANSACTIONS: "/inventoryTransactions",
   ASSET_REQUESTS: "/asset-requests",
   REPAIRS: "/repairs",
+  NOTIFICATIONS: "/notifications",
   AUDIT_LOGS: "/audit-logs",
   LOGS: "/logs",
 
@@ -113,7 +114,7 @@ const ROUTES = {
     CANCEL: "/:id/cancel",
   },
 
-  // Sub-routes - Audit Logs
+  // Sub-routes - Notifications`r`n  NOTIFICATION_ROUTES: {`r`n    SEND_EMAIL: "/email",`r`n    LIST: "/",`r`n    GET_BY_ID: "/:id",`r`n  },`r`n`r`n  // Sub-routes - Audit Logs
   AUDIT_LOG_ROUTES: {
     LIST: "/",
     GET_BY_ID: "/:id",

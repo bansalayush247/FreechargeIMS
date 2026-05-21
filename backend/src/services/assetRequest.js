@@ -10,6 +10,7 @@ const inventoryTransactionService = require(
   "./inventoryTransaction"
 );
 const auditLogService = require("./auditLog");
+const notificationService = require("./notification");
 
 const {
   ASSET_REQUEST_STATUS,
@@ -28,6 +29,9 @@ const {
   AUDIT_ACTIONS,
   AUDIT_ENTITY_TYPES,
 } = require("../constants/auditLog");
+const {
+  NOTIFICATION_TYPES,
+} = require("../constants/notification");
 
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
@@ -86,6 +90,18 @@ const createAssetRequest = async (
     ipAddress: context.ipAddress || "",
     userAgent: context.userAgent || "",
   });
+
+  await notificationService.notifyUserByEmail(
+    {
+      spaceId: context.spaceId || null,
+      recipientUserId: request.employeeId,
+      type: NOTIFICATION_TYPES.ASSET_REQUEST_CREATED,
+      subject: `Asset request ${request.requestNumber} created`,
+      body: `Your asset request ${request.requestNumber} has been created and is pending manager approval.`,
+      metadata: { assetRequestId: request._id },
+    },
+    userId
+  );
 
   return request;
 };
@@ -148,6 +164,18 @@ const managerApproveRequest = async (
     ipAddress: context.ipAddress || "",
     userAgent: context.userAgent || "",
   });
+
+  await notificationService.notifyUserByEmail(
+    {
+      spaceId: context.spaceId || null,
+      recipientUserId: request.employeeId,
+      type: NOTIFICATION_TYPES.ASSET_REQUEST_MANAGER_APPROVED,
+      subject: `Asset request ${request.requestNumber} manager approved`,
+      body: `Your asset request ${request.requestNumber} has been approved by manager and is pending IT approval.`,
+      metadata: { assetRequestId: id },
+    },
+    userId
+  );
 
   return updatedRequest;
 };
@@ -227,6 +255,18 @@ const itApproveRequest = async (
     userAgent: context.userAgent || "",
   });
 
+  await notificationService.notifyUserByEmail(
+    {
+      spaceId: context.spaceId || null,
+      recipientUserId: request.employeeId,
+      type: NOTIFICATION_TYPES.ASSET_REQUEST_FULFILLED,
+      subject: `Asset request ${request.requestNumber} fulfilled`,
+      body: `Your asset request ${request.requestNumber} has been approved by IT and fulfilled.`,
+      metadata: { assetRequestId: id, inventoryItemId: inventoryItem._id },
+    },
+    userId
+  );
+
   return updatedRequest;
 };
 
@@ -271,6 +311,18 @@ const rejectRequest = async (
     userAgent: context.userAgent || "",
   });
 
+  await notificationService.notifyUserByEmail(
+    {
+      spaceId: context.spaceId || null,
+      recipientUserId: request.employeeId,
+      type: NOTIFICATION_TYPES.ASSET_REQUEST_REJECTED,
+      subject: `Asset request ${request.requestNumber} rejected`,
+      body: `Your asset request ${request.requestNumber} was rejected. Reason: ${payload.rejectionReason}.`,
+      metadata: { assetRequestId: id },
+    },
+    userId
+  );
+
   return updatedRequest;
 };
 
@@ -310,6 +362,18 @@ const cancelRequest = async (
     ipAddress: context.ipAddress || "",
     userAgent: context.userAgent || "",
   });
+
+  await notificationService.notifyUserByEmail(
+    {
+      spaceId: context.spaceId || null,
+      recipientUserId: request.employeeId,
+      type: NOTIFICATION_TYPES.ASSET_REQUEST_CANCELLED,
+      subject: `Asset request ${request.requestNumber} cancelled`,
+      body: `Your asset request ${request.requestNumber} has been cancelled.`,
+      metadata: { assetRequestId: id },
+    },
+    userId
+  );
 
   return updatedRequest;
 };

@@ -9,6 +9,7 @@ const inventoryTransactionService = require(
   "./inventoryTransaction"
 );
 const auditLogService = require("./auditLog");
+const notificationService = require("./notification");
 
 const {
   REPAIR_STATUS,
@@ -23,6 +24,9 @@ const {
   AUDIT_ACTIONS,
   AUDIT_ENTITY_TYPES,
 } = require("../constants/auditLog");
+const {
+  NOTIFICATION_TYPES,
+} = require("../constants/notification");
 
 const {
   OPEN_REPAIR_STATUSES,
@@ -129,6 +133,18 @@ const createRepair = async (
     userAgent: context.userAgent || "",
   });
 
+  await notificationService.notifyUserByEmail(
+    {
+      spaceId: context.spaceId || null,
+      recipientUserId: repair.reportedBy,
+      type: NOTIFICATION_TYPES.REPAIR_CREATED,
+      subject: "Repair request " + repair.repairNumber + " created",
+      body: "Repair request " + repair.repairNumber + " has been created for your asset.",
+      metadata: { repairId: repair._id, inventoryItemId: inventoryItem._id },
+    },
+    userId
+  );
+
   return updatedRepair;
 };
 
@@ -186,6 +202,18 @@ const updateRepair = async (
     ipAddress: context.ipAddress || "",
     userAgent: context.userAgent || "",
   });
+
+  await notificationService.notifyUserByEmail(
+    {
+      spaceId: context.spaceId || null,
+      recipientUserId: repair.reportedBy._id || repair.reportedBy,
+      type: NOTIFICATION_TYPES.REPAIR_UPDATED,
+      subject: "Repair request " + repair.repairNumber + " updated",
+      body: "Repair request " + repair.repairNumber + " has been updated.",
+      metadata: { repairId: id },
+    },
+    userId
+  );
 
   return updatedRepair;
 };
@@ -246,6 +274,18 @@ const completeRepair = async (
     userAgent: context.userAgent || "",
   });
 
+  await notificationService.notifyUserByEmail(
+    {
+      spaceId: context.spaceId || null,
+      recipientUserId: repair.reportedBy._id || repair.reportedBy,
+      type: NOTIFICATION_TYPES.REPAIR_COMPLETED,
+      subject: "Repair request " + repair.repairNumber + " completed",
+      body: "Repair request " + repair.repairNumber + " has been completed with outcome " + payload.outcome + ".",
+      metadata: { repairId: id, outcome: payload.outcome },
+    },
+    userId
+  );
+
   return completedRepair;
 };
 
@@ -296,6 +336,18 @@ const cancelRepair = async (
     ipAddress: context.ipAddress || "",
     userAgent: context.userAgent || "",
   });
+
+  await notificationService.notifyUserByEmail(
+    {
+      spaceId: context.spaceId || null,
+      recipientUserId: repair.reportedBy._id || repair.reportedBy,
+      type: NOTIFICATION_TYPES.REPAIR_CANCELLED,
+      subject: "Repair request " + repair.repairNumber + " cancelled",
+      body: "Repair request " + repair.repairNumber + " has been cancelled.",
+      metadata: { repairId: id },
+    },
+    userId
+  );
 
   return cancelledRepair;
 };

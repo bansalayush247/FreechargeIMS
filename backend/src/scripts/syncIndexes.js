@@ -17,6 +17,7 @@ require("../models/warehouse");
 require("../models/inventory");
 require("../models/assetRequest");
 require("../models/repair");
+require("../models/notification");
 require("../models/auditLog");
 require("../models/inventoryTransaction");
 
