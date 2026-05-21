@@ -8,17 +8,17 @@ const mongoose = require("mongoose");
 
 const logger = require("../config/logger");
 
-require("../models/space.model");
-require("../models/role.model");
-require("../models/userRole.model");
-require("../models/spaceMember.model");
-require("../models/product.model");
-require("../models/warehouse.model");
-require("../models/inventory.model");
-require("../models/assetRequest.model");
-require("../models/repair.model");
-require("../models/auditLog.model");
-require("../models/inventoryTransaction.model");
+require("../models/space");
+require("../models/role");
+require("../models/userRole");
+require("../models/spaceMember");
+require("../models/product");
+require("../models/warehouse");
+require("../models/inventory");
+require("../models/assetRequest");
+require("../models/repair");
+require("../models/auditLog");
+require("../models/inventoryTransaction");
 
 const syncIndexes = async () => {
   try {
@@ -48,3 +48,5 @@ const syncIndexes = async () => {
 };
 
 syncIndexes();
+
+

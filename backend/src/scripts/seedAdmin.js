@@ -6,17 +6,17 @@ require("dotenv").config({
 
 const mongoose = require("mongoose");
 
-const User = require("../models/user.model");
-const Space = require("../models/space.model");
-const Role = require("../models/role.model");
-const SpaceMember = require("../models/spaceMember.model");
-const UserRole = require("../models/userRole.model");
+const User = require("../models/user");
+const Space = require("../models/space");
+const Role = require("../models/role");
+const SpaceMember = require("../models/spaceMember");
+const UserRole = require("../models/userRole");
 
-const { USER_TYPES } = require("../constants/user.constant");
-const { ROLE_CODES } = require("../constants/role.constant");
+const { USER_TYPES } = require("../constants/user");
+const { ROLE_CODES } = require("../constants/role");
 const {
   PERMISSIONS,
-} = require("../constants/permission.constant");
+} = require("../constants/permission");
 
 const logger = require("../config/logger");
 
@@ -246,3 +246,5 @@ const seedAdmin = async () => {
 };
 
 seedAdmin();
+
+

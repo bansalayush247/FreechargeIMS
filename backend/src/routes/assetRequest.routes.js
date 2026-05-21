@@ -3,25 +3,27 @@ const express = require("express");
 const router = express.Router();
 
 const assetRequestController = require(
-  "../controllers/assetRequest.controller"
+  "../controllers/assetRequest"
 );
 
 const authMiddleware = require(
-  "../middleware/auth.middleware"
+  "../middleware/auth"
 );
 
 const authorize = require(
-  "../middleware/authorize.middleware"
+  "../middleware/authorize"
 );
 
 const {
   ASSET_REQUEST_PERMISSIONS,
 } = require(
-  "../constants/assetRequest.constant"
+  "../constants/assetRequest"
 );
 
+const ROUTES = require("../constants/routes");
+
 router.post(
-  "/",
+  ROUTES.ASSET_REQUEST_ROUTES.CREATE,
   authMiddleware,
   authorize(
     ASSET_REQUEST_PERMISSIONS.CREATE_ASSET_REQUEST
@@ -30,7 +32,7 @@ router.post(
 );
 
 router.get(
-  "/",
+  ROUTES.ASSET_REQUEST_ROUTES.LIST,
   authMiddleware,
   authorize(
     ASSET_REQUEST_PERMISSIONS.VIEW_ASSET_REQUEST
@@ -39,7 +41,7 @@ router.get(
 );
 
 router.get(
-  "/:id",
+  ROUTES.ASSET_REQUEST_ROUTES.GET_BY_ID,
   authMiddleware,
   authorize(
     ASSET_REQUEST_PERMISSIONS.VIEW_ASSET_REQUEST
@@ -48,7 +50,7 @@ router.get(
 );
 
 router.patch(
-  "/:id/manager-approve",
+  ROUTES.ASSET_REQUEST_ROUTES.MANAGER_APPROVE,
   authMiddleware,
   authorize(
     ASSET_REQUEST_PERMISSIONS.MANAGER_APPROVE_ASSET_REQUEST
@@ -57,7 +59,7 @@ router.patch(
 );
 
 router.patch(
-  "/:id/it-approve",
+  ROUTES.ASSET_REQUEST_ROUTES.IT_APPROVE,
   authMiddleware,
   authorize(
     ASSET_REQUEST_PERMISSIONS.IT_APPROVE_ASSET_REQUEST
@@ -66,7 +68,7 @@ router.patch(
 );
 
 router.patch(
-  "/:id/reject",
+  ROUTES.ASSET_REQUEST_ROUTES.REJECT,
   authMiddleware,
   authorize(
     ASSET_REQUEST_PERMISSIONS.REJECT_ASSET_REQUEST
@@ -75,7 +77,7 @@ router.patch(
 );
 
 router.patch(
-  "/:id/cancel",
+  ROUTES.ASSET_REQUEST_ROUTES.CANCEL,
   authMiddleware,
   authorize(
     ASSET_REQUEST_PERMISSIONS.CANCEL_ASSET_REQUEST

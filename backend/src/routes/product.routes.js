@@ -2,22 +2,24 @@ const express = require("express");
 
 const router = express.Router();
 
-const productController = require("../controllers/product.controller");
+const productController = require("../controllers/product");
 
-const authMiddleware = require("../middleware/auth.middleware");
+const authMiddleware = require("../middleware/auth");
 
-const validateSpaceId = require("../middleware/validateSpaceId.middleware");
+const validateSpaceId = require("../middleware/validateSpaceId");
 
-const validate = require("../middleware/validate.middleware");
+const validate = require("../middleware/validate");
 
-const { createProductSchema, updateProductSchema } = require("../validators/product.validation");
+const { createProductSchema, updateProductSchema } = require("../validators/product");
 
-router.post("/", authMiddleware, validateSpaceId, validate(createProductSchema), productController.createProduct);
+const ROUTES = require("../constants/routes");
 
-router.get("/", authMiddleware, validateSpaceId, productController.getProducts);
+router.post(ROUTES.PRODUCTS.CREATE, authMiddleware, validateSpaceId, validate(createProductSchema), productController.createProduct);
 
-router.patch("/:id", authMiddleware, validate(updateProductSchema), productController.updateProduct);
+router.get(ROUTES.PRODUCTS.LIST, authMiddleware, validateSpaceId, productController.getProducts);
 
-router.delete("/:id", authMiddleware, productController.deleteProduct);
+router.patch(ROUTES.PRODUCTS.UPDATE, authMiddleware, validate(updateProductSchema), productController.updateProduct);
+
+router.delete(ROUTES.PRODUCTS.DELETE, authMiddleware, productController.deleteProduct);
 
 module.exports = router;

@@ -3,30 +3,32 @@ const express = require("express");
 const router = express.Router();
 
 const warehouseController = require(
-  "../controllers/warehouse.controller"
+  "../controllers/warehouse"
 );
 
 const authMiddleware = require(
-  "../middleware/auth.middleware"
+  "../middleware/auth"
 );
 
 const validateSpaceId = require(
-  "../middleware/validateSpaceId.middleware"
+  "../middleware/validateSpaceId"
 );
 
 const validate = require(
-  "../middleware/validate.middleware"
+  "../middleware/validate"
 );
 
 const {
   createWarehouseSchema,
   updateWarehouseSchema,
 } = require(
-  "../validators/warehouse.validation"
+  "../validators/warehouse"
 );
 
+const ROUTES = require("../constants/routes");
+
 router.post(
-  "/",
+  ROUTES.WAREHOUSE.CREATE,
   authMiddleware,
   validateSpaceId,
   validate(createWarehouseSchema),
@@ -34,21 +36,21 @@ router.post(
 );
 
 router.get(
-  "/",
+  ROUTES.WAREHOUSE.LIST,
   authMiddleware,
   validateSpaceId,
   warehouseController.getWarehouses
 );
 
 router.patch(
-  "/:id",
+  ROUTES.WAREHOUSE.UPDATE,
   authMiddleware,
   validate(updateWarehouseSchema),
   warehouseController.updateWarehouse
 );
 
 router.delete(
-  "/:id",
+  ROUTES.WAREHOUSE.DELETE,
   authMiddleware,
   warehouseController.deleteWarehouse
 );

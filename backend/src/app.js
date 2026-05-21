@@ -5,8 +5,9 @@ const morgan = require("morgan");
 
 const routes = require("./routes");
 
-const errorMiddleware = require("./middleware/error.middleware");
-const notFoundMiddleware = require("./middleware/notFound.middleware");
+const errorMiddleware = require("./middleware/error");
+const notFoundMiddleware = require("./middleware/notFound");
+const responseLogger = require("./middleware/responseLogger");
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(cors());
 app.use(helmet());
 
 app.use(morgan("dev"));
+app.use(responseLogger);
 
 app.get("/health", (req, res) => {
   res.status(200).json({

@@ -1,11 +1,11 @@
 const {
   REPAIR_STATUS,
   REPAIR_OUTCOME,
-} = require("../../constants/repair.constant");
+} = require("../../constants/repair");
 
 const {
   INVENTORY_STATUS,
-} = require("../../constants/inventory.constant");
+} = require("../../constants/inventory");
 
 const OPEN_REPAIR_STATUSES = [
   REPAIR_STATUS.OPEN,
@@ -121,3 +121,5 @@ module.exports = {
   canCancelRepair,
   getTransactionTypeForOutcome,
 };
+
+

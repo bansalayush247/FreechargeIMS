@@ -2,22 +2,17 @@ const express = require("express");
 
 const router = express.Router();
 
-const spaceMemberController = require(
-  "../controllers/spaceMember.controller"
-);
+const spaceMemberController = require("../controllers/spaceMember");
 
-const authMiddleware = require("../middleware/auth.middleware");
-const authorize = require("../middleware/authorize.middleware");
-const validateSpaceId = require(
-  "../middleware/validateSpaceId.middleware"
-);
+const authMiddleware = require("../middleware/auth");
+const authorize = require("../middleware/authorize");
+const validateSpaceId = require("../middleware/validateSpaceId");
 
-const {
-  PERMISSIONS,
-} = require("../constants/permission.constant");
+const {PERMISSIONS,} = require("../constants/permission");
+const ROUTES = require("../constants/routes");
 
 router.get(
-  "/user-roles",
+  ROUTES.SPACE_MEMBER_ROUTES.USER_ROLES,
   authMiddleware,
   validateSpaceId,
   authorize(PERMISSIONS.VIEW_ROLE),
@@ -25,15 +20,23 @@ router.get(
 );
 
 router.post(
-  "/user-roles",
+  ROUTES.SPACE_MEMBER_ROUTES.ASSIGN_ROLE,
   authMiddleware,
   validateSpaceId,
   authorize(PERMISSIONS.ASSIGN_ROLE),
   spaceMemberController.assignRole
 );
 
+router.patch(
+  ROUTES.SPACE_MEMBER_ROUTES.REPLACE_ROLE,
+  authMiddleware,
+  validateSpaceId,
+  authorize(PERMISSIONS.ASSIGN_ROLE),
+  spaceMemberController.replaceRole
+);
+
 router.delete(
-  "/user-roles/:id",
+  ROUTES.SPACE_MEMBER_ROUTES.REMOVE_ROLE,
   authMiddleware,
   validateSpaceId,
   authorize(PERMISSIONS.ASSIGN_ROLE),
@@ -41,7 +44,7 @@ router.delete(
 );
 
 router.post(
-  "/",
+  ROUTES.SPACE_MEMBER_ROUTES.CREATE,
   authMiddleware,
   validateSpaceId,
   authorize(PERMISSIONS.UPDATE_SPACE),
@@ -49,7 +52,7 @@ router.post(
 );
 
 router.get(
-  "/",
+  ROUTES.SPACE_MEMBER_ROUTES.LIST,
   authMiddleware,
   validateSpaceId,
   authorize(PERMISSIONS.VIEW_SPACE),
@@ -57,7 +60,7 @@ router.get(
 );
 
 router.patch(
-  "/:id",
+  ROUTES.SPACE_MEMBER_ROUTES.UPDATE,
   authMiddleware,
   validateSpaceId,
   authorize(PERMISSIONS.UPDATE_SPACE),
@@ -65,7 +68,7 @@ router.patch(
 );
 
 router.delete(
-  "/:id",
+  ROUTES.SPACE_MEMBER_ROUTES.DELETE,
   authMiddleware,
   validateSpaceId,
   authorize(PERMISSIONS.UPDATE_SPACE),

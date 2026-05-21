@@ -3,21 +3,23 @@ const express = require("express");
 const router = express.Router();
 
 const roleController = require(
-  "../controllers/role.controller"
+  "../controllers/role"
 );
 
-const authMiddleware = require("../middleware/auth.middleware");
-const authorize = require("../middleware/authorize.middleware");
+const authMiddleware = require("../middleware/auth");
+const authorize = require("../middleware/authorize");
 const validateSpaceId = require(
-  "../middleware/validateSpaceId.middleware"
+  "../middleware/validateSpaceId"
 );
 
 const {
   PERMISSIONS,
-} = require("../constants/permission.constant");
+} = require("../constants/permission");
+
+const ROUTES = require("../constants/routes");
 
 router.post(
-  "/",
+  ROUTES.ROLES.CREATE,
   authMiddleware,
   validateSpaceId,
   authorize(PERMISSIONS.CREATE_ROLE),
@@ -25,7 +27,7 @@ router.post(
 );
 
 router.get(
-  "/",
+  ROUTES.ROLES.LIST,
   authMiddleware,
   validateSpaceId,
   authorize(PERMISSIONS.VIEW_ROLE),
@@ -33,7 +35,7 @@ router.get(
 );
 
 router.get(
-  "/:id",
+  ROUTES.ROLES.GET_BY_ID,
   authMiddleware,
   validateSpaceId,
   authorize(PERMISSIONS.VIEW_ROLE),
@@ -41,7 +43,7 @@ router.get(
 );
 
 router.patch(
-  "/:id",
+  ROUTES.ROLES.UPDATE,
   authMiddleware,
   validateSpaceId,
   authorize(PERMISSIONS.UPDATE_ROLE),
@@ -49,7 +51,7 @@ router.patch(
 );
 
 router.delete(
-  "/:id",
+  ROUTES.ROLES.DELETE,
   authMiddleware,
   validateSpaceId,
   authorize(PERMISSIONS.DELETE_ROLE),
