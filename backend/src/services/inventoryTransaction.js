@@ -11,10 +11,12 @@ const User = require("../models/user");
 
 const {
   INVENTORY_STATUS,
+  normalizeInventoryStatus,
 } = require("../constants/inventory");
 
 const {
   INVENTORY_TRANSACTION_TYPES,
+  normalizeInventoryTransactionType,
 } = require("../constants/inventoryTransaction");
 const {
   AUDIT_ACTIONS,
@@ -65,35 +67,47 @@ const createTransaction = async (
       }
     }
     
-    const previousStatus = inventoryItem.status;
-    const beforeInventoryItem = inventoryItem.toObject();
-    let newStatus = inventoryItem.status;
+    const transactionType = normalizeInventoryTransactionType(
+      payload.transactionType
+    );
+    payload.transactionType = transactionType;
 
-    switch (payload.transactionType) {
-      case INVENTORY_TRANSACTION_TYPES.ASSIGNED:
+    const previousStatus = normalizeInventoryStatus(
+      inventoryItem.status
+    );
+    const beforeInventoryItem = inventoryItem.toObject();
+    let newStatus = previousStatus;
+
+    switch (transactionType) {
+      case INVENTORY_TRANSACTION_TYPES.STOCK_IN:
+        inventoryItem.status = INVENTORY_STATUS.IN_STOCK;
+        newStatus = INVENTORY_STATUS.IN_STOCK;
+        break;
+
+      case INVENTORY_TRANSACTION_TYPES.ASSIGN:
         inventoryItem.status = INVENTORY_STATUS.ASSIGNED;
         inventoryItem.assignedUserId = payload.toUserId;
         newStatus = INVENTORY_STATUS.ASSIGNED;
         break;
 
-      case INVENTORY_TRANSACTION_TYPES.RETURNED:
-        inventoryItem.status = INVENTORY_STATUS.AVAILABLE;
+      case INVENTORY_TRANSACTION_TYPES.RETURN:
+        inventoryItem.status = INVENTORY_STATUS.IN_STOCK;
         inventoryItem.assignedUserId = null;
-        newStatus = INVENTORY_STATUS.AVAILABLE;
+        newStatus = INVENTORY_STATUS.IN_STOCK;
         break;
 
-      case INVENTORY_TRANSACTION_TYPES.TRANSFERRED:
+      case INVENTORY_TRANSACTION_TYPES.TRANSFER:
         inventoryItem.warehouseId = payload.toWarehouseId;
         break;
 
-      case INVENTORY_TRANSACTION_TYPES.REPAIR_SENT:
-        inventoryItem.status = INVENTORY_STATUS.IN_REPAIR;
-        newStatus = INVENTORY_STATUS.IN_REPAIR;
-        break;
-
-      case INVENTORY_TRANSACTION_TYPES.REPAIR_COMPLETED:
-        inventoryItem.status = INVENTORY_STATUS.AVAILABLE;
-        newStatus = INVENTORY_STATUS.AVAILABLE;
+      case INVENTORY_TRANSACTION_TYPES.REPAIR:
+        if (previousStatus === INVENTORY_STATUS.REPAIR) {
+          inventoryItem.status = INVENTORY_STATUS.IN_STOCK;
+          newStatus = INVENTORY_STATUS.IN_STOCK;
+        } else {
+          inventoryItem.status = INVENTORY_STATUS.REPAIR;
+          newStatus = INVENTORY_STATUS.REPAIR;
+        }
         break;
 
       case INVENTORY_TRANSACTION_TYPES.LOST:
@@ -106,9 +120,9 @@ const createTransaction = async (
         newStatus = INVENTORY_STATUS.DAMAGED;
         break;
 
-      case INVENTORY_TRANSACTION_TYPES.RETIRED:
-        inventoryItem.status = INVENTORY_STATUS.RETIRED;
-        newStatus = INVENTORY_STATUS.RETIRED;
+      case INVENTORY_TRANSACTION_TYPES.DISPOSE:
+        inventoryItem.status = INVENTORY_STATUS.DISPOSED;
+        newStatus = INVENTORY_STATUS.DISPOSED;
         break;
 
       default:
@@ -136,7 +150,7 @@ const createTransaction = async (
 
           toUserId: payload.toUserId || null,
 
-          transactionType: payload.transactionType,
+          transactionType,
 
           remarks: payload.remarks,
 
@@ -164,7 +178,7 @@ const createTransaction = async (
           inventoryItem: inventoryItem.toObject(),
         },
         metadata: {
-          transactionType: payload.transactionType,
+          transactionType,
           inventoryItemId: inventoryItem._id,
         },
         ipAddress: context.ipAddress || "",

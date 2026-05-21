@@ -2,10 +2,12 @@ const InventoryItem = require("../models/inventory");
 
 const {
   INVENTORY_STATUS,
+  normalizeInventoryStatus,
 } = require("../constants/inventory");
 
 const {
   INVENTORY_TRANSACTION_TYPES,
+  normalizeInventoryTransactionType,
 } = require("../constants/inventoryTransaction");
 
 const AppError = require("../utils/appError");
@@ -38,11 +40,17 @@ const validateInventoryTransaction = async (
       throw new AppError("Inventory item not found", 404);
     }
 
-    switch (transactionType) {
-      case INVENTORY_TRANSACTION_TYPES.ASSIGNED:
+    const normalizedTransactionType =
+      normalizeInventoryTransactionType(transactionType);
+    const currentStatus = normalizeInventoryStatus(
+      inventoryItem.status
+    );
+
+    switch (normalizedTransactionType) {
+      case INVENTORY_TRANSACTION_TYPES.ASSIGN:
         if (
-          inventoryItem.status !==
-          INVENTORY_STATUS.AVAILABLE
+          currentStatus !==
+          INVENTORY_STATUS.IN_STOCK
         ) {
           throw new AppError("Only available inventory can be assigned", 400);
         }
@@ -56,9 +64,9 @@ const validateInventoryTransaction = async (
 
         break;
 
-      case INVENTORY_TRANSACTION_TYPES.RETURNED:
+      case INVENTORY_TRANSACTION_TYPES.RETURN:
         if (
-          inventoryItem.status !==
+          currentStatus !==
           INVENTORY_STATUS.ASSIGNED
         ) {
           throw new AppError(
@@ -69,7 +77,7 @@ const validateInventoryTransaction = async (
 
         break;
 
-      case INVENTORY_TRANSACTION_TYPES.TRANSFERRED:
+      case INVENTORY_TRANSACTION_TYPES.TRANSFER:
         if (!toWarehouseId) {
           throw new AppError(
             "toWarehouseId is required for transfer",
@@ -89,51 +97,39 @@ const validateInventoryTransaction = async (
 
         break;
 
-      case INVENTORY_TRANSACTION_TYPES.REPAIR_SENT:
+      case INVENTORY_TRANSACTION_TYPES.REPAIR:
         if (
-          inventoryItem.status ===
-          INVENTORY_STATUS.RETIRED
+          currentStatus ===
+          INVENTORY_STATUS.DISPOSED
         ) {
           throw new AppError(
-            "Retired inventory cannot be repaired",
+            "Disposed inventory cannot be repaired",
             400
           );
         }
 
         break;
 
-      case INVENTORY_TRANSACTION_TYPES.REPAIR_COMPLETED:
-        if (
-          inventoryItem.status !==
-          INVENTORY_STATUS.IN_REPAIR
-        ) {
-          throw new AppError(
-            "Inventory is not under repair",
-            400
-          );
-        }
-
-        break;
 
       case INVENTORY_TRANSACTION_TYPES.LOST:
         if (
-          inventoryItem.status ===
-          INVENTORY_STATUS.RETIRED
+          currentStatus ===
+          INVENTORY_STATUS.DISPOSED
         ) {
           throw new AppError(
-            "Retired inventory cannot be marked lost",
+            "Disposed inventory cannot be marked lost",
             400
           );
         }
 
         break;
 
-      case INVENTORY_TRANSACTION_TYPES.RETIRED:
+      case INVENTORY_TRANSACTION_TYPES.DISPOSE:
         if (
-          inventoryItem.status ===
-          INVENTORY_STATUS.RETIRED
+          currentStatus ===
+          INVENTORY_STATUS.DISPOSED
         ) {
-          throw new AppError("Inventory already retired", 400);
+          throw new AppError("Inventory already disposed", 400);
         }
 
         break;

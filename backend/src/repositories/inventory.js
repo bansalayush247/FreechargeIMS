@@ -1,4 +1,7 @@
 const InventoryItem = require("../models/inventory");
+const {
+  getInventoryStatusQueryValues,
+} = require("../constants/inventory");
 
 // Handles create.
 const create = async (payload) => {
@@ -48,7 +51,9 @@ const paginate = async ({
   };
 
   if (status) {
-    query.status = status;
+    query.status = {
+      $in: getInventoryStatusQueryValues(status),
+    };
   }
 
   if (warehouseId) {

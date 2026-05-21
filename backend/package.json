@@ -7,7 +7,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "seed:admin": "node src/scripts/seedAdmin.js",
-    "sync:indexes": "node src/scripts/syncIndexes.js"
+    "sync:indexes": "node src/scripts/syncIndexes.js",
+    "migrate:lifecycle": "node src/scripts/migrateLifecycle.js"
   },
   "keywords": [],
   "author": "",

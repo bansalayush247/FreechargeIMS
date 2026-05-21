@@ -1,7 +1,8 @@
 const Joi = require("joi");
 
 const {
-  INVENTORY_STATUS,
+  INVENTORY_STATUS_VALUES,
+  normalizeInventoryStatus,
   INVENTORY_CONDITION,
 } = require("../constants/inventory");
 
@@ -21,7 +22,8 @@ const createInventoryItemSchema = Joi.object({
   qrCode: Joi.string().trim().optional().allow(null, ""),
 
   status: Joi.string()
-    .valid(...Object.values(INVENTORY_STATUS))
+    .valid(...INVENTORY_STATUS_VALUES)
+    .custom((value) => normalizeInventoryStatus(value))
     .optional(),
 
   purchaseDate: Joi.date().optional(),
@@ -51,7 +53,8 @@ const updateInventoryItemSchema = Joi.object({
   qrCode: Joi.string().trim().optional().allow(null, ""),
 
   status: Joi.string()
-    .valid(...Object.values(INVENTORY_STATUS))
+    .valid(...INVENTORY_STATUS_VALUES)
+    .custom((value) => normalizeInventoryStatus(value))
     .optional(),
 
   purchaseDate: Joi.date().optional(),
@@ -71,7 +74,8 @@ const getInventoryItemsSchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(10),
 
   status: Joi.string()
-    .valid(...Object.values(INVENTORY_STATUS))
+    .valid(...INVENTORY_STATUS_VALUES)
+    .custom((value) => normalizeInventoryStatus(value))
     .optional(),
 
   warehouseId: Joi.string().hex().length(24).optional(),

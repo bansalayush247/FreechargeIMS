@@ -1,4 +1,7 @@
 const InventoryTransaction = require("../models/inventoryTransaction");
+const {
+  getInventoryTransactionTypeQueryValues,
+} = require("../constants/inventoryTransaction");
 
 // Handles create.
 const create = async (payload, session) => {
@@ -45,7 +48,9 @@ const paginate = async (filters) => {
   }
 
   if (transactionType) {
-    query.transactionType = transactionType;
+    query.transactionType = {
+      $in: getInventoryTransactionTypeQueryValues(transactionType),
+    };
   }
 
   if (performedBy) {

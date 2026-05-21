@@ -5,6 +5,7 @@ const {
 
 const {
   INVENTORY_STATUS,
+  normalizeInventoryStatus,
 } = require("../../constants/inventory");
 
 const OPEN_REPAIR_STATUSES = [
@@ -15,7 +16,7 @@ const OPEN_REPAIR_STATUSES = [
 
 const NON_REPAIRABLE_INVENTORY_STATUSES = [
   INVENTORY_STATUS.LOST,
-  INVENTORY_STATUS.RETIRED,
+  INVENTORY_STATUS.DISPOSED,
 ];
 
 // Handles can create repair.
@@ -29,7 +30,7 @@ const canCreateRepair = (inventoryItem, activeRepair) => {
 
   if (
     NON_REPAIRABLE_INVENTORY_STATUSES.includes(
-      inventoryItem.status
+      normalizeInventoryStatus(inventoryItem.status)
     )
   ) {
     return {
@@ -107,11 +108,11 @@ const getTransactionTypeForOutcome = (
   transactionTypes
 ) => {
   if (outcome === REPAIR_OUTCOME.FIXED) {
-    return transactionTypes.REPAIR_COMPLETED;
+    return transactionTypes.REPAIR;
   }
 
   if (outcome === REPAIR_OUTCOME.DISPOSED) {
-    return transactionTypes.RETIRED;
+    return transactionTypes.DISPOSE;
   }
 
   return transactionTypes.DAMAGED;

@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const {
   INVENTORY_STATUS,
+  INVENTORY_STATUS_VALUES,
   INVENTORY_CONDITION,
 } = require("../constants/inventory");
 
@@ -51,8 +52,8 @@ const inventorySchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: Object.values(INVENTORY_STATUS),
-      default: INVENTORY_STATUS.AVAILABLE,
+      enum: INVENTORY_STATUS_VALUES,
+      default: INVENTORY_STATUS.IN_STOCK,
     },
 
     purchaseDate: {

@@ -18,6 +18,7 @@ const {
 
 const {
   INVENTORY_STATUS,
+  getInventoryStatusQueryValues,
 } = require("../constants/inventory");
 
 const {
@@ -199,7 +200,11 @@ const itApproveRequest = async (
   const inventoryItem =
     await InventoryItem.findOne({
       productId: request.productId,
-      status: INVENTORY_STATUS.AVAILABLE,
+      status: {
+        $in: getInventoryStatusQueryValues(
+          INVENTORY_STATUS.IN_STOCK
+        ),
+      },
       isDeleted: false,
     });
 

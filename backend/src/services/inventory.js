@@ -10,6 +10,9 @@ const {PRODUCT_ASSET_TYPES,} = require("../constants/product");
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
 const {
+  normalizeInventoryStatus,
+} = require("../constants/inventory");
+const {
   AUDIT_ACTIONS,
   AUDIT_ENTITY_TYPES,
 } = require("../constants/auditLog");
@@ -217,6 +220,10 @@ const createInventoryItem = async (
       "quantity must be 1 for non-consumable products",
       400
     );
+  }
+
+  if (payload.status) {
+    payload.status = normalizeInventoryStatus(payload.status);
   }
 
   const inventoryItem = await inventoryRepository.create({
