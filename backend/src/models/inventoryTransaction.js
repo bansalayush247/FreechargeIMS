@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const {
-  INVENTORY_TRANSACTION_TYPES,
+  INVENTORY_TRANSACTION_TYPE_VALUES,
 } = require("../constants/inventoryTransaction");
 
 const inventoryTransactionSchema = new mongoose.Schema(
@@ -44,7 +44,7 @@ const inventoryTransactionSchema = new mongoose.Schema(
 
     transactionType: {
       type: String,
-      enum: Object.values(INVENTORY_TRANSACTION_TYPES),
+      enum: INVENTORY_TRANSACTION_TYPE_VALUES,
       required: true,
     },
 

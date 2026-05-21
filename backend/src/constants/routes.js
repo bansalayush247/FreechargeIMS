@@ -17,6 +17,7 @@ const ROUTES = {
   ASSET_REQUESTS: "/asset-requests",
   REPAIRS: "/repairs",
   NOTIFICATIONS: "/notifications",
+  WORKFLOWS: "/workflows",
   AUDIT_LOGS: "/audit-logs",
   LOGS: "/logs",
 
@@ -114,7 +115,23 @@ const ROUTES = {
     CANCEL: "/:id/cancel",
   },
 
-  // Sub-routes - Notifications`r`n  NOTIFICATION_ROUTES: {`r`n    SEND_EMAIL: "/email",`r`n    LIST: "/",`r`n    GET_BY_ID: "/:id",`r`n  },`r`n`r`n  // Sub-routes - Audit Logs
+  // Sub-routes - Workflows
+  WORKFLOW_ROUTES: {
+    DEFINITIONS: "/definitions",
+    DEFINITION_BY_ID: "/definitions/:id",
+    INSTANCES: "/instances",
+    INSTANCE_BY_ID: "/instances/:id",
+    INSTANCE_TRANSITION: "/instances/:id/transition",
+  },
+
+  // Sub-routes - Notifications
+  NOTIFICATION_ROUTES: {
+    SEND_EMAIL: "/email",
+    LIST: "/",
+    GET_BY_ID: "/:id",
+  },
+
+  // Sub-routes - Audit Logs
   AUDIT_LOG_ROUTES: {
     LIST: "/",
     GET_BY_ID: "/:id",
