@@ -12,35 +12,34 @@ const {
 
 const { HTTP_STATUS } = require("../constants/http");
 const { PERMISSIONS } = require("../constants/permission");
+const { USER_TYPES } = require("../constants/user");
 
 // System-level permissions that don't require a space ID
-const SYSTEM_LEVEL_PERMISSIONS = [
+const SYSTEM_LEVEL_PERMISSIONS = new Set([
   PERMISSIONS.CREATE_SPACE,
   PERMISSIONS.CREATE_ROLE,
   PERMISSIONS.CREATE_WAREHOUSE,
   PERMISSIONS.CREATE_PRODUCT,
   PERMISSIONS.CREATE_USER,
-];
+]);
 
 // Handles authorize.
 const authorize = (...requiredPermissions) => {
   return async (req, res, next) => {
     try {
       const userId = req.user._id;
-      const { USER_TYPES } = require("../constants/user");
-
       const spaceId = req.headers["x-space-id"];
 
       // Check if all required permissions are system-level
       const isSystemLevelOperation = requiredPermissions.every(
-        (perm) => SYSTEM_LEVEL_PERMISSIONS.includes(perm)
+        (perm) => SYSTEM_LEVEL_PERMISSIONS.has(perm)
       );
 
-      let permissions = [];
+      let permissionSet;
 
       // ADMIN users can perform any authorized operation without role lookup.
       if (req.user.userType === USER_TYPES.ADMIN) {
-        permissions = requiredPermissions;
+        permissionSet = new Set(requiredPermissions);
       } else if (isSystemLevelOperation) {
         logger.warn(`Non-admin user ${userId} attempted system-level operation`);
         throw new AppError("Insufficient permissions", HTTP_STATUS.FORBIDDEN);
@@ -64,12 +63,14 @@ const authorize = (...requiredPermissions) => {
 
         const roles = await findActiveRolesByIds(roleIds);
 
-        permissions = roles.flatMap((role) => role.permissions);
+        permissionSet = new Set(
+          roles.flatMap((role) => role.permissions)
+        );
       }
 
       // Handles has permission.
       const hasPermission = requiredPermissions.every((permission) =>
-        permissions.includes(permission)
+        permissionSet.has(permission)
       );
 
       if (!hasPermission) {
@@ -78,7 +79,7 @@ const authorize = (...requiredPermissions) => {
         throw new AppError("Insufficient permissions", HTTP_STATUS.FORBIDDEN);
       }
 
-      req.permissions = permissions;
+      req.permissions = Array.from(permissionSet);
 
       next();
     } catch (error) {

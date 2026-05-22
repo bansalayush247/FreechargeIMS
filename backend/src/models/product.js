@@ -36,7 +36,6 @@ const productSchema = new mongoose.Schema({
 
 productSchema.index({ spaceId: 1, sku: 1 }, { 
   unique: true, 
-  sparse: true, 
   partialFilterExpression: { isDeleted: false } 
 });
 

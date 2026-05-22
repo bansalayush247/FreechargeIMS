@@ -102,6 +102,31 @@ inventoryTransactionSchema.index({ inventoryItemId: 1 });
 inventoryTransactionSchema.index({ transactionType: 1 });
 inventoryTransactionSchema.index({ performedBy: 1 });
 inventoryTransactionSchema.index({ transactionDate: -1 });
+inventoryTransactionSchema.index({
+  inventoryItemId: 1,
+  isDeleted: 1,
+  transactionDate: 1,
+});
+inventoryTransactionSchema.index({
+  transactionType: 1,
+  isDeleted: 1,
+  transactionDate: -1,
+});
+inventoryTransactionSchema.index({
+  performedBy: 1,
+  isDeleted: 1,
+  transactionDate: -1,
+});
+inventoryTransactionSchema.index({
+  fromWarehouseId: 1,
+  isDeleted: 1,
+  transactionDate: -1,
+});
+inventoryTransactionSchema.index({
+  toWarehouseId: 1,
+  isDeleted: 1,
+  transactionDate: -1,
+});
 
 module.exports = mongoose.model(
   "InventoryTransaction",

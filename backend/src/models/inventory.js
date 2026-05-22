@@ -155,6 +155,22 @@ inventorySchema.index(
 inventorySchema.index({ productId: 1 });
 inventorySchema.index({ warehouseId: 1 });
 inventorySchema.index({ status: 1 });
+inventorySchema.index({ isDeleted: 1, createdAt: -1 });
+inventorySchema.index({
+  warehouseId: 1,
+  isDeleted: 1,
+  createdAt: -1,
+});
+inventorySchema.index({
+  productId: 1,
+  isDeleted: 1,
+  createdAt: -1,
+});
+inventorySchema.index({
+  status: 1,
+  isDeleted: 1,
+  createdAt: -1,
+});
 
 module.exports = mongoose.model("InventoryItem", inventorySchema);
 

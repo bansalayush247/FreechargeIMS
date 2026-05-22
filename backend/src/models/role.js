@@ -92,6 +92,7 @@ roleSchema.index(
 );
 
 roleSchema.index({ spaceId: 1, isActive: 1, isDeleted: 1 });
+roleSchema.index({ spaceId: 1, isDeleted: 1, createdAt: -1 });
 
 const Role = mongoose.model("Role", roleSchema);
 

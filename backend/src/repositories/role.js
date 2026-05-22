@@ -24,9 +24,15 @@ const findBySpaceAndCode = async (spaceId, code) => {
 
 // Handles find active roles by ids.
 const findActiveRolesByIds = async (roleIds) => {
+  const uniqueRoleIds = [...new Set(roleIds.map(String))];
+
+  if (!uniqueRoleIds.length) {
+    return [];
+  }
+
   return Role.find({
     _id: {
-      $in: roleIds,
+      $in: uniqueRoleIds,
     },
     isDeleted: false,
     isActive: true,

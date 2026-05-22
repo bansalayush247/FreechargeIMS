@@ -161,6 +161,24 @@ assetRequestSchema.index(
   }
 );
 
+assetRequestSchema.index({ isDeleted: 1, createdAt: -1 });
+assetRequestSchema.index({
+  employeeId: 1,
+  isDeleted: 1,
+  createdAt: -1,
+});
+assetRequestSchema.index({
+  productId: 1,
+  isDeleted: 1,
+  createdAt: -1,
+});
+assetRequestSchema.index({
+  status: 1,
+  priority: 1,
+  isDeleted: 1,
+  createdAt: -1,
+});
+
 module.exports = mongoose.model(
   "AssetRequest",
   assetRequestSchema
