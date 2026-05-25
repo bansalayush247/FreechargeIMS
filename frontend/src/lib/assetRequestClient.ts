@@ -24,3 +24,31 @@ export async function createAssetRequest(
   const res = await apiClient.post(`/asset-requests`, payload, { headers: spaceId ? { "x-space-id": spaceId } : undefined });
   return res.data;
 }
+
+export async function managerApproveAssetRequest(id: string, payload?: { remarks?: string }, spaceId?: string) {
+  const res = await apiClient.patch(`/asset-requests/${id}/manager-approve`, payload ?? {}, {
+    headers: spaceId ? { "x-space-id": spaceId } : undefined,
+  });
+  return res.data;
+}
+
+export async function itApproveAssetRequest(id: string, payload?: { remarks?: string }, spaceId?: string) {
+  const res = await apiClient.patch(`/asset-requests/${id}/it-approve`, payload ?? {}, {
+    headers: spaceId ? { "x-space-id": spaceId } : undefined,
+  });
+  return res.data;
+}
+
+export async function rejectAssetRequest(id: string, payload: { rejectionReason: string }, spaceId?: string) {
+  const res = await apiClient.patch(`/asset-requests/${id}/reject`, payload, {
+    headers: spaceId ? { "x-space-id": spaceId } : undefined,
+  });
+  return res.data;
+}
+
+export async function cancelAssetRequest(id: string, spaceId?: string) {
+  const res = await apiClient.patch(`/asset-requests/${id}/cancel`, {}, {
+    headers: spaceId ? { "x-space-id": spaceId } : undefined,
+  });
+  return res.data;
+}

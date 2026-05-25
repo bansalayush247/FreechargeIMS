@@ -12,6 +12,15 @@ export type AuthUser = {
   [key: string]: unknown;
 };
 
+export type SignupPayload = {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName?: string;
+  employeeId: string;
+  userType: string;
+};
+
 type LoginResult = {
   token: string;
   user: AuthUser | null;
@@ -23,6 +32,7 @@ type AuthContextValue = {
   isHydrated: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<LoginResult>;
+  signup: (payload: SignupPayload) => Promise<LoginResult>;
   logout: () => void;
 };
 
@@ -124,6 +134,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return nextSession;
   }, []);
 
+  const signup = useCallback(async (payload: SignupPayload) => {
+    const response = await apiClient.post("/auth/signup", payload);
+    const nextSession = extractLoginData(response.data);
+
+    setToken(nextSession.token);
+    setUser(nextSession.user);
+    setApiToken(nextSession.token);
+
+    return nextSession;
+  }, []);
+
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
@@ -137,9 +158,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isHydrated,
       isAuthenticated: Boolean(token),
       login,
+      signup,
       logout,
     }),
-    [isHydrated, login, logout, token, user],
+    [isHydrated, login, logout, signup, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

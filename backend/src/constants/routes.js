@@ -31,6 +31,7 @@ const ENDPOINTS = Object.freeze({
     DELETE: "/:id",
     CREATE_JOIN_REQUEST: "/:id/join-requests",
     LIST_JOIN_REQUESTS: "/:id/join-requests",
+    LIST_MY_JOIN_REQUESTS: "/:id/join-requests/my",
     REVIEW_JOIN_REQUEST: "/:id/join-requests/:requestId/review",
   }),
 

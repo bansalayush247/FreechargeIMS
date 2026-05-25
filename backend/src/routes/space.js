@@ -75,6 +75,13 @@ router.get(
   joinRequestController.getJoinRequests
 );
 
+// Join requests - list for requester
+router.get(
+  ROUTES.SPACES.LIST_MY_JOIN_REQUESTS,
+  authMiddleware,
+  joinRequestController.getMyJoinRequests
+);
+
 // Review (approve/reject) join request - space admins
 router.patch(
   ROUTES.SPACES.REVIEW_JOIN_REQUEST,

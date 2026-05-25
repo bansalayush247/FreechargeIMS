@@ -10,7 +10,12 @@ const findById = async (id) => {
   return AssetRequest.findOne({
     _id: id,
     isDeleted: false,
-  }).lean();
+  })
+    .populate("employeeId", "firstName lastName email employeeId")
+    .populate("productId", "name sku")
+    .populate("managerApprovalBy", "firstName lastName email")
+    .populate("itApprovalBy", "firstName lastName email")
+    .lean();
 };
 
 // Handles update by id.
@@ -64,6 +69,8 @@ const paginate = async (filters) => {
     AssetRequest.find(query)
       .populate("employeeId", "firstName lastName")
       .populate("productId", "name sku")
+      .populate("managerApprovalBy", "firstName lastName email")
+      .populate("itApprovalBy", "firstName lastName email")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
