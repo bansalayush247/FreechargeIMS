@@ -28,6 +28,9 @@ const ENDPOINTS = Object.freeze({
     GET_BY_ID: "/:id",
     UPDATE: "/:id",
     DELETE: "/:id",
+    CREATE_JOIN_REQUEST: "/:id/join-requests",
+    LIST_JOIN_REQUESTS: "/:id/join-requests",
+    REVIEW_JOIN_REQUEST: "/:id/join-requests/:requestId/review",
   }),
 
   ROLES: Object.freeze({

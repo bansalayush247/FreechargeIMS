@@ -6,6 +6,11 @@ const spaceController = require(
   "../controllers/space"
 );
 
+const joinRequestController = require("../controllers/joinRequest");
+
+const authorize = require("../middleware/authorize");
+const { PERMISSIONS } = require("../constants/permission");
+
 const authMiddleware = require("../middleware/auth");
 const requireAdmin = require(
   "../middleware/requireAdmin"
@@ -46,6 +51,29 @@ router.delete(
   authMiddleware,
   requireAdmin,
   spaceController.deleteSpace
+);
+
+// Join requests - create (any authenticated user)
+router.post(
+  ROUTES.SPACES.CREATE_JOIN_REQUEST,
+  authMiddleware,
+  joinRequestController.createJoinRequest
+);
+
+// Join requests - list for space admins
+router.get(
+  ROUTES.SPACES.LIST_JOIN_REQUESTS,
+  authMiddleware,
+  authorize(PERMISSIONS.UPDATE_SPACE),
+  joinRequestController.getJoinRequests
+);
+
+// Review (approve/reject) join request - space admins
+router.patch(
+  ROUTES.SPACES.REVIEW_JOIN_REQUEST,
+  authMiddleware,
+  authorize(PERMISSIONS.UPDATE_SPACE),
+  joinRequestController.reviewJoinRequest
 );
 
 module.exports = router;
