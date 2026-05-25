@@ -11,6 +11,7 @@ import { useConfirm } from "../../../../src/components/confirmProvider";
 import { listInventory } from "../../../../src/lib/inventoryClient";
 import {
   createAssetRequest,
+  forwardAssetRequest,
   itApproveAssetRequest,
   listAssetRequests,
   managerApproveAssetRequest,
@@ -43,6 +44,9 @@ export default function SpaceDetailPage() {
   const [productsError, setProductsError] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+  const [memberSpaces, setMemberSpaces] = useState<any[]>([]);
+  const [memberSpacesLoading, setMemberSpacesLoading] = useState(false);
+  const [memberSpacesError, setMemberSpacesError] = useState<string | null>(null);
   const toast = useToast();
   const confirm = useConfirm();
   const [modalOpen, setModalOpen] = useState(false);
@@ -59,6 +63,10 @@ export default function SpaceDetailPage() {
   const [transitError, setTransitError] = useState<string | null>(null);
   const [transitTransactions, setTransitTransactions] = useState<any[]>([]);
   const [transitInventoryItemId, setTransitInventoryItemId] = useState<string | null>(null);
+  const [forwardOpen, setForwardOpen] = useState(false);
+  const [forwardRequest, setForwardRequest] = useState<any | null>(null);
+  const [forwardTargetSpaceId, setForwardTargetSpaceId] = useState<string>("");
+  const [forwardSubmitting, setForwardSubmitting] = useState(false);
   const availableByProductId = useMemo(() => {
     const map: Record<string, number> = {};
     for (const item of inventory) {
@@ -77,6 +85,7 @@ export default function SpaceDetailPage() {
   const canManagerApprove = isAdminUserType || permissions.includes("MANAGER_APPROVE_ASSET_REQUEST");
   const canItApprove = isAdminUserType || permissions.includes("IT_APPROVE_ASSET_REQUEST");
   const canReject = isAdminUserType || permissions.includes("REJECT_ASSET_REQUEST");
+  const canForwardRequests = isAdminUserType || permissions.includes("FORWARD_ASSET_REQUEST");
 
   useEffect(() => {
     let mounted = true;
@@ -249,6 +258,45 @@ export default function SpaceDetailPage() {
   }, [id]);
 
   useEffect(() => {
+    if (!id || !canForwardRequests) {
+      setMemberSpaces([]);
+      setMemberSpacesError(null);
+      return;
+    }
+
+    let mounted = true;
+
+    async function loadMemberSpaces() {
+      setMemberSpacesLoading(true);
+      setMemberSpacesError(null);
+      try {
+        const endpoint = isAdminUserType ? "/spaces?page=1&limit=200" : "/spaces/mine?page=1&limit=200";
+        const res = await apiClient.get(endpoint);
+        const payload = res.data?.data ?? res.data ?? {};
+        const items = Array.isArray(payload.items) ? payload.items : payload;
+        if (mounted) {
+          setMemberSpaces(Array.isArray(items) ? items : []);
+        }
+      } catch (err: any) {
+        if (mounted) {
+          setMemberSpaces([]);
+          setMemberSpacesError("Failed to load member spaces.");
+        }
+      } finally {
+        if (mounted) {
+          setMemberSpacesLoading(false);
+        }
+      }
+    }
+
+    loadMemberSpaces();
+
+    return () => {
+      mounted = false;
+    };
+  }, [id, canForwardRequests, isAdminUserType]);
+
+  useEffect(() => {
     if (!id || !permissionsLoaded) return;
     loadJoinRequests();
   }, [id, permissionsLoaded, canReviewJoinRequests, currentUserId]);
@@ -405,6 +453,36 @@ export default function SpaceDetailPage() {
     }
   }
 
+  function openForwardModal(request: any) {
+    setForwardRequest(request);
+    setForwardTargetSpaceId("");
+    setForwardOpen(true);
+  }
+
+  async function submitForward() {
+    const requestId = forwardRequest?._id ?? forwardRequest?.id;
+    if (!requestId || !id) return;
+    if (!forwardTargetSpaceId) {
+      toast.show("error", "Select a target space.");
+      return;
+    }
+
+    setForwardSubmitting(true);
+    try {
+      const res = await forwardAssetRequest(requestId, forwardTargetSpaceId, id);
+      toast.show("success", res?.message ?? "Request forwarded");
+      setForwardOpen(false);
+      setForwardRequest(null);
+      setForwardTargetSpaceId("");
+      await loadRequests();
+    } catch (err: any) {
+      const msg = (err?.response?.data?.message as string) ?? err?.message ?? "Could not forward request";
+      toast.show("error", msg);
+    } finally {
+      setForwardSubmitting(false);
+    }
+  }
+
   async function openTransitModal(inventoryItemId: string) {
     if (!id) return;
     setTransitOpen(true);
@@ -427,6 +505,7 @@ export default function SpaceDetailPage() {
 
   const showJoinRequests = canReviewJoinRequests || jrLoading || joinRequests.length > 0;
   const showRequestsSection = canViewAssetRequests || reqLoading || requests.length > 0 || Boolean(reqError);
+  const forwardSpaces = memberSpaces.filter((spaceItem) => String(spaceItem._id ?? spaceItem.id) !== String(id));
 
   return (
     <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/20 backdrop-blur-lg sm:p-8">
@@ -495,14 +574,40 @@ export default function SpaceDetailPage() {
             ) : inventory.length === 0 ? (
               <p className="text-sm text-orange-100">No inventory items for this space.</p>
             ) : (
-              <div className="mt-3 grid gap-2">
-                {inventory.map((it) => (
-                  <div key={it._id ?? it.id} className="rounded-md bg-white/3 p-2">
-                    <div className="text-sm text-white">{it.productId?.name ?? it.name ?? it.title}</div>
-                    <div className="text-xs text-orange-200/80">SKU: {it.productId?.sku ?? it.sku ?? it.code ?? "-"}</div>
-                    <div className="text-xs text-orange-200/80">Qty: {it.quantity ?? it.stock ?? 0}</div>
-                  </div>
-                ))}
+              <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {inventory.map((it) => {
+                  const product = it.productId ?? {};
+                  const imageUrl = product.imageUrl ?? it.imageUrl;
+                  const assignedUser = it.assignedUserId;
+                  const warehouse = it.warehouseId;
+
+                  return (
+                    <div key={it._id ?? it.id} className="rounded-xl border border-white/10 bg-white/3 p-4">
+                      <div className="flex gap-3">
+                        <div className="h-16 w-16 overflow-hidden rounded-lg border border-white/10 bg-white/5">
+                          {imageUrl ? (
+                            <img src={imageUrl} alt={product.name ?? "Product"} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-xs text-white/40">No image</div>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-sm text-white">{product.name ?? it.name ?? it.title}</div>
+                          <div className="text-xs text-orange-200/80">SKU: {product.sku ?? it.sku ?? it.code ?? "-"}</div>
+                          <div className="text-xs text-orange-200/80">Qty: {it.quantity ?? it.stock ?? 0}</div>
+                          {it.status && <div className="text-xs text-orange-200/80">Status: {it.status}</div>}
+                          {it.condition && <div className="text-xs text-orange-200/80">Condition: {it.condition}</div>}
+                          {warehouse?.name && (
+                            <div className="text-xs text-orange-200/80">Warehouse: {warehouse.name}</div>
+                          )}
+                          {assignedUser && (
+                            <div className="text-xs text-orange-200/80">Assigned: {formatUserLabel(assignedUser)}</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -608,6 +713,7 @@ export default function SpaceDetailPage() {
                     const showManagerApprove = canManagerApprove && status === "PENDING";
                     const showItApprove = canItApprove && status === "MANAGER_APPROVED";
                     const showReject = canReject && (status === "PENDING" || status === "MANAGER_APPROVED");
+                    const showForward = canForwardRequests && (status === "PENDING" || status === "MANAGER_APPROVED");
 
                     return (
                       <div key={r._id ?? r.id} className="rounded-md border border-white/8 bg-white/3 p-3">
@@ -639,7 +745,7 @@ export default function SpaceDetailPage() {
                             {inventoryItemId && <div className="text-xs text-orange-50/80">Inventory item: {inventoryItemId}</div>}
                             {r.fulfilledAt && <div className="text-xs text-orange-50/80">Fulfilled at: {formatDate(r.fulfilledAt)}</div>}
                           </div>
-                          {(showManagerApprove || showItApprove || showReject || Boolean(inventoryItemId)) && (
+                          {(showManagerApprove || showItApprove || showReject || showForward || Boolean(inventoryItemId)) && (
                             <div className="flex flex-col gap-2">
                               {showManagerApprove && (
                                 <button
@@ -663,6 +769,14 @@ export default function SpaceDetailPage() {
                                   className="rounded-md bg-red-600 px-3 py-1 text-sm text-white"
                                 >
                                   Reject
+                                </button>
+                              )}
+                              {showForward && (
+                                <button
+                                  onClick={() => openForwardModal(r)}
+                                  className="rounded-md bg-purple-600 px-3 py-1 text-sm text-white"
+                                >
+                                  Forward
                                 </button>
                               )}
                               {inventoryItemId && (
@@ -700,6 +814,43 @@ export default function SpaceDetailPage() {
                       {rejectSubmitting ? "Rejecting..." : "Reject"}
                     </button>
                     <button onClick={() => setRejectOpen(false)} className="rounded-md px-3 py-2 text-sm text-white/80 hover:text-white">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </Modal>
+
+              <Modal title="Forward request" open={forwardOpen} onClose={() => setForwardOpen(false)}>
+                <div>
+                  <p className="text-sm text-white">Select a target space you belong to.</p>
+                  {memberSpacesLoading && <p className="mt-2 text-sm text-orange-100">Loading spaces…</p>}
+                  {memberSpacesError && <p className="mt-2 text-sm text-red-300">{memberSpacesError}</p>}
+                  {!memberSpacesLoading && forwardSpaces.length === 0 && (
+                    <p className="mt-2 text-sm text-orange-100">No other member spaces available.</p>
+                  )}
+                  {!memberSpacesLoading && forwardSpaces.length > 0 && (
+                    <select
+                      value={forwardTargetSpaceId}
+                      onChange={(e) => setForwardTargetSpaceId(e.target.value)}
+                      className="mt-3 w-full rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white"
+                    >
+                      <option value="">Select a space</option>
+                      {forwardSpaces.map((spaceItem) => (
+                        <option key={spaceItem._id ?? spaceItem.id} value={spaceItem._id ?? spaceItem.id} className="bg-slate-900">
+                          {spaceItem.name} ({spaceItem.code ?? ""})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={submitForward}
+                      disabled={forwardSubmitting || forwardSpaces.length === 0}
+                      className="rounded-md bg-purple-600 px-3 py-2 text-sm text-white disabled:opacity-50"
+                    >
+                      {forwardSubmitting ? "Forwarding..." : "Forward"}
+                    </button>
+                    <button onClick={() => setForwardOpen(false)} className="rounded-md px-3 py-2 text-sm text-white/80 hover:text-white">
                       Cancel
                     </button>
                   </div>

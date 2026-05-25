@@ -52,3 +52,12 @@ export async function cancelAssetRequest(id: string, spaceId?: string) {
   });
   return res.data;
 }
+
+export async function forwardAssetRequest(id: string, targetSpaceId: string, spaceId?: string) {
+  const res = await apiClient.patch(
+    `/asset-requests/${id}/forward`,
+    { targetSpaceId },
+    { headers: spaceId ? { "x-space-id": spaceId } : undefined }
+  );
+  return res.data;
+}

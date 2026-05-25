@@ -106,6 +106,7 @@ const ENDPOINTS = Object.freeze({
     IT_APPROVE: "/:id/it-approve",
     REJECT: "/:id/reject",
     CANCEL: "/:id/cancel",
+    FORWARD: "/:id/forward",
   }),
   ASSET_REQUEST_ROUTES: Object.freeze({
     CREATE: "/",
@@ -115,6 +116,7 @@ const ENDPOINTS = Object.freeze({
     IT_APPROVE: "/:id/it-approve",
     REJECT: "/:id/reject",
     CANCEL: "/:id/cancel",
+    FORWARD: "/:id/forward",
   }),
 
   REPAIRS: Object.freeze({

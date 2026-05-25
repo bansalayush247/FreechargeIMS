@@ -89,7 +89,7 @@ const paginate = async ({
 
   const [items, total] = await Promise.all([
     InventoryItem.find(query)
-      .populate("productId", "name sku")
+      .populate("productId", "name sku imageUrl")
       .populate("warehouseId", "name code")
       .populate("assignedUserId", "firstName lastName employeeId")
       .sort({ createdAt: -1 })

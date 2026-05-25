@@ -31,6 +31,10 @@ const rejectionSchema = Joi.object({
   rejectionReason: Joi.string().trim().required(),
 });
 
+const forwardSchema = Joi.object({
+  targetSpaceId: Joi.string().hex().length(24).required(),
+});
+
 const getAssetRequestsSchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
 
@@ -43,12 +47,15 @@ const getAssetRequestsSchema = Joi.object({
   status: Joi.string().optional(),
 
   priority: Joi.string().optional(),
+
+  spaceId: Joi.string().hex().length(24).optional(),
 });
 
 module.exports = {
   createAssetRequestSchema,
   approvalSchema,
   rejectionSchema,
+  forwardSchema,
   getAssetRequestsSchema,
 };
 

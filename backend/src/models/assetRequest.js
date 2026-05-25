@@ -7,6 +7,20 @@ const {
 
 const assetRequestSchema = new mongoose.Schema(
   {
+    spaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Space",
+      required: true,
+      index: true,
+    },
+
+    originSpaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Space",
+      required: true,
+      index: true,
+    },
+
     requestNumber: {
       type: String,
       required: true,
@@ -116,6 +130,46 @@ const assetRequestSchema = new mongoose.Schema(
       default: "",
     },
 
+    forwardedFromSpaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Space",
+      default: null,
+    },
+
+    forwardedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    forwardedAt: {
+      type: Date,
+      default: null,
+    },
+
+    forwardedHistory: {
+      type: [
+        {
+          fromSpaceId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Space",
+          },
+          toSpaceId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Space",
+          },
+          forwardedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+          },
+          forwardedAt: {
+            type: Date,
+          },
+        },
+      ],
+      default: [],
+    },
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -162,6 +216,7 @@ assetRequestSchema.index(
 );
 
 assetRequestSchema.index({ isDeleted: 1, createdAt: -1 });
+assetRequestSchema.index({ spaceId: 1, isDeleted: 1, createdAt: -1 });
 assetRequestSchema.index({
   employeeId: 1,
   isDeleted: 1,

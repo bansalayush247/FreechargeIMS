@@ -1,9 +1,13 @@
 const AssetRequest = require("../models/assetRequest");
 const Product = require("../models/product");
 const InventoryItem = require("../models/inventory");
+const Warehouse = require("../models/warehouse");
 
 const assetRequestRepository = require(
   "../repositories/assetRequest"
+);
+const userRoleRepository = require(
+  "../repositories/userRole"
 );
 
 const inventoryTransactionService = require(
@@ -54,6 +58,10 @@ const createAssetRequest = async (
 ) => {
   logger.info("Creating asset request");
 
+  if (!context.spaceId) {
+    throw new AppError("Space ID is required", 400);
+  }
+
   const product = await Product.findOne({
     _id: payload.productId,
     isDeleted: false,
@@ -68,6 +76,8 @@ const createAssetRequest = async (
   const request = await assetRequestRepository.create({
     ...payload,
     requestNumber,
+    spaceId: context.spaceId,
+    originSpaceId: context.spaceId,
     employeeId: userId,
     createdBy: userId,
   });
@@ -132,6 +142,10 @@ const managerApproveRequest = async (
 ) => {
   const request = await getAssetRequestById(id);
 
+  if (context.spaceId && String(request.spaceId) !== String(context.spaceId)) {
+    throw new AppError("Request does not belong to this space", 403);
+  }
+
   if (
     request.status !== ASSET_REQUEST_STATUS.PENDING
   ) {
@@ -190,6 +204,14 @@ const itApproveRequest = async (
 ) => {
   const request = await getAssetRequestById(id);
 
+  if (!context.spaceId) {
+    throw new AppError("Space ID is required", 400);
+  }
+
+  if (String(request.spaceId) !== String(context.spaceId)) {
+    throw new AppError("Request does not belong to this space", 403);
+  }
+
   if (
     request.status !==
     ASSET_REQUEST_STATUS.MANAGER_APPROVED
@@ -197,9 +219,19 @@ const itApproveRequest = async (
     throw new AppError("Manager approval required", 400);
   }
 
+  const warehouses = await Warehouse.find({
+    spaceId: context.spaceId,
+    isDeleted: false,
+  })
+    .select("_id")
+    .lean();
+
+  const warehouseIds = warehouses.map((w) => w._id);
+
   const inventoryItem =
     await InventoryItem.findOne({
       productId: request.productId,
+      warehouseId: { $in: warehouseIds },
       status: {
         $in: getInventoryStatusQueryValues(
           INVENTORY_STATUS.IN_STOCK
@@ -271,6 +303,79 @@ const itApproveRequest = async (
     },
     userId
   );
+
+  return updatedRequest;
+};
+
+// Handles forward request.
+const forwardRequest = async (
+  id,
+  payload,
+  userId,
+  context = {}
+) => {
+  const request = await getAssetRequestById(id);
+  const targetSpaceId = payload.targetSpaceId;
+
+  if (!context.spaceId) {
+    throw new AppError("Space ID is required", 400);
+  }
+
+  if (String(request.spaceId) !== String(context.spaceId)) {
+    throw new AppError("Request does not belong to this space", 403);
+  }
+
+  if (String(targetSpaceId) === String(request.spaceId)) {
+    throw new AppError("Target space must be different", 400);
+  }
+
+  if (context.userType !== "ADMIN") {
+    const roles = await userRoleRepository.findUserRolesByUserAndSpace(
+      userId,
+      targetSpaceId
+    );
+
+    if (!roles.length) {
+      throw new AppError("User must be a member of the target space", 403);
+    }
+  }
+
+  const forwardedAt = new Date();
+  const history = Array.isArray(request.forwardedHistory)
+    ? request.forwardedHistory
+    : [];
+
+  const updatedRequest = await assetRequestRepository.updateById(id, {
+    spaceId: targetSpaceId,
+    forwardedFromSpaceId: request.spaceId,
+    forwardedBy: userId,
+    forwardedAt,
+    forwardedHistory: [
+      ...history,
+      {
+        fromSpaceId: request.spaceId,
+        toSpaceId: targetSpaceId,
+        forwardedBy: userId,
+        forwardedAt,
+      },
+    ],
+    updatedBy: userId,
+  });
+
+  await auditLogService.recordAuditLog({
+    spaceId: context.spaceId || null,
+    actorId: userId,
+    action: AUDIT_ACTIONS.UPDATE,
+    entityType: AUDIT_ENTITY_TYPES.ASSET_REQUEST,
+    entityId: id,
+    before: request,
+    after: updatedRequest,
+    metadata: {
+      forwardedToSpaceId: targetSpaceId,
+    },
+    ipAddress: context.ipAddress || "",
+    userAgent: context.userAgent || "",
+  });
 
   return updatedRequest;
 };
@@ -391,6 +496,7 @@ module.exports = {
   itApproveRequest,
   rejectRequest,
   cancelRequest,
+  forwardRequest,
 };
 
 

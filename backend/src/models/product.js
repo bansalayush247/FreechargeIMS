@@ -17,6 +17,8 @@ const productSchema = new mongoose.Schema({
 
   specifications: { type: Object, default: {} },
 
+  imageUrl: { type: String, trim: true, default: "" },
+
   assetType: { type: String, enum: Object.values(PRODUCT_ASSET_TYPES), required: true },
 
   minimumStock: { type: Number, default: 0 },

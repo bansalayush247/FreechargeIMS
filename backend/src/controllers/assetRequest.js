@@ -8,6 +8,7 @@ const {
   createAssetRequestSchema,
   approvalSchema,
   rejectionSchema,
+  forwardSchema,
   getAssetRequestsSchema,
 } = require(
   "../validators/assetRequest"
@@ -34,6 +35,7 @@ const createAssetRequest = asyncHandler(
         userId,
         {
           spaceId: req.headers["x-space-id"],
+          userType: req.user?.userType,
           ipAddress: req.ip,
           userAgent: req.get("user-agent"),
         }
@@ -51,9 +53,10 @@ const createAssetRequest = asyncHandler(
 const getAssetRequests = asyncHandler(
   async (req, res) => {
     const { error, value } =
-      getAssetRequestsSchema.validate(
-        req.query
-      );
+      getAssetRequestsSchema.validate({
+        ...req.query,
+        spaceId: req.headers["x-space-id"],
+      });
 
     if (error) {
       return res.status(400).json({
@@ -72,6 +75,39 @@ const getAssetRequests = asyncHandler(
       message:
         "Asset requests fetched successfully",
       data: requests,
+    });
+  }
+);
+
+const forwardRequest = asyncHandler(
+  async (req, res) => {
+    const userId = req.user._id || req.user.id;
+    const { error, value } =
+      forwardSchema.validate(req.body);
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message,
+      });
+    }
+
+    const request =
+      await assetRequestService.forwardRequest(
+        req.params.id,
+        value,
+        userId,
+        {
+          spaceId: req.headers["x-space-id"],
+          ipAddress: req.ip,
+          userAgent: req.get("user-agent"),
+        }
+      );
+
+    return res.status(200).json({
+      success: true,
+      message: "Asset request forwarded",
+      data: request,
     });
   }
 );
@@ -224,4 +260,5 @@ module.exports = {
   itApproveRequest,
   rejectRequest,
   cancelRequest,
+  forwardRequest,
 };

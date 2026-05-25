@@ -15,6 +15,8 @@ const createProductSchema = Joi.object({
 
   specifications: Joi.object().optional(),
 
+  imageUrl: Joi.string().trim().allow("", null).optional(),
+
   assetType: Joi.string().valid(...Object.values(PRODUCT_ASSET_TYPES)).required(),
 
   minimumStock: Joi.number().min(0).optional(),
@@ -32,6 +34,8 @@ const updateProductSchema = Joi.object({
   model: Joi.string().allow("", null),
 
   specifications: Joi.object(),
+
+  imageUrl: Joi.string().trim().allow("", null),
 
   minimumStock: Joi.number().min(0),
 

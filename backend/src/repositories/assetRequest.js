@@ -15,6 +15,7 @@ const findById = async (id) => {
     .populate("productId", "name sku")
     .populate("managerApprovalBy", "firstName lastName email")
     .populate("itApprovalBy", "firstName lastName email")
+    .populate("forwardedBy", "firstName lastName email")
     .lean();
 };
 
@@ -41,6 +42,7 @@ const paginate = async (filters) => {
     productId,
     status,
     priority,
+    spaceId,
   } = filters;
 
   const skip = (page - 1) * limit;
@@ -65,12 +67,17 @@ const paginate = async (filters) => {
     query.priority = priority;
   }
 
+  if (spaceId) {
+    query.spaceId = spaceId;
+  }
+
   const [items, total] = await Promise.all([
     AssetRequest.find(query)
       .populate("employeeId", "firstName lastName")
       .populate("productId", "name sku")
       .populate("managerApprovalBy", "firstName lastName email")
       .populate("itApprovalBy", "firstName lastName email")
+      .populate("forwardedBy", "firstName lastName email")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
