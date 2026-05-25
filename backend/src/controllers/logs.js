@@ -4,8 +4,9 @@ const asyncHandler = require("express-async-handler");
 const logger = require("../config/logger");
 const { archiveLogs, cleanupOldArchives } = require("../jobs/logArchiver");
 
-const LOGS_DIR = path.join(__dirname, "../logs");
+const LOGS_DIR = path.resolve(__dirname, "../../../src/logs");
 const ARCHIVES_DIR = path.join(LOGS_DIR, "archives");
+const COMBINED_LOG_PATH = path.join(LOGS_DIR, "combined.log");
 
 /**
  * Manually trigger log archival
@@ -184,10 +185,60 @@ const getLogStatus = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * Ingest frontend logs (lightweight)
+ * Accepts: { level, message, meta, timestamp }
+ * Appends a JSON line to combined.log
+ */
+const ingestLog = asyncHandler(async (req, res) => {
+  try {
+    const {
+      level = "info",
+      message = "",
+      meta = {},
+      timestamp = new Date().toISOString(),
+      source = "frontend",
+    } = req.body || {};
+
+    // Basic validation
+    if (typeof message !== "string" || message.length > 2000) {
+      return res.status(400).json({ success: false, message: "Invalid message" });
+    }
+
+    const safeLevel = ["debug", "info", "warn", "error"].includes(level) ? level : "info";
+
+    const normalizedSource = source === "backend" ? "backend" : "frontend";
+    const prefixedMessage = typeof message === "string" && !message.startsWith(`[${normalizedSource}]`)
+      ? `[${normalizedSource}] ${message}`
+      : message;
+
+    const line = JSON.stringify({
+      level: safeLevel,
+      source: normalizedSource,
+      message: prefixedMessage,
+      meta,
+      timestamp,
+    }) + "\n";
+
+    // Ensure logs dir exists
+    if (!fs.existsSync(LOGS_DIR)) {
+      fs.mkdirSync(LOGS_DIR, { recursive: true });
+    }
+
+    fs.appendFileSync(COMBINED_LOG_PATH, line, { encoding: "utf8" });
+
+    return res.status(201).json({ success: true, message: "Logged" });
+  } catch (error) {
+    logger.error("Error ingesting frontend log:", error);
+    return res.status(500).json({ success: false, message: "Failed to ingest log" });
+  }
+});
+
 module.exports = {
   triggerLogArchival,
   getArchivedLogs,
   deleteArchivedLog,
   cleanupArchives,
   getLogStatus,
+  ingestLog,
 };

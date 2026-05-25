@@ -6,12 +6,16 @@ const {
   deleteArchivedLog,
   cleanupArchives,
   getLogStatus,
+  ingestLog,
 } = require("../controllers/logs");
 
 const requireAdmin = require("../middleware/requireAdmin");
 const authMiddleware = require("../middleware/auth");
 
 const router = express.Router();
+
+// Public ingest endpoint for frontend logs (no auth required)
+router.post("/", ingestLog);
 
 /**
  * Log management routes

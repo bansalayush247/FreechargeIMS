@@ -9,9 +9,13 @@ const logger = require("../config/logger");
  * Archives logs daily and removes archived log files
  */
 
-const LOGS_DIR = path.join(__dirname, "../logs");
+const LOGS_DIR = path.resolve(__dirname, "../../../src/logs");
 const ARCHIVES_DIR = path.join(LOGS_DIR, "archives");
 const LOG_FILES = ["combined.log", "error.log"];
+const ARCHIVE_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+let archiveInProgress = false;
+let lastArchiveAt = 0;
 
 // Ensure archives directory exists
 
@@ -36,8 +40,21 @@ const generateArchiveFilename = () => {
 };
 
 // Archive logs and clear them
-const archiveLogs = async () => {
+const archiveLogs = async ({ force = false } = {}) => {
   try {
+    if (archiveInProgress) {
+      logger.info("Log archival skipped because another archive is already running");
+      return;
+    }
+
+    const timeSinceLastArchive = Date.now() - lastArchiveAt;
+
+    if (!force && lastArchiveAt > 0 && timeSinceLastArchive < ARCHIVE_INTERVAL_MS) {
+      logger.info("Log archival skipped because the 24 hour window has not elapsed yet");
+      return;
+    }
+
+    archiveInProgress = true;
     ensureArchivesDir();
 
     // Check if there are any log files to archive
@@ -95,6 +112,9 @@ const archiveLogs = async () => {
     await archive.finalize();
   } catch (error) {
     logger.error("Error archiving logs:", error);
+  } finally {
+    archiveInProgress = false;
+    lastArchiveAt = Date.now();
   }
 };
 
@@ -128,21 +148,25 @@ const cleanupOldArchives = (daysToKeep = 30) => {
 
 /**
  * Initialize log archiver cron job
- * Runs daily at 1:00 AM
+ * Runs daily at 1:00 AM and also every 24 hours from server start
  */
 const initializeLogArchiver = () => {
   try {
     // Schedule at 1:00 AM every day (0 1 * * *)
-    // Format: minute hour day month dayOfWeek
-    const job = cron.schedule("0 1 * * *", async () => {
+    const dailyJob = cron.schedule("0 1 * * *", async () => {
       logger.info("Starting scheduled log archival...");
       await archiveLogs();
     });
 
-    logger.info("Log archiver job initialized (runs daily at 1:00 AM)");
+    const intervalJob = setInterval(async () => {
+      logger.info("Starting 24 hour fallback log archival...");
+      await archiveLogs();
+    }, ARCHIVE_INTERVAL_MS);
+
+    logger.info("Log archiver job initialized (runs daily at 1:00 AM and every 24 hours)");
 
     // Store job reference for potential cleanup
-    return job;
+    return { dailyJob, intervalJob };
   } catch (error) {
     logger.error("Error initializing log archiver:", error);
   }
