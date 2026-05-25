@@ -28,14 +28,14 @@ router.post(
 router.get(
   ROUTES.SPACES.LIST,
   authMiddleware,
-  requireAdmin,
+  // Allow authenticated users to view available spaces (removed requireAdmin)
   spaceController.getSpaces
 );
 
 router.get(
   ROUTES.SPACES.GET_BY_ID,
   authMiddleware,
-  requireAdmin,
+  // Allow authenticated users to fetch a single space
   spaceController.getSpaceById
 );
 
