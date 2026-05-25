@@ -12,7 +12,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-semibold text-white">Dashboard</h1>
           <p className="mt-2 max-w-2xl text-orange-50/80">
-            Logged in as {user?.email ?? user?.name ?? "an authenticated user"}. Use the navigation to move between spaces, inventory, and request workflows.
+            Logged in as {user?.email ?? user?.name ?? "an authenticated user"}. Use the navigation to open a space and manage its inventory and requests.
           </p>
         </div>
         <button

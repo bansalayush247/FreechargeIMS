@@ -14,8 +14,6 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/spaces", label: "Spaces" },
-  { href: "/inventory", label: "Inventory" },
-  { href: "/requests", label: "Requests" },
   { href: "/admin", label: "Admin", adminOnly: true },
 ];
 

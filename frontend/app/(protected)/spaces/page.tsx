@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiClient } from "../../../src/lib/api";
 import { logger } from "../../../src/lib/logger";
 import { useToast } from "../../../src/components/toastProvider";
@@ -33,6 +34,7 @@ export default function SpacesPage() {
   const [messages, setMessages] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState<Record<string, boolean>>({});
   const toast = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     let mounted = true;
@@ -273,56 +275,72 @@ export default function SpacesPage() {
 
         {!loading && !error && (
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {spaces.map((space) => (
-              <div key={space._id ?? space.id} className="rounded-xl border border-white/6 bg-white/3 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold text-white">{space.name}</h2>
-                    <p className="text-sm text-orange-50/80">{space.description || "No description"}</p>
-                  </div>
-                  <div>
-                    {memberIds[space._id ?? space.id] ? (
-                      <span className="rounded-md px-3 py-1 text-sm font-medium text-white/80">Member</span>
-                    ) : (
-                      <button
-                        onClick={() => handleOpenJoin(space._id ?? space.id)}
-                        className="rounded-md bg-orange-500 px-3 py-1 text-sm font-medium text-white hover:bg-orange-600"
-                      >
-                        Request to join
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {openJoin[space._id ?? space.id] && (
-                  <div className="mt-3">
-                    <textarea
-                      value={messages[space._id ?? space.id] ?? ""}
-                      onChange={(e) => setMessages((m) => ({ ...m, [space._id ?? space.id]: e.target.value }))}
-                      placeholder="Optional message to the space admins"
-                      className="w-full rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white placeholder:text-orange-200/50"
-                      rows={3}
-                    />
-
-                    <div className="mt-2 flex items-center gap-2">
-                      <button
-                        disabled={Boolean(submitting[space._id ?? space.id])}
-                        onClick={() => handleSubmitJoin(space._id ?? space.id)}
-                        className="rounded-md bg-green-600 px-3 py-1 text-sm font-medium text-white disabled:opacity-50"
-                      >
-                        {submitting[space._id ?? space.id] ? "Sending…" : "Send request"}
-                      </button>
-                      <button
-                        onClick={() => setOpenJoin((s) => ({ ...s, [space._id ?? space.id]: false }))}
-                        className="rounded-md px-3 py-1 text-sm font-medium text-white/80 hover:text-white"
-                      >
-                        Cancel
-                      </button>
+            {spaces.map((space) => {
+              const sid = space._id ?? space.id;
+              return (
+                <div
+                  key={sid}
+                  onClick={() => router.push(`/spaces/${sid}`)}
+                  className="rounded-xl border border-white/6 bg-white/3 p-4 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-semibold text-white">{space.name}</h2>
+                      <p className="text-sm text-orange-50/80">{space.description || "No description"}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {memberIds[sid] ? (
+                        <span className="rounded-md px-3 py-1 text-sm font-medium text-white/80">Member</span>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenJoin(sid);
+                          }}
+                          className="rounded-md bg-orange-500 px-3 py-1 text-sm font-medium text-white hover:bg-orange-600"
+                        >
+                          Request to join
+                        </button>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {openJoin[sid] && (
+                    <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+                      <textarea
+                        value={messages[sid] ?? ""}
+                        onChange={(e) => setMessages((m) => ({ ...m, [sid]: e.target.value }))}
+                        placeholder="Optional message to the space admins"
+                        className="w-full rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white placeholder:text-orange-200/50"
+                        rows={3}
+                      />
+
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          disabled={Boolean(submitting[sid])}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSubmitJoin(sid);
+                          }}
+                          className="rounded-md bg-green-600 px-3 py-1 text-sm font-medium text-white disabled:opacity-50"
+                        >
+                          {submitting[sid] ? "Sending…" : "Send request"}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenJoin((s) => ({ ...s, [sid]: false }));
+                          }}
+                          className="rounded-md px-3 py-1 text-sm font-medium text-white/80 hover:text-white"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
         {tab === "mine" && (
