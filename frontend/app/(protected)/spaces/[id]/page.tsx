@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { apiClient } from "../../../../src/lib/api";
 import { logger } from "../../../../src/lib/logger";
 import { useAuth } from "../../../../src/auth/authContext";
+import { useToast } from "../../../../src/components/toastProvider";
+import { useConfirm } from "../../../../src/components/confirmProvider";
 
 export default function SpaceDetailPage() {
   const params = useParams();
@@ -18,6 +20,8 @@ export default function SpaceDetailPage() {
   const [joinRequests, setJoinRequests] = useState<any[]>([]);
   const [jrLoading, setJrLoading] = useState(false);
   const [jrError, setJrError] = useState<string | null>(null);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => {
     let mounted = true;
@@ -72,14 +76,22 @@ export default function SpaceDetailPage() {
 
   async function review(requestId: string, action: "APPROVE" | "REJECT") {
     try {
+      const ok = await confirm("Confirm review", `Are you sure you want to ${action.toLowerCase()} this request?`);
+      if (!ok) return;
+
       const body: any = { action };
-      if (action === "REJECT") body.remarks = "Rejected from UI";
+      if (action === "REJECT") {
+        const remarksOk = await confirm("Reject remarks", "Provide rejection remarks (OK = generic rejection, Cancel = abort)");
+        if (!remarksOk) return;
+        body.remarks = "Rejected from UI";
+      }
+
       const res = await apiClient.patch(`/spaces/${id}/join-requests/${requestId}/review`, body, { headers: { "x-space-id": id } });
-      alert(res.data?.message ?? "Reviewed");
+      toast.show("success", res.data?.message ?? "Reviewed");
       await loadJoinRequests();
     } catch (err: any) {
       const msg = (err?.response?.data?.message as string) ?? err?.message ?? "Could not review";
-      alert(msg);
+      toast.show("error", msg);
     }
   }
 

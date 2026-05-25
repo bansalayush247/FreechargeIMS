@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "../../../src/lib/api";
 import { logger } from "../../../src/lib/logger";
+import { useToast } from "../../../src/components/toastProvider";
 import { useAuth } from "../../../src/auth/authContext";
 
 type Space = {
@@ -31,6 +32,7 @@ export default function SpacesPage() {
   const [openJoin, setOpenJoin] = useState<Record<string, boolean>>({});
   const [messages, setMessages] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState<Record<string, boolean>>({});
+  const toast = useToast();
 
   useEffect(() => {
     let mounted = true;
@@ -161,14 +163,12 @@ export default function SpacesPage() {
     try {
       const res = await apiClient.post(`/spaces/${spaceId}/join-requests`, { message });
       logger.info("Join request submitted", { spaceId, userId: user?.id ?? user?._id });
-      // optimistic UI: close form and show toast via simple alert for now
       setOpenJoin((s) => ({ ...s, [spaceId]: false }));
-      // show success using window.alert to keep things simple for now
-      alert(res.data?.message ?? "Join request submitted");
+      toast.show("success", res.data?.message ?? "Join request submitted");
     } catch (err: any) {
       const msg = (err?.response?.data?.message as string) ?? err?.message ?? "Could not submit join request.";
       logger.warn("Join request failed", { spaceId, message: msg });
-      alert(msg);
+      toast.show("error", msg);
     } finally {
       setSubmitting((s) => ({ ...s, [spaceId]: false }));
     }
@@ -225,13 +225,13 @@ export default function SpacesPage() {
               <div className="flex gap-2">
                 <button
                   disabled={creating || !createName.trim()}
-                  onClick={async () => {
+                      onClick={async () => {
                     setCreating(true);
                     try {
                       const payload: any = { name: createName.trim() };
                       if (createCode.trim()) payload.code = createCode.trim();
                       const res = await apiClient.post("/spaces", payload);
-                      alert(res.data?.message ?? "Space created");
+                      toast.show("success", res.data?.message ?? "Space created");
                       // After create, switch to My spaces and refresh
                       setCreateOpen(false);
                       setCreateName("");
@@ -250,9 +250,9 @@ export default function SpacesPage() {
                       } catch (e) {
                         // ignore
                       }
-                    } catch (err: any) {
+                      } catch (err: any) {
                       const msg = (err?.response?.data?.message as string) ?? err?.message ?? "Could not create space.";
-                      alert(msg);
+                      toast.show("error", msg);
                     } finally {
                       setCreating(false);
                     }

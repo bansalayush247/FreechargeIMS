@@ -1,20 +1,20 @@
 const express = require("express");
 
 const { getApiStatus } = require("../controllers/api");
-const authRoutes = require("./auth.routes");
-const productRoutes = require("./product.routes");
-const warehouseRoutes = require("./warehouse.routes");
-const spaceRoutes = require("./space.routes");
-const roleRoutes = require("./role.routes");
-const spaceMemberRoutes = require("./spaceMember.routes");
-const inventoryRoutes = require("./inventory.routes");
-const inventoryTransactionRoutes = require("./inventoryTransaction.routes");
-const assetRequestRoutes = require("./assetRequest.routes");
-const repairRoutes = require("./repair.routes");
-const notificationRoutes = require("./notification.routes");
-const workflowRoutes = require("./workflow.routes");
-const auditLogRoutes = require("./auditLog.routes");
-const logsRoutes = require("./logs.routes");
+const authRoutes = require("./auth");
+const productRoutes = require("./product");
+const warehouseRoutes = require("./warehouse");
+const spaceRoutes = require("./space");
+const roleRoutes = require("./role");
+const spaceMemberRoutes = require("./spaceMember");
+const inventoryRoutes = require("./inventory");
+const inventoryTransactionRoutes = require("./inventoryTransaction");
+const assetRequestRoutes = require("./assetRequest");
+const repairRoutes = require("./repair");
+const notificationRoutes = require("./notification");
+const workflowRoutes = require("./workflow");
+const auditLogRoutes = require("./auditLog");
+const logsRoutes = require("./logs");
 
 const ROUTES = require("../constants/routes");
 
