@@ -65,6 +65,49 @@ const getSpaces = asyncHandler(async (req, res) => {
   });
 });
 
+// Handles get spaces for current user (spaces where user is a member)
+const getMySpaces = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page || "1", 10);
+  const limit = parseInt(req.query.limit || "10", 10);
+
+  // use spaceMember repository to find memberships for the current user
+  const spaceMemberRepo = require("../repositories/spaceMember");
+
+  const membershipPage = await spaceMemberRepo.paginate({
+    page,
+    limit,
+    userId: req.user._id,
+  });
+
+  const spaceIds = (membershipPage.items || []).map((m) => m.spaceId);
+
+  const spaces = await spaceService.getSpaces({
+    page: 1,
+    limit: spaceIds.length || 1,
+    search: undefined,
+    isActive: true,
+    ids: spaceIds,
+  });
+
+  // If spaceService.getSpaces ignores ids, fallback to repository fetch
+  // spaceService.getSpaces currently calls repository.paginate which doesn't accept ids,
+  // so fetch directly if spaces.items is undefined or empty.
+  let items = spaces?.items ?? [];
+  if ((!items || items.length === 0) && spaceIds.length) {
+    const spaceRepo = require("../repositories/space");
+    items = await spaceRepo.findByIds(spaceIds);
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "User spaces fetched successfully",
+    data: {
+      items,
+      pagination: membershipPage.pagination,
+    },
+  });
+});
+
 // Handles get space by id.
 const getSpaceById = asyncHandler(async (req, res) => {
   const space = await spaceService.getSpaceById(
@@ -123,6 +166,7 @@ const deleteSpace = asyncHandler(async (req, res) => {
 module.exports = {
   createSpace,
   getSpaces,
+  getMySpaces,
   getSpaceById,
   updateSpace,
   deleteSpace,

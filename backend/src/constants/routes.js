@@ -25,6 +25,7 @@ const ENDPOINTS = Object.freeze({
     BASE: `${API_VERSION}/spaces`,
     CREATE: "/",
     LIST: "/",
+    MY: "/mine",
     GET_BY_ID: "/:id",
     UPDATE: "/:id",
     DELETE: "/:id",

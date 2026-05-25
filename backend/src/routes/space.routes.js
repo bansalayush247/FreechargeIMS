@@ -21,7 +21,7 @@ const ROUTES = require("../constants/routes");
 router.post(
   ROUTES.SPACES.CREATE,
   authMiddleware,
-  requireAdmin,
+  // Allow authenticated users to create a space; creator will be auto-assigned as space admin
   spaceController.createSpace
 );
 
@@ -30,6 +30,13 @@ router.get(
   authMiddleware,
   // Allow authenticated users to view available spaces (removed requireAdmin)
   spaceController.getSpaces
+);
+
+// Spaces for current user
+router.get(
+  ROUTES.SPACES.MY,
+  authMiddleware,
+  spaceController.getMySpaces
 );
 
 router.get(

@@ -102,6 +102,17 @@ module.exports = {
   findByName,
   updateById,
   paginate,
+  findByIds,
 };
+
+// Handles find multiple by ids.
+async function findByIds(ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return [];
+
+  return Space.find({
+    _id: { $in: ids },
+    isDeleted: false,
+  }).lean();
+}
 
 
