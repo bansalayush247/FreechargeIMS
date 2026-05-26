@@ -22,6 +22,10 @@ const getJoinRequests = asyncHandler(async (req, res) => {
   const { error, value } = getJoinRequestsSchema.validate({ ...req.query, spaceId: req.params.id });
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
+  if (!value.status) {
+    value.status = "PENDING";
+  }
+
   const requests = await joinRequestService.getJoinRequests(value);
   return res.status(200).json({ success: true, message: "Join requests fetched", data: requests });
 });
@@ -34,6 +38,10 @@ const getMyJoinRequests = asyncHandler(async (req, res) => {
     userId,
   });
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
+
+  if (!value.status) {
+    value.status = "PENDING";
+  }
 
   const requests = await joinRequestService.getJoinRequests(value);
   return res.status(200).json({ success: true, message: "Join requests fetched", data: requests });

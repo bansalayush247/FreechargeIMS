@@ -32,6 +32,15 @@ const createJoinRequest = async (spaceId, payload, userId, context = {}) => {
     if (existing.status === "PENDING") {
       throw new AppError("Join request already pending", 400);
     }
+
+    return joinRequestRepository.updateById(existing._id, {
+      status: "PENDING",
+      message: payload.message || "",
+      reviewedBy: null,
+      reviewedAt: null,
+      reviewRemarks: "",
+      updatedBy: userId,
+    });
   }
 
   const request = await joinRequestRepository.create({

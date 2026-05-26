@@ -4,7 +4,10 @@ type LogLevel = "debug" | "info" | "warn" | "error";
 
 async function sendLog(level: LogLevel, message: string, meta?: Record<string, any>) {
   try {
-    if (process.env.NODE_ENV === "development") {
+    const shouldForwardLogs =
+      process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FORWARD_FRONTEND_LOGS === "true";
+
+    if (!shouldForwardLogs) {
       return;
     }
 

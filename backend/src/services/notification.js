@@ -103,7 +103,7 @@ const notifyUserByEmail = async (
   userId = null
 ) => {
   try {
-    return sendEmailNotification(payload, userId);
+    return await sendEmailNotification(payload, userId);
   } catch (error) {
     logger.error("Notification creation failed", {
       error: error.message,
@@ -122,8 +122,11 @@ const getNotifications = async (filters) => {
 };
 
 // Handles get notification by id.
-const getNotificationById = async (id) => {
-  const notification = await notificationRepository.findById(id);
+const getNotificationById = async (id, owner = {}) => {
+  const notification = await notificationRepository.findByIdForOwner(
+    id,
+    owner
+  );
 
   if (!notification) {
     throw new AppError("Notification not found", 404);

@@ -8,7 +8,6 @@ const notificationController = require(
 
 const authMiddleware = require("../middleware/auth");
 const authorize = require("../middleware/authorize");
-
 const {
   NOTIFICATION_PERMISSIONS,
 } = require("../constants/notification");
@@ -25,14 +24,12 @@ router.post(
 router.get(
   ROUTES.NOTIFICATION_ROUTES.LIST,
   authMiddleware,
-  authorize(NOTIFICATION_PERMISSIONS.VIEW_NOTIFICATION),
   notificationController.getNotifications
 );
 
 router.get(
   ROUTES.NOTIFICATION_ROUTES.GET_BY_ID,
   authMiddleware,
-  authorize(NOTIFICATION_PERMISSIONS.VIEW_NOTIFICATION),
   notificationController.getNotificationById
 );
 

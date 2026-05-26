@@ -15,6 +15,32 @@ const findById = async (id) => {
     .lean();
 };
 
+// Handles find notification by id for a user owner.
+const findByIdForOwner = async (id, owner = {}) => {
+  const query = {
+    _id: id,
+    isDeleted: false,
+  };
+
+  const ownerConditions = [];
+
+  if (owner.ownerUserId) {
+    ownerConditions.push({ recipientUserId: owner.ownerUserId });
+  }
+
+  if (owner.ownerEmail) {
+    ownerConditions.push({ recipientEmail: owner.ownerEmail });
+  }
+
+  if (ownerConditions.length) {
+    query.$or = ownerConditions;
+  }
+
+  return Notification.findOne(query)
+    .populate("recipientUserId", "firstName lastName email employeeId")
+    .lean();
+};
+
 // Handles update notification by id.
 const updateById = async (id, payload) => {
   return Notification.findOneAndUpdate(
@@ -35,6 +61,8 @@ const paginate = async (filters) => {
     page,
     limit,
     spaceId,
+    ownerUserId,
+    ownerEmail,
     recipientUserId,
     recipientEmail,
     status,
@@ -50,6 +78,18 @@ const paginate = async (filters) => {
 
   if (spaceId) {
     query.spaceId = spaceId;
+  }
+
+  if (ownerUserId || ownerEmail) {
+    query.$or = [];
+
+    if (ownerUserId) {
+      query.$or.push({ recipientUserId: ownerUserId });
+    }
+
+    if (ownerEmail) {
+      query.$or.push({ recipientEmail: ownerEmail });
+    }
   }
 
   if (recipientUserId) {
@@ -97,6 +137,7 @@ const paginate = async (filters) => {
 module.exports = {
   create,
   findById,
+  findByIdForOwner,
   updateById,
   paginate,
 };

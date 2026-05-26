@@ -2,7 +2,7 @@
 
 import axios from "axios";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { apiClient, setApiToken } from "../lib/api";
+import { apiClient, setApiToken, setUnauthorizedHandler } from "../lib/api";
 
 export type AuthUser = {
   id?: string;
@@ -122,6 +122,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     persistSession(token, user);
     setApiToken(token);
   }, [isHydrated, token, user]);
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setToken(null);
+      setUser(null);
+      setApiToken(null);
+    });
+
+    return () => {
+      setUnauthorizedHandler(null);
+    };
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const response = await apiClient.post("/auth/login", { email, password });

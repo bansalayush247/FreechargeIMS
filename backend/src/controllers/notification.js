@@ -12,6 +12,9 @@ const {
 // Handles get user id.
 const getUserId = (req) => req.user._id || req.user.id;
 
+// Handles get user email.
+const getUserEmail = (req) => req.user.email;
+
 // Handles send email notification.
 const sendEmailNotification = asyncHandler(
   async (req, res) => {
@@ -55,10 +58,17 @@ const getNotifications = asyncHandler(async (req, res) => {
     });
   }
 
+  const {
+    recipientUserId,
+    recipientEmail,
+    ...filters
+  } = value;
+
   const notifications =
     await notificationService.getNotifications({
-      ...value,
-      spaceId: req.headers["x-space-id"],
+      ...filters,
+      ownerUserId: getUserId(req),
+      ownerEmail: getUserEmail(req),
     });
 
   return res.status(200).json({
@@ -71,7 +81,13 @@ const getNotifications = asyncHandler(async (req, res) => {
 // Handles get notification by id.
 const getNotificationById = asyncHandler(async (req, res) => {
   const notification =
-    await notificationService.getNotificationById(req.params.id);
+    await notificationService.getNotificationById(
+      req.params.id,
+      {
+        ownerUserId: getUserId(req),
+        ownerEmail: getUserEmail(req),
+      }
+    );
 
   return res.status(200).json({
     success: true,

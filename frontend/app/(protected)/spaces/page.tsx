@@ -37,6 +37,33 @@ export default function SpacesPage() {
   const toast = useToast();
   const router = useRouter();
 
+  async function loadRequestedIds(list: Space[], signal?: AbortSignal) {
+    const entries = await Promise.allSettled(
+      list.map(async (space) => {
+        const sid = space._id ?? space.id;
+        if (!sid) return null;
+
+        const res = await apiClient.get(`/spaces/${sid}/join-requests/my`, {
+          headers: { "x-space-id": sid },
+          signal: signal as any,
+        });
+
+        const payload = res.data?.data ?? res.data ?? {};
+        const items = Array.isArray(payload.items) ? payload.items : payload;
+        return Array.isArray(items) && items.length > 0 ? sid : null;
+      })
+    );
+
+    const nextRequestedIds: Record<string, true> = {};
+    for (const entry of entries) {
+      if (entry.status === "fulfilled" && entry.value) {
+        nextRequestedIds[entry.value] = true;
+      }
+    }
+
+    setRequestedIds(nextRequestedIds);
+  }
+
   useEffect(() => {
     let mounted = true;
 
@@ -54,8 +81,13 @@ export default function SpacesPage() {
         }
 
         if (!mounted) return;
-        setSpaces(Array.isArray(list) ? list : []);
+        const nextSpaces = Array.isArray(list) ? list : [];
+        setSpaces(nextSpaces);
         logger.info("Fetched spaces list", { count: Array.isArray(list) ? list.length : 0, tab });
+
+        if (tab === "all") {
+          await loadRequestedIds(nextSpaces);
+        }
       } catch (err) {
         logger.warn("Failed to fetch spaces", { error: String(err), tab });
         setError("Unable to load spaces. Try again later.");
@@ -106,7 +138,12 @@ export default function SpacesPage() {
         }
 
         if (!mounted) return;
-        setSpaces(Array.isArray(list) ? list : []);
+        const nextSpaces = Array.isArray(list) ? list : [];
+        setSpaces(nextSpaces);
+
+        if (tab === "all") {
+          await loadRequestedIds(nextSpaces, controller.signal);
+        }
       } catch (err) {
         if ((err as any)?.name === "CanceledError") return;
         setError("Unable to load spaces. Try again later.");
@@ -169,6 +206,7 @@ export default function SpacesPage() {
       setOpenJoin((s) => ({ ...s, [spaceId]: false }));
       // mark as requested to avoid confusing the user
       setRequestedIds((r) => ({ ...r, [spaceId]: true }));
+        await loadRequestedIds(spaces);
       toast.show("success", res.data?.message ?? "Join request submitted");
     } catch (err: any) {
       const msg = (err?.response?.data?.message as string) ?? err?.message ?? "Could not submit join request.";
