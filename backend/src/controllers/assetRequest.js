@@ -52,6 +52,7 @@ const createAssetRequest = asyncHandler(
 
 const getAssetRequests = asyncHandler(
   async (req, res) => {
+    const userId = req.user._id || req.user.id;
     const { error, value } =
       getAssetRequestsSchema.validate({
         ...req.query,
@@ -67,7 +68,12 @@ const getAssetRequests = asyncHandler(
 
     const requests =
       await assetRequestService.getAssetRequests(
-        value
+        value,
+        {
+          userId,
+          userType: req.user?.userType,
+          permissions: req.permissions || [],
+        }
       );
 
     return res.status(200).json({

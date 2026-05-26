@@ -25,6 +25,7 @@ export default function SpacesPage() {
   const [createCode, setCreateCode] = useState("");
   const [creating, setCreating] = useState(false);
   const [memberIds, setMemberIds] = useState<Record<string, true>>({});
+  const [requestedIds, setRequestedIds] = useState<Record<string, true>>({});
   const [minePage, setMinePage] = useState(1);
   const PAGE_LIMIT = 6;
   const [minePagination, setMinePagination] = useState<{ page: number; totalPages: number } | null>(null);
@@ -166,6 +167,8 @@ export default function SpacesPage() {
       const res = await apiClient.post(`/spaces/${spaceId}/join-requests`, { message });
       logger.info("Join request submitted", { spaceId, userId: user?.id ?? user?._id });
       setOpenJoin((s) => ({ ...s, [spaceId]: false }));
+      // mark as requested to avoid confusing the user
+      setRequestedIds((r) => ({ ...r, [spaceId]: true }));
       toast.show("success", res.data?.message ?? "Join request submitted");
     } catch (err: any) {
       const msg = (err?.response?.data?.message as string) ?? err?.message ?? "Could not submit join request.";
@@ -221,7 +224,7 @@ export default function SpacesPage() {
               <input
                 value={createCode}
                 onChange={(e) => setCreateCode(e.target.value)}
-                placeholder="Space code (optional, e.g. FC_DEV)"
+                placeholder="Space code (e.g. FC_DEV)"
                 className="w-full rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white"
               />
               <div className="flex gap-2">
@@ -291,6 +294,8 @@ export default function SpacesPage() {
                     <div className="flex items-center gap-2">
                       {memberIds[sid] ? (
                         <span className="rounded-md px-3 py-1 text-sm font-medium text-white/80">Member</span>
+                      ) : requestedIds[sid] ? (
+                        <span className="rounded-md px-3 py-1 text-sm font-medium text-white/80">Requested</span>
                       ) : (
                         <button
                           onClick={(e) => {

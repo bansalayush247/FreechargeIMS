@@ -81,19 +81,9 @@ const getMySpaces = asyncHandler(async (req, res) => {
 
   const spaceIds = (membershipPage.items || []).map((m) => m.spaceId);
 
-  const spaces = await spaceService.getSpaces({
-    page: 1,
-    limit: spaceIds.length || 1,
-    search: undefined,
-    isActive: true,
-    ids: spaceIds,
-  });
+  let items = [];
 
-  // If spaceService.getSpaces ignores ids, fallback to repository fetch
-  // spaceService.getSpaces currently calls repository.paginate which doesn't accept ids,
-  // so fetch directly if spaces.items is undefined or empty.
-  let items = spaces?.items ?? [];
-  if ((!items || items.length === 0) && spaceIds.length) {
+  if (spaceIds.length) {
     const spaceRepo = require("../repositories/space");
     items = await spaceRepo.findByIds(spaceIds);
   }

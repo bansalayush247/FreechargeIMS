@@ -284,6 +284,13 @@ const removeMember = async (
   return removedMember;
 };
 
+// Prevent users from changing their own role assignments.
+const assertNotSelfRoleMutation = (targetUserId, actorUserId) => {
+  if (String(targetUserId) === String(actorUserId)) {
+    throw new AppError("You cannot change your own role", 400);
+  }
+};
+
 // Handles assign role.
 const assignRole = async (
   spaceId,
@@ -295,6 +302,8 @@ const assignRole = async (
     assertSpaceExists(spaceId),
     assertActiveUser(payload.userId),
   ]);
+
+  assertNotSelfRoleMutation(payload.userId, userId);
 
   const member =
     await spaceMemberRepository.findByUserAndSpace(
@@ -370,6 +379,8 @@ const replaceRole = async (
     assertSpaceExists(spaceId),
     assertActiveUser(payload.userId),
   ]);
+
+  assertNotSelfRoleMutation(payload.userId, userId);
 
   const member = await spaceMemberRepository.findByUserAndSpace(
     payload.userId,
@@ -487,6 +498,11 @@ const removeRole = async (
   ) {
     throw new AppError("User role assignment not found", 404);
   }
+
+  assertNotSelfRoleMutation(
+    assignment.userId._id || assignment.userId,
+    userId
+  );
 
   const removedAssignment =
     await userRoleRepository.softDeleteById(id, {

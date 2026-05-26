@@ -25,13 +25,13 @@ const {
 
 const ROUTES = require("../constants/routes");
 
+// Allow any authenticated user to create an asset request for a space
+// (users may not yet be members of the space). Authorization for
+// further workflow steps (manager/IT approvals) remains enforced.
 router.post(
   ROUTES.ASSET_REQUEST_ROUTES.CREATE,
   authMiddleware,
   validateSpaceId,
-  authorize(
-    ASSET_REQUEST_PERMISSIONS.CREATE_ASSET_REQUEST
-  ),
   assetRequestController.createAssetRequest
 );
 
@@ -39,9 +39,6 @@ router.get(
   ROUTES.ASSET_REQUEST_ROUTES.LIST,
   authMiddleware,
   validateSpaceId,
-  authorize(
-    ASSET_REQUEST_PERMISSIONS.VIEW_ASSET_REQUEST
-  ),
   assetRequestController.getAssetRequests
 );
 

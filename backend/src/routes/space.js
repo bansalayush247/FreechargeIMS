@@ -12,9 +12,6 @@ const authorize = require("../middleware/authorize");
 const { PERMISSIONS } = require("../constants/permission");
 
 const authMiddleware = require("../middleware/auth");
-const requireAdmin = require(
-  "../middleware/requireAdmin"
-);
 
 const ROUTES = require("../constants/routes");
 
@@ -49,14 +46,14 @@ router.get(
 router.patch(
   ROUTES.SPACES.UPDATE,
   authMiddleware,
-  requireAdmin,
+  authorize(PERMISSIONS.UPDATE_SPACE),
   spaceController.updateSpace
 );
 
 router.delete(
   ROUTES.SPACES.DELETE,
   authMiddleware,
-  requireAdmin,
+  authorize(PERMISSIONS.DELETE_SPACE),
   spaceController.deleteSpace
 );
 

@@ -52,11 +52,14 @@ const paginate = async (filters) => {
   const skip = (page - 1) * limit;
 
   const query = {
-    spaceId,
     isDeleted: {
       $ne: true,
     },
   };
+
+  if (spaceId) {
+    query.spaceId = spaceId;
+  }
 
   if (userId) {
     query.userId = userId;

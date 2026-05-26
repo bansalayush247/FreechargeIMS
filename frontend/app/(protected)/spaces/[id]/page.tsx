@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { apiClient } from "../../../../src/lib/api";
 import { logger } from "../../../../src/lib/logger";
 import { useToast } from "../../../../src/components/toastProvider";
@@ -22,6 +22,7 @@ import { getInventoryItemAuditTrail } from "../../../../src/lib/inventoryTransac
 
 export default function SpaceDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params?.id as string;
   const { user } = useAuth();
   const currentUserId = (user as any)?._id ?? user?.id;
@@ -47,6 +48,17 @@ export default function SpaceDetailPage() {
   const [memberSpaces, setMemberSpaces] = useState<any[]>([]);
   const [memberSpacesLoading, setMemberSpacesLoading] = useState(false);
   const [memberSpacesError, setMemberSpacesError] = useState<string | null>(null);
+  const [members, setMembers] = useState<any[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [membersError, setMembersError] = useState<string | null>(null);
+  const [roles, setRoles] = useState<any[]>([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [memberRoleByUserId, setMemberRoleByUserId] = useState<Record<string, string>>({});
+  const [updatingRoleForUserId, setUpdatingRoleForUserId] = useState<string | null>(null);
+  const [deletingSpace, setDeletingSpace] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [savingDescription, setSavingDescription] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(false);
   const toast = useToast();
   const confirm = useConfirm();
   const [modalOpen, setModalOpen] = useState(false);
@@ -86,6 +98,9 @@ export default function SpaceDetailPage() {
   const canItApprove = isAdminUserType || permissions.includes("IT_APPROVE_ASSET_REQUEST");
   const canReject = isAdminUserType || permissions.includes("REJECT_ASSET_REQUEST");
   const canForwardRequests = isAdminUserType || permissions.includes("FORWARD_ASSET_REQUEST");
+  const canManageMembers = isAdminUserType || permissions.includes("ASSIGN_ROLE") || permissions.includes("UPDATE_SPACE");
+  const canUpdateSpace = isAdminUserType || permissions.includes("UPDATE_SPACE");
+  const canDeleteSpace = isAdminUserType || permissions.includes("DELETE_SPACE");
 
   useEffect(() => {
     let mounted = true;
@@ -110,6 +125,11 @@ export default function SpaceDetailPage() {
       mounted = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    setDescriptionDraft(space?.description ?? "");
+    setEditingDescription(false);
+  }, [space?.description]);
 
   useEffect(() => {
     if (!id || !currentUserId) {
@@ -252,10 +272,163 @@ export default function SpaceDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    loadInventory();
-    loadRequests();
-    loadProducts();
+    setInvLoading(true);
+    setReqLoading(true);
+    setProductsLoading(true);
+    setReqError(null);
+    setProductsError(null);
+    Promise.allSettled([
+      listInventory({ spaceId: id, page: 1, limit: 50 }),
+      listAssetRequests({ spaceId: id, page: 1, limit: 20 }),
+      listProducts({ spaceId: id, page: 1, limit: 50 }),
+    ]).then(([invRes, reqRes, prodRes]) => {
+      if (invRes.status === "fulfilled") {
+        const inv = invRes.value;
+        const items = inv.data?.items ?? inv.items ?? inv.data ?? inv ?? [];
+        setInventory(Array.isArray(items) ? items : []);
+      } else {
+        setInventory([]);
+      }
+
+      if (reqRes.status === "fulfilled") {
+        const ar = reqRes.value;
+        const items = ar.data?.items ?? ar.items ?? ar.data ?? ar ?? [];
+        setRequests(Array.isArray(items) ? items : []);
+      } else {
+        const err: any = reqRes.reason;
+        setRequests([]);
+        setReqError(err?.response?.status === 403 ? "not-authorized" : "Failed to load requests.");
+      }
+
+      if (prodRes.status === "fulfilled") {
+        const res = prodRes.value;
+        const payload = res.data ?? res ?? {};
+        const items = payload.products ?? payload.items ?? payload.data ?? [];
+        setProducts(Array.isArray(items) ? items : []);
+      } else {
+        setProductsError("Failed to load products.");
+        setProducts([]);
+      }
+
+      setInvLoading(false);
+      setReqLoading(false);
+      setProductsLoading(false);
+    });
   }, [id]);
+
+  async function loadMembersAndRoles() {
+    if (!id || !canManageMembers) {
+      setMembers([]);
+      setRoles([]);
+      setMemberRoleByUserId({});
+      return;
+    }
+
+    setMembersLoading(true);
+    setMembersError(null);
+    setRolesLoading(true);
+    try {
+      const [membersRes, rolesRes, assignmentsRes] = await Promise.all([
+        apiClient.get("/space-members?page=1&limit=100", { headers: { "x-space-id": id } }),
+        apiClient.get("/roles?page=1&limit=100", { headers: { "x-space-id": id } }),
+        apiClient.get("/space-members/user-roles?page=1&limit=100", { headers: { "x-space-id": id } }),
+      ]);
+
+      const memberItems = membersRes.data?.data?.items ?? membersRes.data?.data ?? [];
+      const roleItems = rolesRes.data?.data?.items ?? rolesRes.data?.data ?? [];
+      const assignments = assignmentsRes.data?.data?.items ?? assignmentsRes.data?.data ?? [];
+      const byUserId: Record<string, string> = {};
+      if (Array.isArray(assignments)) {
+        assignments.forEach((a: any) => {
+          const uid = String(a?.userId?._id ?? a?.userId ?? "");
+          const rid = String(a?.roleId?._id ?? a?.roleId ?? "");
+          if (uid && rid) byUserId[uid] = rid;
+        });
+      }
+
+      setMembers(Array.isArray(memberItems) ? memberItems : []);
+      setRoles(Array.isArray(roleItems) ? roleItems : []);
+      setMemberRoleByUserId(byUserId);
+    } catch (err: any) {
+      setMembers([]);
+      setRoles([]);
+      setMemberRoleByUserId({});
+      setMembersError("Failed to load members.");
+    } finally {
+      setMembersLoading(false);
+      setRolesLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadMembersAndRoles();
+  }, [id, canManageMembers]);
+
+  async function handleChangeMemberRole(userId: string, roleId: string) {
+    if (!id || !userId || !roleId) return;
+    if (String(currentUserId ?? "") === String(userId)) {
+      toast.show("error", "You cannot change your own role.");
+      return;
+    }
+    setUpdatingRoleForUserId(userId);
+    try {
+      const res = await apiClient.patch(
+        "/space-members/user-roles/replace",
+        { userId, roleId },
+        { headers: { "x-space-id": id } }
+      );
+      toast.show("success", res.data?.message ?? "Role changed");
+      await loadMembersAndRoles();
+    } catch (err: any) {
+      const msg = (err?.response?.data?.message as string) ?? err?.message ?? "Could not change role";
+      toast.show("error", msg);
+    } finally {
+      setUpdatingRoleForUserId(null);
+    }
+  }
+
+  async function handleDeleteSpace() {
+    if (!id) return;
+
+    const ok = await confirm("Delete space", "This will permanently delete the space. Continue?");
+    if (!ok) return;
+
+    setDeletingSpace(true);
+    try {
+      const res = await apiClient.delete(`/spaces/${id}`, { headers: { "x-space-id": id } });
+      toast.show("success", res.data?.message ?? "Space deleted");
+      router.replace("/spaces");
+    } catch (err: any) {
+      const msg = (err?.response?.data?.message as string) ?? err?.message ?? "Could not delete space";
+      toast.show("error", msg);
+    } finally {
+      setDeletingSpace(false);
+    }
+  }
+
+  async function handleSaveDescription() {
+    if (!id) return;
+
+    setSavingDescription(true);
+    try {
+      const res = await apiClient.patch(
+        `/spaces/${id}`,
+        { description: descriptionDraft.trim() },
+        { headers: { "x-space-id": id } }
+      );
+      const updatedSpace = res.data?.data ?? res.data ?? null;
+      if (updatedSpace) {
+        setSpace(updatedSpace);
+      }
+      setEditingDescription(false);
+      toast.show("success", res.data?.message ?? "Space description updated");
+    } catch (err: any) {
+      const msg = (err?.response?.data?.message as string) ?? err?.message ?? "Could not update description";
+      toast.show("error", msg);
+    } finally {
+      setSavingDescription(false);
+    }
+  }
 
   useEffect(() => {
     if (!id || !canForwardRequests) {
@@ -270,7 +443,8 @@ export default function SpaceDetailPage() {
       setMemberSpacesLoading(true);
       setMemberSpacesError(null);
       try {
-        const endpoint = isAdminUserType ? "/spaces?page=1&limit=200" : "/spaces/mine?page=1&limit=200";
+        // Backend validator caps limit at 100 — request a safe default
+        const endpoint = isAdminUserType ? "/spaces?page=1&limit=100" : "/spaces/mine?page=1&limit=100";
         const res = await apiClient.get(endpoint);
         const payload = res.data?.data ?? res.data ?? {};
         const items = Array.isArray(payload.items) ? payload.items : payload;
@@ -336,14 +510,16 @@ export default function SpaceDetailPage() {
     const productId = modalProduct?._id ?? modalProduct?.id;
     if (!productId) return;
     if (!id) return;
+
     const available = availableByProductId[productId] ?? 0;
+    const requestedQuantity = modalQty ?? 1;
+
     if (available <= 0) {
-      toast.show("error", "No available quantity for this product.");
-      return;
+      // allow request when out of stock but inform the user
+      toast.show("info", "This product is currently out of stock. Your request will be queued.");
     }
 
-    const requestedQuantity = modalQty ?? 1;
-    if (requestedQuantity > available) {
+    if (available > 0 && requestedQuantity > available) {
       toast.show("error", `Quantity cannot exceed available stock (${available}).`);
       return;
     }
@@ -504,8 +680,9 @@ export default function SpaceDetailPage() {
   }
 
   const showJoinRequests = canReviewJoinRequests || jrLoading || joinRequests.length > 0;
-  const showRequestsSection = canViewAssetRequests || reqLoading || requests.length > 0 || Boolean(reqError);
+  const showRequestsSection = canViewAssetRequests || reqLoading || requests.length > 0;
   const forwardSpaces = memberSpaces.filter((spaceItem) => String(spaceItem._id ?? spaceItem.id) !== String(id));
+  const showRequestProductsSection = productsLoading || products.length > 0;
 
   return (
     <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/20 backdrop-blur-lg sm:p-8">
@@ -514,8 +691,80 @@ export default function SpaceDetailPage() {
 
       {space && (
         <div>
-          <h1 className="text-2xl font-semibold text-white">{space.name}</h1>
-          <p className="text-sm text-orange-50/80 mt-2">{space.description || "No description"}</p>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-white">{space.name}</h1>
+              {canUpdateSpace ? (
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs uppercase tracking-[0.2em] text-orange-200/60">Description</label>
+                    {!editingDescription && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingDescription(true)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
+                        aria-label="Edit description"
+                        title="Edit description"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  {!editingDescription ? (
+                    <p className="max-w-2xl rounded-md border border-white/10 bg-white/5 p-3 text-sm text-orange-50/80">
+                      {space.description || "No description"}
+                    </p>
+                  ) : (
+                    <>
+                      <textarea
+                        value={descriptionDraft}
+                        onChange={(e) => setDescriptionDraft(e.target.value)}
+                        rows={4}
+                        className="w-full max-w-2xl rounded-md border border-white/10 bg-white/5 p-3 text-sm text-white placeholder:text-white/40"
+                        placeholder="Add a description for this space"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleSaveDescription}
+                          disabled={savingDescription}
+                          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {savingDescription ? "Saving..." : "Save description"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDescriptionDraft(space?.description ?? "");
+                            setEditingDescription(false);
+                          }}
+                          disabled={savingDescription}
+                          className="rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-orange-50/80">{space.description || "No description"}</p>
+              )}
+            </div>
+            {canDeleteSpace && (
+              <button
+                type="button"
+                onClick={handleDeleteSpace}
+                disabled={deletingSpace}
+                className="rounded-md border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-100 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deletingSpace ? "Deleting..." : "Delete space"}
+              </button>
+            )}
+          </div>
           <div className="mt-4">
             <h3 className="text-lg font-medium text-white">Details</h3>
             <div className="mt-2 text-sm text-white/80">Code: {space.code}</div>
@@ -567,6 +816,48 @@ export default function SpaceDetailPage() {
             </div>
           )}
 
+          {canManageMembers && (
+            <div className="mt-6">
+              <h3 className="text-lg font-medium text-white">Members</h3>
+              {membersLoading && <p className="text-sm text-orange-100">Loading members...</p>}
+              {membersError && <p className="text-sm text-red-300">{membersError}</p>}
+              {!membersLoading && members.length === 0 && !membersError && <p className="text-sm text-orange-100">No members found.</p>}
+              {!membersLoading && members.length > 0 && (
+                <div className="mt-3 space-y-3">
+                  {members.map((m) => {
+                    const memberUser = m.userId ?? {};
+                    const uid = String(memberUser._id ?? memberUser.id ?? m.userId);
+                    return (
+                      <div key={m._id ?? uid} className="rounded-md border border-white/8 bg-white/3 p-3">
+                        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                          <div className="text-sm text-white">{formatUserLabel(memberUser)}</div>
+                          <div className="flex items-center gap-2">
+                            {String(currentUserId ?? "") === String(uid) && (
+                              <span className="text-xs text-orange-200/80">Your role cannot be changed here</span>
+                            )}
+                            <select
+                              value={memberRoleByUserId[uid] ?? ""}
+                              disabled={rolesLoading || updatingRoleForUserId === uid || String(currentUserId ?? "") === String(uid)}
+                              onChange={(e) => handleChangeMemberRole(uid, e.target.value)}
+                              className="rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white"
+                            >
+                              <option value="">Select role</option>
+                              {roles.map((role) => (
+                                <option key={role._id ?? role.id} value={role._id ?? role.id} className="bg-slate-900">
+                                  {role.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="mt-6">
             <h3 className="text-lg font-medium text-white">Inventory</h3>
             {invLoading ? (
@@ -603,6 +894,16 @@ export default function SpaceDetailPage() {
                           {assignedUser && (
                             <div className="text-xs text-orange-200/80">Assigned: {formatUserLabel(assignedUser)}</div>
                           )}
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              disabled={!product?._id && !product?.id}
+                              onClick={() => openRequestModal(product)}
+                              className="rounded-md bg-orange-600 px-3 py-2 text-xs font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Request inventory
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -612,7 +913,8 @@ export default function SpaceDetailPage() {
             )}
           </div>
 
-          <div className="mt-6">
+          {showRequestProductsSection && (
+            <div className="mt-6">
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-medium text-white">Request Products</h3>
             </div>
@@ -638,7 +940,7 @@ export default function SpaceDetailPage() {
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            disabled={!productId || available <= 0}
+                            disabled={!productId}
                             onClick={() => openRequestModal(product)}
                             className="rounded-md bg-orange-600 px-3 py-2 text-sm text-white disabled:opacity-50"
                           >
@@ -662,7 +964,7 @@ export default function SpaceDetailPage() {
                   <input
                     type="number"
                     min={1}
-                    max={modalProduct ? (availableByProductId[modalProduct._id ?? modalProduct.id] ?? 1) : 1}
+                    max={modalProduct ? (availableByProductId[modalProduct._id ?? modalProduct.id] ?? undefined) : undefined}
                     value={modalQty}
                     onChange={(e) => setModalQty(Math.max(1, Number(e.target.value || 1)))}
                     className="mt-1 w-32 rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white"
@@ -692,6 +994,7 @@ export default function SpaceDetailPage() {
               </div>
             </Modal>
           </div>
+          )}
 
           {showRequestsSection && (
             <div className="mt-6">
@@ -725,6 +1028,9 @@ export default function SpaceDetailPage() {
                             <div className="text-xs text-orange-50/80">Quantity: {r.requestedQuantity ?? 1}</div>
                             <div className="text-xs text-orange-50/80">Priority: {r.priority ?? "MEDIUM"}</div>
                             <div className="text-xs text-orange-50/80">Status: {status}</div>
+                            <div className="text-xs text-orange-50/80">
+                              Tracking: {status === "PENDING" ? "Manager/Admin approval pending" : status === "MANAGER_APPROVED" ? "IT Team approval pending" : status === "FULFILLED" ? "Approved and fulfilled by IT Team" : status}
+                            </div>
                             <div className="text-xs text-orange-50/80">Requested by: {formatUserLabel(requester)}</div>
                             <div className="text-xs text-orange-50/80">Requested at: {formatDate(r.createdAt)}</div>
                             {r.businessJustification && (
@@ -741,6 +1047,7 @@ export default function SpaceDetailPage() {
                             {r.itRemarks && <div className="text-xs text-orange-50/80">IT remarks: {r.itRemarks}</div>}
                             {r.rejectionReason && <div className="text-xs text-red-200">Rejection reason: {r.rejectionReason}</div>}
                             {r.managerApprovalAt && <div className="text-xs text-orange-50/80">Manager approved at: {formatDate(r.managerApprovalAt)}</div>}
+                            {r.forwardedAt && <div className="text-xs text-orange-50/80">Sent to IT Team queue at: {formatDate(r.forwardedAt)}</div>}
                             {r.itApprovalAt && <div className="text-xs text-orange-50/80">IT approved at: {formatDate(r.itApprovalAt)}</div>}
                             {inventoryItemId && <div className="text-xs text-orange-50/80">Inventory item: {inventoryItemId}</div>}
                             {r.fulfilledAt && <div className="text-xs text-orange-50/80">Fulfilled at: {formatDate(r.fulfilledAt)}</div>}

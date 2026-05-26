@@ -2,6 +2,7 @@ const AssetRequest = require("../models/assetRequest");
 const Product = require("../models/product");
 const InventoryItem = require("../models/inventory");
 const Warehouse = require("../models/warehouse");
+const Space = require("../models/space");
 
 const assetRequestRepository = require(
   "../repositories/assetRequest"
@@ -18,6 +19,7 @@ const notificationService = require("./notification");
 
 const {
   ASSET_REQUEST_STATUS,
+  ASSET_REQUEST_PERMISSIONS,
 } = require("../constants/assetRequest");
 
 const {
@@ -40,6 +42,35 @@ const {
 
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
+const { USER_TYPES } = require("../constants/user");
+
+const IT_TEAM_SPACE = {
+  name: "IT Team",
+  code: "IT_TEAM",
+  description: "Central IT approval queue space",
+};
+
+const ensureItTeamSpace = async (userId) => {
+  let itSpace = await Space.findOne({
+    $or: [{ code: IT_TEAM_SPACE.code }, { name: IT_TEAM_SPACE.name }],
+    isDeleted: false,
+  })
+    .select("_id name code")
+    .lean();
+
+  if (itSpace) return itSpace;
+
+  const created = await Space.create({
+    ...IT_TEAM_SPACE,
+    isActive: true,
+    createdBy: userId || null,
+    updatedBy: userId || null,
+  });
+
+  itSpace = await Space.findById(created._id).select("_id name code").lean();
+  logger.info("Created IT Team space for approval queue", { spaceId: itSpace?._id });
+  return itSpace;
+};
 
 // Handles generate request number.
 const generateRequestNumber = async () => {
@@ -118,8 +149,17 @@ const createAssetRequest = async (
 };
 
 // Handles get asset requests.
-const getAssetRequests = async (filters) => {
-  return assetRequestRepository.paginate(filters);
+const getAssetRequests = async (filters, context = {}) => {
+  const nextFilters = { ...filters };
+  const hasViewPermission = Array.isArray(context.permissions)
+    && context.permissions.includes(ASSET_REQUEST_PERMISSIONS.VIEW_ASSET_REQUEST);
+  const isAdmin = context.userType === USER_TYPES.ADMIN;
+
+  if (!isAdmin && !hasViewPermission && context.userId) {
+    nextFilters.employeeId = context.userId;
+  }
+
+  return assetRequestRepository.paginate(nextFilters);
 };
 
 // Handles get asset request by id.
@@ -165,6 +205,23 @@ const managerApproveRequest = async (
     updatedBy: userId,
   });
 
+  // Route manager-approved requests to the shared IT queue.
+  const itSpace = await ensureItTeamSpace(userId);
+  const shouldForwardToItSpace = itSpace && String(updatedRequest.spaceId) !== String(itSpace._id);
+
+  const finalRequest = shouldForwardToItSpace
+    ? await forwardRequest(
+        id,
+        { targetSpaceId: itSpace._id },
+        userId,
+        {
+          ...context,
+          userType: "ADMIN",
+          spaceId: updatedRequest.spaceId,
+        }
+      )
+    : updatedRequest;
+
   await auditLogService.recordAuditLog({
     spaceId: context.spaceId || null,
     actorId: userId,
@@ -192,7 +249,7 @@ const managerApproveRequest = async (
     userId
   );
 
-  return updatedRequest;
+  return finalRequest;
 };
 
 // Handles it approve request.

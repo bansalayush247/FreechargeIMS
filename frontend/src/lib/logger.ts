@@ -4,6 +4,10 @@ type LogLevel = "debug" | "info" | "warn" | "error";
 
 async function sendLog(level: LogLevel, message: string, meta?: Record<string, any>) {
   try {
+    if (process.env.NODE_ENV === "development") {
+      return;
+    }
+
     const payload = {
       level,
       source: "frontend",
