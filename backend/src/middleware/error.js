@@ -1,4 +1,5 @@
 const logger = require("../config/logger");
+const { ERRORS } = require("../constants/error");
 
 // Handles error middleware.
 function errorMiddleware(err, req, res, next) {
@@ -15,13 +16,15 @@ function errorMiddleware(err, req, res, next) {
 
     return res.status(409).json({
       success: false,
-      message: `${field} already exists`
+      message: `${field} already exists`,
+      errorCode: ERRORS.DB_DUPLICATE_KEY.errorCode
     });
   }
 
   return res.status(err.statusCode || 500).json({
     success: false,
-    message: err.message || "Internal Server Error"
+    message: err.message || "Internal Server Error",
+    errorCode: err.errorCode || "GEN_001"
   });
 }
 

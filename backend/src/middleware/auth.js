@@ -1,4 +1,5 @@
 const AppError = require("../utils/appError");
+const { ERRORS } = require("../constants/error");
 
 const { HTTP_STATUS } = require("../constants/http");
 
@@ -12,7 +13,11 @@ const authMiddleware = async (req, res, next) => {
     const authorization = req.headers.authorization;
 
     if (!authorization?.startsWith("Bearer ")) {
-      throw new AppError("Unauthorized access", HTTP_STATUS.UNAUTHORIZED);
+      throw new AppError(
+        ERRORS.UNAUTHORIZED.message,
+        ERRORS.UNAUTHORIZED.statusCode,
+        ERRORS.UNAUTHORIZED.errorCode
+      );
     }
 
     const token = authorization.split(" ")[1];
@@ -26,7 +31,11 @@ const authMiddleware = async (req, res, next) => {
     const user = await findActiveUserById(tokenResult.decoded.userId);
 
     if (!user) {
-      throw new AppError("Unauthorized access", HTTP_STATUS.UNAUTHORIZED);
+      throw new AppError(
+        ERRORS.UNAUTHORIZED.message,
+        ERRORS.UNAUTHORIZED.statusCode,
+        ERRORS.UNAUTHORIZED.errorCode
+      );
     }
 
     req.user = user;

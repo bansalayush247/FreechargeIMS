@@ -73,6 +73,9 @@ const PERMISSIONS = {
 
   // Audit
   VIEW_AUDIT_LOGS: "VIEW_AUDIT_LOGS",
+
+  // Platform logs
+  MANAGE_LOGS: "MANAGE_LOGS",
 };
 
 module.exports = {

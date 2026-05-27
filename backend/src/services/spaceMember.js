@@ -13,6 +13,9 @@ const auditLogService = require("./auditLog");
 
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
+const {
+  invalidateByUserAndSpace,
+} = require("./rbacCache");
 
 const {
   AUDIT_ACTIONS,
@@ -102,6 +105,7 @@ const addMember = async (
             memberId: existingMember._id,
             roleId: viewerRole._id,
           });
+          invalidateByUserAndSpace(payload.userId, spaceId);
         }
       } catch (error) {
         logger.warn("Failed to auto-assign VIEWER role on reactivation", { 
@@ -157,6 +161,7 @@ const addMember = async (
         memberId: member._id,
         roleId: viewerRole._id,
       });
+      invalidateByUserAndSpace(payload.userId, spaceId);
     }
   } catch (error) {
     logger.warn("Failed to auto-assign VIEWER role", { error: error.message });
@@ -261,6 +266,7 @@ const removeMember = async (
     spaceId,
     deletePayload
   );
+  invalidateByUserAndSpace(member.userId._id || member.userId, spaceId);
 
   await auditLogService.recordAuditLog({
     spaceId,
@@ -364,6 +370,7 @@ const assignRole = async (
   logger.info("Role assigned to user", {
     userRoleId: assignment._id,
   });
+  invalidateByUserAndSpace(payload.userId, spaceId);
 
   return assignment;
 };
@@ -465,6 +472,7 @@ const replaceRole = async (
     replacedRoleAssignmentCount:
       removeResult.modifiedCount || 0,
   });
+  invalidateByUserAndSpace(payload.userId, spaceId);
 
   return {
     assignment,
@@ -511,6 +519,10 @@ const removeRole = async (
       deletedBy: userId,
       updatedBy: userId,
     });
+  invalidateByUserAndSpace(
+    assignment.userId._id || assignment.userId,
+    spaceId
+  );
 
   await auditLogService.recordAuditLog({
     spaceId,

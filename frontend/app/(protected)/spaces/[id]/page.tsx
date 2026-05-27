@@ -8,7 +8,7 @@ import { useToast } from "../../../../src/components/toastProvider";
 import { Modal } from "../../../../src/components/modal";
 import { useAuth } from "../../../../src/auth/authContext";
 import { useConfirm } from "../../../../src/components/confirmProvider";
-import { listInventory } from "../../../../src/lib/inventoryClient";
+import { createInventoryItem, listInventory } from "../../../../src/lib/inventoryClient";
 import {
   createAssetRequest,
   forwardAssetRequest,
@@ -43,6 +43,9 @@ export default function SpaceDetailPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [warehousesLoading, setWarehousesLoading] = useState(false);
+  const [warehousesError, setWarehousesError] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const [memberSpaces, setMemberSpaces] = useState<any[]>([]);
@@ -79,6 +82,18 @@ export default function SpaceDetailPage() {
   const [forwardRequest, setForwardRequest] = useState<any | null>(null);
   const [forwardTargetSpaceId, setForwardTargetSpaceId] = useState<string>("");
   const [forwardSubmitting, setForwardSubmitting] = useState(false);
+  const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
+  const [inventorySubmitting, setInventorySubmitting] = useState(false);
+  const [inventoryForm, setInventoryForm] = useState({
+    productId: "",
+    warehouseId: "",
+    quantity: 1,
+    serialNumber: "",
+    assetTag: "",
+    qrCode: "",
+    condition: "GOOD",
+    remarks: "",
+  });
   const availableByProductId = useMemo(() => {
     const map: Record<string, number> = {};
     for (const item of inventory) {
@@ -101,6 +116,10 @@ export default function SpaceDetailPage() {
   const canManageMembers = isAdminUserType || permissions.includes("ASSIGN_ROLE") || permissions.includes("UPDATE_SPACE");
   const canUpdateSpace = isAdminUserType || permissions.includes("UPDATE_SPACE");
   const canDeleteSpace = isAdminUserType || permissions.includes("DELETE_SPACE");
+  const canCreateInventory = isAdminUserType || permissions.includes("CREATE_INVENTORY");
+  const canCreateAssetRequest = Boolean(currentUserId) || isAdminUserType || permissions.includes("CREATE_ASSET_REQUEST");
+  const selectedInventoryProduct = products.find((product) => String(product._id ?? product.id) === inventoryForm.productId);
+  const selectedInventoryProductIsConsumable = selectedInventoryProduct?.assetType === "CONSUMABLE";
 
   useEffect(() => {
     let mounted = true;
@@ -270,18 +289,38 @@ export default function SpaceDetailPage() {
     }
   }
 
+  async function loadWarehouses() {
+    if (!id) return;
+    setWarehousesLoading(true);
+    setWarehousesError(null);
+    try {
+      const res = await apiClient.get("/warehouse?page=1&limit=100", { headers: { "x-space-id": id } });
+      const payload = res.data?.data ?? res.data ?? {};
+      const items = payload.warehouses ?? payload.items ?? payload.data ?? [];
+      setWarehouses(Array.isArray(items) ? items : []);
+    } catch (err: any) {
+      setWarehouses([]);
+      setWarehousesError("Failed to load warehouses.");
+    } finally {
+      setWarehousesLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (!id) return;
     setInvLoading(true);
     setReqLoading(true);
     setProductsLoading(true);
+    setWarehousesLoading(true);
     setReqError(null);
     setProductsError(null);
+    setWarehousesError(null);
     Promise.allSettled([
       listInventory({ spaceId: id, page: 1, limit: 50 }),
       listAssetRequests({ spaceId: id, page: 1, limit: 20 }),
       listProducts({ spaceId: id, page: 1, limit: 50 }),
-    ]).then(([invRes, reqRes, prodRes]) => {
+      apiClient.get("/warehouse?page=1&limit=100", { headers: { "x-space-id": id } }),
+    ]).then(([invRes, reqRes, prodRes, warehouseRes]) => {
       if (invRes.status === "fulfilled") {
         const inv = invRes.value;
         const items = inv.data?.items ?? inv.items ?? inv.data ?? inv ?? [];
@@ -310,9 +349,19 @@ export default function SpaceDetailPage() {
         setProducts([]);
       }
 
+      if (warehouseRes.status === "fulfilled") {
+        const payload = warehouseRes.value.data?.data ?? warehouseRes.value.data ?? {};
+        const items = payload.warehouses ?? payload.items ?? payload.data ?? [];
+        setWarehouses(Array.isArray(items) ? items : []);
+      } else {
+        setWarehousesError("Failed to load warehouses.");
+        setWarehouses([]);
+      }
+
       setInvLoading(false);
       setReqLoading(false);
       setProductsLoading(false);
+      setWarehousesLoading(false);
     });
   }, [id]);
 
@@ -546,6 +595,65 @@ export default function SpaceDetailPage() {
     }
   }
 
+  function openInventoryModal() {
+    setInventoryForm({
+      productId: products[0]?._id ?? products[0]?.id ?? "",
+      warehouseId: warehouses[0]?._id ?? warehouses[0]?.id ?? "",
+      quantity: 1,
+      serialNumber: "",
+      assetTag: "",
+      qrCode: "",
+      condition: "GOOD",
+      remarks: "",
+    });
+    setInventoryModalOpen(true);
+  }
+
+  async function submitInventory() {
+    if (!id) return;
+    if (!inventoryForm.productId) {
+      toast.show("error", "Select a product.");
+      return;
+    }
+    if (!inventoryForm.warehouseId) {
+      toast.show("error", "Select a warehouse.");
+      return;
+    }
+
+    const payload: any = {
+      productId: inventoryForm.productId,
+      warehouseId: inventoryForm.warehouseId,
+      quantity: Math.max(1, Number(inventoryForm.quantity || 1)),
+      status: "IN_STOCK",
+      condition: inventoryForm.condition,
+      remarks: inventoryForm.remarks.trim(),
+    };
+
+    if (!selectedInventoryProductIsConsumable) {
+      payload.quantity = 1;
+      payload.serialNumber = inventoryForm.serialNumber.trim();
+      payload.assetTag = inventoryForm.assetTag.trim();
+      payload.qrCode = inventoryForm.qrCode.trim();
+      if (!payload.serialNumber || !payload.assetTag || !payload.qrCode) {
+        toast.show("error", "Serial number, asset tag, and QR code are required for non-consumable inventory.");
+        return;
+      }
+    }
+
+    setInventorySubmitting(true);
+    try {
+      const res = await createInventoryItem(payload, id);
+      toast.show("success", res?.message ?? "Inventory item created");
+      setInventoryModalOpen(false);
+      await Promise.all([loadInventory(), loadProducts(), loadWarehouses()]);
+    } catch (err: any) {
+      const msg = (err?.response?.data?.message as string) ?? err?.message ?? "Could not add inventory";
+      toast.show("error", msg);
+    } finally {
+      setInventorySubmitting(false);
+    }
+  }
+
   function formatUserLabel(userValue: any) {
     if (!userValue) return "Unknown user";
     if (typeof userValue === "string") return userValue;
@@ -682,7 +790,7 @@ export default function SpaceDetailPage() {
   const showJoinRequests = canReviewJoinRequests || jrLoading || joinRequests.length > 0;
   const showRequestsSection = canViewAssetRequests || reqLoading || requests.length > 0;
   const forwardSpaces = memberSpaces.filter((spaceItem) => String(spaceItem._id ?? spaceItem.id) !== String(id));
-  const showRequestProductsSection = productsLoading || products.length > 0;
+  const showRequestProductsSection = canCreateAssetRequest || productsLoading || products.length > 0 || Boolean(productsError);
 
   return (
     <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/20 backdrop-blur-lg sm:p-8">
@@ -859,7 +967,26 @@ export default function SpaceDetailPage() {
           )}
 
           <div className="mt-6">
-            <h3 className="text-lg font-medium text-white">Inventory</h3>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-lg font-medium text-white">Inventory</h3>
+              {canCreateInventory && (
+                <button
+                  type="button"
+                  onClick={openInventoryModal}
+                  disabled={productsLoading || warehousesLoading || products.length === 0 || warehouses.length === 0}
+                  className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Add inventory
+                </button>
+              )}
+            </div>
+            {canCreateInventory && !productsLoading && products.length === 0 && (
+              <p className="mt-2 text-sm text-orange-100">Create a product first before adding inventory.</p>
+            )}
+            {canCreateInventory && !warehousesLoading && warehouses.length === 0 && (
+              <p className="mt-2 text-sm text-orange-100">Create a warehouse first before adding inventory.</p>
+            )}
+            {warehousesError && <p className="mt-2 text-sm text-red-300">{warehousesError}</p>}
             {invLoading ? (
               <p className="text-sm text-orange-100">Loading inventory…</p>
             ) : inventory.length === 0 ? (
@@ -911,6 +1038,116 @@ export default function SpaceDetailPage() {
                 })}
               </div>
             )}
+
+            <Modal title="Add inventory" open={inventoryModalOpen} onClose={() => setInventoryModalOpen(false)}>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm text-white">Product</label>
+                  <select
+                    value={inventoryForm.productId}
+                    onChange={(e) => setInventoryForm((form) => ({ ...form, productId: e.target.value }))}
+                    className="mt-1 w-full rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white"
+                  >
+                    <option value="">Select product</option>
+                    {products.map((product) => (
+                      <option key={product._id ?? product.id} value={product._id ?? product.id} className="bg-slate-900">
+                        {product.name} ({product.sku ?? product.assetType ?? "-"})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-white">Warehouse</label>
+                  <select
+                    value={inventoryForm.warehouseId}
+                    onChange={(e) => setInventoryForm((form) => ({ ...form, warehouseId: e.target.value }))}
+                    className="mt-1 w-full rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white"
+                  >
+                    <option value="">Select warehouse</option>
+                    {warehouses.map((warehouse) => (
+                      <option key={warehouse._id ?? warehouse.id} value={warehouse._id ?? warehouse.id} className="bg-slate-900">
+                        {warehouse.name} ({warehouse.code ?? "-"})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedInventoryProductIsConsumable ? (
+                  <div>
+                    <label className="text-sm text-white">Quantity</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={inventoryForm.quantity}
+                      onChange={(e) => setInventoryForm((form) => ({ ...form, quantity: Math.max(1, Number(e.target.value || 1)) }))}
+                      className="mt-1 w-32 rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white"
+                    />
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className="text-sm text-white">Serial number</label>
+                      <input
+                        value={inventoryForm.serialNumber}
+                        onChange={(e) => setInventoryForm((form) => ({ ...form, serialNumber: e.target.value }))}
+                        className="mt-1 w-full rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-white">Asset tag</label>
+                      <input
+                        value={inventoryForm.assetTag}
+                        onChange={(e) => setInventoryForm((form) => ({ ...form, assetTag: e.target.value }))}
+                        className="mt-1 w-full rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-white">QR code</label>
+                      <input
+                        value={inventoryForm.qrCode}
+                        onChange={(e) => setInventoryForm((form) => ({ ...form, qrCode: e.target.value }))}
+                        className="mt-1 w-full rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white"
+                      />
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label className="text-sm text-white">Condition</label>
+                  <select
+                    value={inventoryForm.condition}
+                    onChange={(e) => setInventoryForm((form) => ({ ...form, condition: e.target.value }))}
+                    className="mt-1 w-full rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white"
+                  >
+                    {["NEW", "GOOD", "FAIR", "DAMAGED"].map((condition) => (
+                      <option key={condition} value={condition} className="bg-slate-900">
+                        {condition}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-white">Remarks</label>
+                  <textarea
+                    value={inventoryForm.remarks}
+                    onChange={(e) => setInventoryForm((form) => ({ ...form, remarks: e.target.value }))}
+                    rows={3}
+                    className="mt-1 w-full rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={submitInventory}
+                    disabled={inventorySubmitting}
+                    className="rounded-md bg-green-600 px-3 py-2 text-sm text-white disabled:opacity-50"
+                  >
+                    {inventorySubmitting ? "Adding..." : "Add inventory"}
+                  </button>
+                  <button type="button" onClick={() => setInventoryModalOpen(false)} className="rounded-md px-3 py-2 text-sm text-white/80 hover:text-white">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </Modal>
           </div>
 
           {showRequestProductsSection && (

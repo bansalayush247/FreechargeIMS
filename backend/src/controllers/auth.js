@@ -3,6 +3,7 @@ const logger = require("../config/logger");
 const { loginUser, signupUser, refreshAccessToken, logoutUser } = require("../services/auth");
 const { HTTP_STATUS } = require("../constants/http");
 const AppError = require("../utils/appError");
+const { ERRORS } = require("../constants/error");
 
 // Handles get ip address.
 const getIpAddress = (req) => {
@@ -57,7 +58,11 @@ const refresh = asyncHandler(async (req, res) => {
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
-    throw new AppError("Refresh token is required", HTTP_STATUS.BAD_REQUEST);
+    throw new AppError(
+      ERRORS.REFRESH_TOKEN_REQUIRED.message,
+      ERRORS.REFRESH_TOKEN_REQUIRED.statusCode,
+      ERRORS.REFRESH_TOKEN_REQUIRED.errorCode
+    );
   }
 
   const result = await refreshAccessToken(refreshToken);

@@ -7,6 +7,7 @@ const auditLogService = require("./auditLog");
 
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
+const { invalidateBySpace } = require("./rbacCache");
 
 const {
   AUDIT_ACTIONS,
@@ -132,6 +133,7 @@ const updateRole = async (
   logger.info("Role updated", {
     roleId: id,
   });
+  invalidateBySpace(spaceId);
 
   return updatedRole;
 };
@@ -167,6 +169,7 @@ const deleteRole = async (
     spaceId,
     deletePayload
   );
+  invalidateBySpace(spaceId);
 
   await auditLogService.recordAuditLog({
     spaceId,
