@@ -48,7 +48,10 @@ const getInventoryItems = asyncHandler(async (req, res) => {
     });
   }
 
-  const result = await inventoryService.getInventoryItems(value);
+  const result = await inventoryService.getInventoryItems({
+    ...value,
+    spaceId: req.spaceId,
+  });
 
   return res.status(200).json({
     success: true,

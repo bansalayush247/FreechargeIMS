@@ -11,7 +11,7 @@ const logger = require("../config/logger");
 
 const LOGS_DIR = path.resolve(__dirname, "../../../src/logs");
 const ARCHIVES_DIR = path.join(LOGS_DIR, "archives");
-const LOG_FILES = ["combined.log", "error.log"];
+const LOG_FILES = ["combined.log"];
 const ARCHIVE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 let archiveInProgress = false;

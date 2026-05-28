@@ -176,8 +176,12 @@ const createAssetRequest = async (
 // Handles get asset requests.
 const getAssetRequests = async (filters, context = {}) => {
   const nextFilters = { ...filters };
-  const hasViewPermission = Array.isArray(context.permissions)
-    && context.permissions.includes(ASSET_REQUEST_PERMISSIONS.VIEW_ASSET_REQUEST);
+  const requestPermissions = new Set(context.permissions || []);
+  const hasViewPermission = requestPermissions.has(ASSET_REQUEST_PERMISSIONS.VIEW_ASSET_REQUEST)
+    || requestPermissions.has(ASSET_REQUEST_PERMISSIONS.MANAGER_APPROVE_ASSET_REQUEST)
+    || requestPermissions.has(ASSET_REQUEST_PERMISSIONS.IT_APPROVE_ASSET_REQUEST)
+    || requestPermissions.has(ASSET_REQUEST_PERMISSIONS.REJECT_ASSET_REQUEST)
+    || requestPermissions.has(ASSET_REQUEST_PERMISSIONS.FORWARD_ASSET_REQUEST);
   const isAdmin = context.userType === USER_TYPES.ADMIN;
 
   if (!isAdmin && !hasViewPermission && context.userId) {

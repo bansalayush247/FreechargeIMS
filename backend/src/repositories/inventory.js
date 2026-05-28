@@ -1,4 +1,5 @@
 const InventoryItem = require("../models/inventory");
+const Warehouse = require("../models/warehouse");
 const {
   getInventoryStatusQueryValues,
 } = require("../constants/inventory");
@@ -42,6 +43,7 @@ const paginate = async ({
   status,
   warehouseId,
   productId,
+  spaceId,
   search,
 }) => {
   const skip = (page - 1) * limit;
@@ -56,8 +58,27 @@ const paginate = async ({
     };
   }
 
+  if (spaceId) {
+    const warehouses = await Warehouse.find({
+      spaceId,
+      isDeleted: false,
+    })
+      .select("_id")
+      .lean();
+
+    query.warehouseId = {
+      $in: warehouses.map((warehouse) => warehouse._id),
+    };
+  }
+
   if (warehouseId) {
-    query.warehouseId = warehouseId;
+    query.warehouseId = spaceId
+      ? {
+          $in: query.warehouseId.$in.filter(
+            (id) => String(id) === String(warehouseId)
+          ),
+        }
+      : warehouseId;
   }
 
   if (productId) {
@@ -118,4 +139,3 @@ module.exports = {
   updateById,
   paginate,
 };
-

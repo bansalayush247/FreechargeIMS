@@ -1,6 +1,8 @@
 const assetRequestService = require(
   "../services/assetRequest"
 );
+const userRoleRepository = require("../repositories/userRole");
+const roleRepository = require("../repositories/role");
 
 const asyncHandler = require("../utils/asyncHandler");
 
@@ -13,6 +15,27 @@ const {
 } = require(
   "../validators/assetRequest"
 );
+const { USER_TYPES } = require("../constants/user");
+
+const getRequestPermissions = async (req, userId, spaceId) => {
+  if (req.user?.userType === USER_TYPES.ADMIN) {
+    return req.permissions || [];
+  }
+
+  if (Array.isArray(req.permissions) && req.permissions.length) {
+    return req.permissions;
+  }
+
+  const userRoles = await userRoleRepository.findUserRolesByUserAndSpace(
+    userId,
+    spaceId
+  );
+  const roles = await roleRepository.findActiveRolesByIds(
+    userRoles.map((item) => item.roleId)
+  );
+
+  return [...new Set(roles.flatMap((role) => role.permissions || []))];
+};
 
 const createAssetRequest = asyncHandler(
   async (req, res) => {
@@ -66,13 +89,19 @@ const getAssetRequests = asyncHandler(
       });
     }
 
+    const permissions = await getRequestPermissions(
+      req,
+      userId,
+      req.headers["x-space-id"]
+    );
+
     const requests =
       await assetRequestService.getAssetRequests(
         value,
         {
           userId,
           userType: req.user?.userType,
-          permissions: req.permissions || [],
+          permissions,
         }
       );
 

@@ -4,7 +4,7 @@ const fs = require("fs");
 
 const LOGS_DIR = process.env.LOGS_DIR
   ? path.resolve(process.env.LOGS_DIR)
-  : path.resolve(__dirname, "../../logs");
+  : path.resolve(__dirname, "../../../src/logs");
 
 fs.mkdirSync(LOGS_DIR, { recursive: true });
 
@@ -28,11 +28,6 @@ const logger = winston.createLogger({
 
   transports: [
     new winston.transports.Console(),
-
-    new winston.transports.File({
-      filename: path.join(LOGS_DIR, "error.log"),
-      level: "error"
-    }),
 
     new winston.transports.File({
       filename: path.join(LOGS_DIR, "combined.log")

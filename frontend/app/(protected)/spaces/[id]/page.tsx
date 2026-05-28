@@ -43,7 +43,6 @@ export default function SpaceDetailPage() {
   const [reqError, setReqError] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
-  const [productsError, setProductsError] = useState<string | null>(null);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [warehousesLoading, setWarehousesLoading] = useState(false);
   const [warehousesError, setWarehousesError] = useState<string | null>(null);
@@ -107,6 +106,22 @@ export default function SpaceDetailPage() {
     }
     return map;
   }, [inventory]);
+  const requestableProducts = useMemo(() => {
+    const map = new Map<string, any>();
+
+    for (const item of inventory) {
+      const product = item.productId ?? item.product ?? {};
+      const productId = typeof product === "string" ? product : product?._id ?? product?.id;
+      const quantity = Number(item.quantity ?? item.stock ?? 1);
+      const isAvailable = (item.status ?? "IN_STOCK") === "IN_STOCK" && !item.assignedUserId && quantity > 0;
+
+      if (!productId || !isAvailable || typeof product === "string") continue;
+
+      map.set(productId, product);
+    }
+
+    return Array.from(map.values());
+  }, [inventory]);
 
   const canReviewJoinRequests = isAdminUserType || permissions.includes("UPDATE_SPACE");
   const canViewAssetRequests = isAdminUserType || permissions.includes("VIEW_ASSET_REQUEST");
@@ -118,7 +133,7 @@ export default function SpaceDetailPage() {
   const canUpdateSpace = isAdminUserType || permissions.includes("UPDATE_SPACE");
   const canDeleteSpace = isAdminUserType || permissions.includes("DELETE_SPACE");
   const canCreateInventory = isAdminUserType || permissions.includes("CREATE_INVENTORY");
-  const canCreateAssetRequest = Boolean(currentUserId) || isAdminUserType || permissions.includes("CREATE_ASSET_REQUEST");
+  const canCreateAssetRequest = Boolean(currentUserId);
   const selectedInventoryProduct = products.find((product) => String(product._id ?? product.id) === inventoryForm.productId);
   const selectedInventoryProductIsConsumable = selectedInventoryProduct?.assetType === "CONSUMABLE";
 
@@ -322,14 +337,12 @@ export default function SpaceDetailPage() {
   async function loadProducts() {
     if (!id) return;
     setProductsLoading(true);
-    setProductsError(null);
     try {
       const res = await listProducts({ spaceId: id, page: 1, limit: 50 });
       const payload = res.data ?? res ?? {};
       const items = payload.products ?? payload.items ?? payload.data ?? [];
       setProducts(Array.isArray(items) ? items : []);
     } catch (err: any) {
-      setProductsError("Failed to load products.");
       setProducts([]);
     } finally {
       setProductsLoading(false);
@@ -360,7 +373,6 @@ export default function SpaceDetailPage() {
     setProductsLoading(true);
     setWarehousesLoading(true);
     setReqError(null);
-    setProductsError(null);
     setWarehousesError(null);
     Promise.allSettled([
       listInventory({ spaceId: id, page: 1, limit: 50 }),
@@ -392,7 +404,6 @@ export default function SpaceDetailPage() {
         const items = payload.products ?? payload.items ?? payload.data ?? [];
         setProducts(Array.isArray(items) ? items : []);
       } else {
-        setProductsError("Failed to load products.");
         setProducts([]);
       }
 
@@ -592,10 +603,11 @@ export default function SpaceDetailPage() {
     }
   }
 
-  function openRequestModal(product: any) {
-    const productId = product?._id ?? product?.id;
+  function openRequestModal(product?: any) {
+    const nextProduct = product ?? requestableProducts[0];
+    const productId = nextProduct?._id ?? nextProduct?.id;
     if (!productId) return;
-    setModalProduct(product);
+    setModalProduct(nextProduct);
     setModalQty(1);
     setModalNotes("");
     setModalOpen(true);
@@ -857,9 +869,8 @@ export default function SpaceDetailPage() {
   }
 
   const showJoinRequests = canReviewJoinRequests || jrLoading || joinRequests.length > 0;
-  const showRequestsSection = canViewAssetRequests || reqLoading || requests.length > 0;
+  const showProductRequestsSection = canViewAssetRequests || reqLoading || requests.length > 0;
   const forwardSpaces = memberSpaces.filter((spaceItem) => String(spaceItem._id ?? spaceItem.id) !== String(id));
-  const showRequestProductsSection = canCreateAssetRequest || productsLoading || products.length > 0 || Boolean(productsError);
 
   return (
     <section className="rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-2xl shadow-black/20 backdrop-blur-lg sm:p-8">
@@ -949,8 +960,8 @@ export default function SpaceDetailPage() {
           </div>
 
           {showJoinRequests && (
-            <div className="mt-6">
-              <h3 className="text-lg font-medium text-white">{canReviewJoinRequests ? "Join Requests" : "Your Join Request"}</h3>
+            <div className="mt-6 rounded-lg border border-sky-300/15 bg-sky-950/20 p-4">
+              <h3 className="text-lg font-medium text-white">{canReviewJoinRequests ? "Space Join Requests" : "Your Space Join Request"}</h3>
 
               {jrLoading && <p className="text-sm text-orange-100">Loading join requests…</p>}
               {jrError === "not-authorized" && <p className="text-sm text-white/70">You are not allowed to view join requests.</p>}
@@ -1038,17 +1049,32 @@ export default function SpaceDetailPage() {
           <div className="mt-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-lg font-medium text-white">Inventory</h3>
-              {canCreateInventory && (
-                <button
-                  type="button"
-                  onClick={openInventoryModal}
-                  disabled={productsLoading || warehousesLoading || products.length === 0 || warehouses.length === 0}
-                  className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Add inventory
-                </button>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {canCreateAssetRequest && (
+                  <button
+                    type="button"
+                    onClick={() => openRequestModal()}
+                    disabled={requestableProducts.length === 0}
+                    className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Request item
+                  </button>
+                )}
+                {canCreateInventory && (
+                  <button
+                    type="button"
+                    onClick={openInventoryModal}
+                    disabled={productsLoading || warehousesLoading || products.length === 0 || warehouses.length === 0}
+                    className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Add inventory
+                  </button>
+                )}
+              </div>
             </div>
+            {canCreateAssetRequest && !invLoading && requestableProducts.length === 0 && (
+              <p className="mt-2 text-sm text-orange-100">No available inventory can be requested in this space.</p>
+            )}
             {canCreateInventory && !productsLoading && products.length === 0 && (
               <p className="mt-2 text-sm text-orange-100">Create a product first before adding inventory.</p>
             )}
@@ -1090,16 +1116,6 @@ export default function SpaceDetailPage() {
                           {assignedUser && (
                             <div className="text-xs text-orange-200/80">Assigned: {formatUserLabel(assignedUser)}</div>
                           )}
-                          <div className="pt-2">
-                            <button
-                              type="button"
-                              disabled={!product?._id && !product?.id}
-                              onClick={() => openRequestModal(product)}
-                              className="rounded-md bg-orange-600 px-3 py-2 text-xs font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              Request inventory
-                            </button>
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -1219,52 +1235,34 @@ export default function SpaceDetailPage() {
             </Modal>
           </div>
 
-          {showRequestProductsSection && (
-            <div className="mt-6">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-medium text-white">Request Products</h3>
-            </div>
-
-            {productsLoading && <p className="text-sm text-orange-100">Loading products…</p>}
-            {productsError && <p className="text-sm text-red-300">{productsError}</p>}
-            {!productsLoading && products.length === 0 && <p className="text-sm text-orange-100">No products found for this space.</p>}
-
-            {products.length > 0 && (
-              <div className="mt-3 space-y-3">
-                {products.map((product) => {
-                  const productId = product?._id ?? product?.id;
-                  const available = productId ? availableByProductId[productId] ?? 0 : 0;
-
-                  return (
-                    <div key={productId ?? product.name} className="rounded-md bg-white/3 p-3">
-                      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <div className="text-sm text-white">{product.name ?? "Product"}</div>
-                          <div className="text-xs text-orange-200/80">SKU: {product.sku ?? "-"}</div>
-                          <div className="text-xs text-orange-200/80">Available: {available}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={!productId}
-                            onClick={() => openRequestModal(product)}
-                            className="rounded-md bg-orange-600 px-3 py-2 text-sm text-white disabled:opacity-50"
-                          >
-                            Request
-                          </button>
-                        </div>
-                      </div>
-                      {available <= 0 && <p className="mt-1 text-xs text-orange-200/80">Out of stock</p>}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <Modal title={modalProduct ? `Request ${modalProduct.name ?? "product"}` : "Request product"} open={modalOpen} onClose={() => setModalOpen(false)}>
+          <Modal title={modalProduct ? `Request ${modalProduct.name ?? "product"}` : "Request product"} open={modalOpen} onClose={() => setModalOpen(false)}>
               <div>
-                <div className="text-sm text-white">{modalProduct?.name}</div>
-                <div className="text-xs text-orange-200/80">SKU: {modalProduct?.sku ?? "-"}</div>
+                <div>
+                  <label className="text-sm text-white">Available item</label>
+                  <select
+                    value={modalProduct?._id ?? modalProduct?.id ?? ""}
+                    onChange={(e) => {
+                      const nextProduct = requestableProducts.find(
+                        (product) => String(product._id ?? product.id) === e.target.value
+                      );
+                      if (nextProduct) {
+                        setModalProduct(nextProduct);
+                        setModalQty(1);
+                      }
+                    }}
+                    className="mt-1 w-full rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white"
+                  >
+                    {requestableProducts.map((product) => {
+                      const productId = product._id ?? product.id;
+                      const available = availableByProductId[productId] ?? 0;
+                      return (
+                        <option key={productId} value={productId} className="bg-slate-900">
+                          {product.name} ({product.sku ?? "-"}) - Available: {available}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
                 <div className="mt-3">
                   <label className="text-sm text-white">Quantity</label>
                   <input
@@ -1298,17 +1296,15 @@ export default function SpaceDetailPage() {
                   </button>
                 </div>
               </div>
-            </Modal>
-          </div>
-          )}
+          </Modal>
 
-          {showRequestsSection && (
-            <div className="mt-6">
-              <h3 className="text-lg font-medium text-white">Requests</h3>
+          {showProductRequestsSection && (
+            <div className="mt-6 rounded-lg border border-orange-300/15 bg-orange-950/20 p-4">
+              <h3 className="text-lg font-medium text-white">Product Requests</h3>
               {reqLoading && <p className="text-sm text-orange-100">Loading requests…</p>}
-              {reqError === "not-authorized" && <p className="text-sm text-white/70">You do not have access to view requests.</p>}
+              {reqError === "not-authorized" && <p className="text-sm text-white/70">You do not have access to view product requests.</p>}
               {reqError && reqError !== "not-authorized" && <p className="text-sm text-red-300">{reqError}</p>}
-              {!reqLoading && !reqError && requests.length === 0 && <p className="text-sm text-orange-100">No requests for this space.</p>}
+              {!reqLoading && !reqError && requests.length === 0 && <p className="text-sm text-orange-100">No product requests for this space.</p>}
 
               {!reqLoading && requests.length > 0 && (
                 <div className="mt-3 space-y-3">

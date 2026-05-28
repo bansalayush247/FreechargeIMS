@@ -34,5 +34,6 @@ src/logs/combined.log
 src/logs/error.log
 
 # Log Archives
+logs_archives/
 src/logs/archives/
 src/logs/archives/**/*.zip

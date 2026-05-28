@@ -146,7 +146,7 @@ const getLogStatus = asyncHandler(async (req, res) => {
   try {
     const logFiles = fs
       .readdirSync(LOGS_DIR)
-      .filter((file) => file.endsWith(".log"))
+      .filter((file) => file === "combined.log")
       .map((file) => {
         const filePath = path.join(LOGS_DIR, file);
         const stats = fs.statSync(filePath);
