@@ -2,12 +2,30 @@
 
 import React from "react";
 
+export type TransitTimelineTransaction = {
+  _id?: string;
+  id?: string;
+  transactionType?: string;
+  previousStatus?: string;
+  newStatus?: string;
+  fromSpaceId?: unknown;
+  fromWarehouseId?: unknown;
+  toSpaceId?: unknown;
+  toWarehouseId?: unknown;
+  performedBy?: unknown;
+  forwardedBy?: unknown;
+  transactionDate?: unknown;
+  remarks?: string;
+  fromUserId?: unknown;
+  toUserId?: unknown;
+};
+
 type Props = {
-  t: any;
+  t: TransitTimelineTransaction;
   isForward: boolean;
-  formatUserLabel: (u: any) => string;
-  formatEntityLabel: (e: any) => string;
-  formatDate: (d?: any) => string;
+  formatUserLabel: (user: unknown) => string;
+  formatEntityLabel: (entity: unknown) => string;
+  formatDate: (date?: unknown) => string;
 };
 
 export default function TransitTimelineItem({ t, isForward, formatUserLabel, formatEntityLabel, formatDate }: Props) {

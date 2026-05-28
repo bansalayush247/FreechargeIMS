@@ -1,0 +1,1 @@
+export { useAuth } from "@/src/features/auth/auth-provider";

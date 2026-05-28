@@ -46,3 +46,18 @@ export async function listNotifications(options?: {
 
   return res.data?.data ?? res.data;
 }
+
+export async function getNotification(id: string) {
+  const res = await apiClient.get(`/notifications/${id}`);
+  return res.data?.data ?? res.data;
+}
+
+export async function sendNotification(payload: Record<string, unknown>) {
+  const res = await apiClient.post("/notifications/send", payload);
+  return res.data?.data ?? res.data;
+}
+
+export async function testNotificationEmail(payload: { recipientEmail: string; subject?: string; body?: string }) {
+  const res = await apiClient.post("/notifications/test-email", payload);
+  return res.data?.data ?? res.data;
+}

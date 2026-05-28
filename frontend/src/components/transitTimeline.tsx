@@ -1,13 +1,13 @@
 "use client";
 
 import React from "react";
-import TransitTimelineItem from "./transitTimelineItem";
+import TransitTimelineItem, { type TransitTimelineTransaction } from "./transitTimelineItem";
 
 type Props = {
-  transactions: any[];
-  formatUserLabel: (u: any) => string;
-  formatEntityLabel: (e: any) => string;
-  formatDate: (d?: any) => string;
+  transactions: TransitTimelineTransaction[];
+  formatUserLabel: (user: unknown) => string;
+  formatEntityLabel: (entity: unknown) => string;
+  formatDate: (date?: unknown) => string;
 };
 
 export default function TransitTimeline({ transactions, formatUserLabel, formatEntityLabel, formatDate }: Props) {

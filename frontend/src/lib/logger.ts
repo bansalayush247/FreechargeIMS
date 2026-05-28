@@ -1,8 +1,9 @@
 import { apiBaseUrl } from "./env";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
+type LogMeta = Record<string, unknown>;
 
-async function sendLog(level: LogLevel, message: string, meta?: Record<string, any>) {
+async function sendLog(level: LogLevel, message: string, meta?: LogMeta) {
   try {
     const shouldForwardLogs =
       process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_FORWARD_FRONTEND_LOGS === "true";
@@ -35,25 +36,25 @@ async function sendLog(level: LogLevel, message: string, meta?: Record<string, a
       body: JSON.stringify(payload),
       keepalive: true,
     }).catch(() => {});
-  } catch (e) {
+  } catch {
     // swallow errors in logger
   }
 }
 
 export const logger = {
-  debug: (msg: string, meta?: Record<string, any>) => {
+  debug: (msg: string, meta?: LogMeta) => {
     console.debug("[frontend][debug]", msg, meta ?? "");
     void sendLog("debug", msg, meta);
   },
-  info: (msg: string, meta?: Record<string, any>) => {
+  info: (msg: string, meta?: LogMeta) => {
     console.info("[frontend][info]", msg, meta ?? "");
     void sendLog("info", msg, meta);
   },
-  warn: (msg: string, meta?: Record<string, any>) => {
+  warn: (msg: string, meta?: LogMeta) => {
     console.warn("[frontend][warn]", msg, meta ?? "");
     void sendLog("warn", msg, meta);
   },
-  error: (msg: string, meta?: Record<string, any>) => {
+  error: (msg: string, meta?: LogMeta) => {
     console.error("[frontend][error]", msg, meta ?? "");
     void sendLog("error", msg, meta);
   },

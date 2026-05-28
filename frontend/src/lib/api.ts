@@ -1,34 +1,12 @@
-import axios from "axios";
-import { apiBaseUrl } from "./env";
+import { apiBaseUrl as configuredApiBaseUrl, env } from "@/src/config/env";
 
-let unauthorizedHandler: (() => void) | null = null;
+export { apiClient, getApiErrorMessage, setUnauthorizedHandler } from "@/src/services/http/client";
+export { env };
+export const apiBaseUrl = configuredApiBaseUrl;
 
-export function setUnauthorizedHandler(handler: (() => void) | null) {
-  unauthorizedHandler = handler;
-}
+export function buildApiUrl(path: string) {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const base = apiBaseUrl.endsWith("/") ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
 
-export const apiClient = axios.create({
-  baseURL: `${apiBaseUrl.replace(/\/$/, "")}/api/v1`,
-});
-
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const status = error?.response?.status;
-
-    if (status === 401) {
-      unauthorizedHandler?.();
-    }
-
-    return Promise.reject(error);
-  }
-);
-
-export function setApiToken(token: string | null) {
-  if (token) {
-    apiClient.defaults.headers.common.Authorization = `Bearer ${token}`;
-    return;
-  }
-
-  delete apiClient.defaults.headers.common.Authorization;
+  return `${base}/api/v1${normalizedPath}`;
 }

@@ -1,5 +1,7 @@
 This is the frontend for FreechargeIMS, built with Next.js and TypeScript.
 
+For the production scaffold, architecture rules, and folder tree, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Getting Started
 
 Create a local environment file first:
@@ -24,6 +26,14 @@ Open http://localhost:3001 with your browser to see the result when running the 
 - npm run build - build the production app.
 - npm run start - run the production build.
 - npm run lint - run ESLint.
+
+## Architecture Notes
+
+- App Router route groups are split into `(auth)` and `(dashboard)`.
+- Shared UI primitives live under `src/components/ui`.
+- Domain logic is organized under `src/features/*`.
+- Session, token refresh, and Axios wiring live under `src/services/http` and `src/store`.
+- Environment values are validated with Zod in `src/config/env.ts`.
 
 ## API Notes
 
