@@ -127,6 +127,10 @@ const createAssetRequest = async (
     throw new AppError("Product not found", 404);
   }
 
+  if (String(product.spaceId) !== String(context.spaceId)) {
+    throw new AppError("Product does not belong to the requested space", 400);
+  }
+
   const requestNumber = await generateRequestNumber();
 
   const request = await assetRequestRepository.create({

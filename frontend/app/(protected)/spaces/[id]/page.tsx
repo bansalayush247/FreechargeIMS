@@ -106,22 +106,7 @@ export default function SpaceDetailPage() {
     }
     return map;
   }, [inventory]);
-  const requestableProducts = useMemo(() => {
-    const map = new Map<string, any>();
-
-    for (const item of inventory) {
-      const product = item.productId ?? item.product ?? {};
-      const productId = typeof product === "string" ? product : product?._id ?? product?.id;
-      const quantity = Number(item.quantity ?? item.stock ?? 1);
-      const isAvailable = (item.status ?? "IN_STOCK") === "IN_STOCK" && !item.assignedUserId && quantity > 0;
-
-      if (!productId || !isAvailable || typeof product === "string") continue;
-
-      map.set(productId, product);
-    }
-
-    return Array.from(map.values());
-  }, [inventory]);
+  const requestableProducts = useMemo(() => products, [products]);
 
   const canReviewJoinRequests = isAdminUserType || permissions.includes("UPDATE_SPACE");
   const canViewAssetRequests = isAdminUserType || permissions.includes("VIEW_ASSET_REQUEST");
@@ -627,11 +612,6 @@ export default function SpaceDetailPage() {
       toast.show("info", "This product is currently out of stock. Your request will be queued.");
     }
 
-    if (available > 0 && requestedQuantity > available) {
-      toast.show("error", `Quantity cannot exceed available stock (${available}).`);
-      return;
-    }
-
     const businessJustification = (modalNotes ?? "").trim();
     if (!businessJustification) {
       toast.show("error", "Business justification is required.");
@@ -1054,7 +1034,7 @@ export default function SpaceDetailPage() {
                   <button
                     type="button"
                     onClick={() => openRequestModal()}
-                    disabled={requestableProducts.length === 0}
+                    disabled={productsLoading || requestableProducts.length === 0}
                     className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Request item
@@ -1072,8 +1052,8 @@ export default function SpaceDetailPage() {
                 )}
               </div>
             </div>
-            {canCreateAssetRequest && !invLoading && requestableProducts.length === 0 && (
-              <p className="mt-2 text-sm text-orange-100">No available inventory can be requested in this space.</p>
+            {canCreateAssetRequest && !productsLoading && requestableProducts.length === 0 && (
+              <p className="mt-2 text-sm text-orange-100">No products are defined in this space yet.</p>
             )}
             {canCreateInventory && !productsLoading && products.length === 0 && (
               <p className="mt-2 text-sm text-orange-100">Create a product first before adding inventory.</p>
@@ -1238,7 +1218,7 @@ export default function SpaceDetailPage() {
           <Modal title={modalProduct ? `Request ${modalProduct.name ?? "product"}` : "Request product"} open={modalOpen} onClose={() => setModalOpen(false)}>
               <div>
                 <div>
-                  <label className="text-sm text-white">Available item</label>
+                  <label className="text-sm text-white">Product</label>
                   <select
                     value={modalProduct?._id ?? modalProduct?.id ?? ""}
                     onChange={(e) => {
@@ -1268,7 +1248,6 @@ export default function SpaceDetailPage() {
                   <input
                     type="number"
                     min={1}
-                    max={modalProduct ? (availableByProductId[modalProduct._id ?? modalProduct.id] ?? undefined) : undefined}
                     value={modalQty}
                     onChange={(e) => setModalQty(Math.max(1, Number(e.target.value || 1)))}
                     className="mt-1 w-32 rounded-md border border-white/10 bg-white/5 p-2 text-sm text-white"
