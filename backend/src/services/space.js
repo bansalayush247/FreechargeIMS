@@ -16,6 +16,7 @@ const {
   AUDIT_ENTITY_TYPES,
 } = require("../constants/auditLog");
 const { ROLE_CODES } = require("../constants/role");
+const { SPACE_CODES } = require("../constants/space");
 const {
   PERMISSIONS,
 } = require("../constants/permission");
@@ -242,7 +243,7 @@ const updateSpace = async (
 const deleteSpace = async (id, userId, context = {}) => {
   const space = await getSpaceById(id);
 
-  if (space.code === "SUPER_ADMIN") {
+  if (space.code === SPACE_CODES.SUPER_ADMIN) {
     throw new AppError("SUPER_ADMIN space cannot be deleted", 400);
   }
 

@@ -20,7 +20,11 @@ const findById = async (id) => {
   })
     .populate("inventoryItemId")
     .populate("productId", "name sku")
-    .populate("performedBy", "firstName lastName")
+    .populate("performedBy", "firstName lastName email employeeId")
+    .populate("fromWarehouseId", "name code")
+    .populate("toWarehouseId", "name code")
+    .populate("fromUserId", "firstName lastName email employeeId")
+    .populate("toUserId", "firstName lastName email employeeId")
     .lean();
 };
 
@@ -80,7 +84,11 @@ const paginate = async (filters) => {
     InventoryTransaction.find(query)
       .populate("inventoryItemId")
       .populate("productId", "name sku")
-      .populate("performedBy", "firstName lastName")
+      .populate("performedBy", "firstName lastName email employeeId")
+      .populate("fromWarehouseId", "name code")
+      .populate("toWarehouseId", "name code")
+      .populate("fromUserId", "firstName lastName email employeeId")
+      .populate("toUserId", "firstName lastName email employeeId")
       .sort({ transactionDate: -1 })
       .skip(skip)
       .limit(limit)
@@ -106,7 +114,11 @@ const getItemAuditTrail = async (inventoryItemId) => {
     inventoryItemId,
     isDeleted: false,
   })
-    .populate("performedBy", "firstName lastName")
+    .populate("performedBy", "firstName lastName email employeeId")
+    .populate("fromWarehouseId", "name code")
+    .populate("toWarehouseId", "name code")
+    .populate("fromUserId", "firstName lastName email employeeId")
+    .populate("toUserId", "firstName lastName email employeeId")
     .sort({ transactionDate: 1 })
     .lean();
 };

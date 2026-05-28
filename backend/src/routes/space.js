@@ -25,7 +25,6 @@ router.post(
 router.get(
   ROUTES.SPACES.LIST,
   authMiddleware,
-  // Allow authenticated users to view available spaces (removed requireAdmin)
   spaceController.getSpaces
 );
 

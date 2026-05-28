@@ -3,6 +3,7 @@ require("dotenv").config();
 const app = require("./app");
 const connectDB = require("./database/db");
 const logger = require("./config/logger");
+const { validateEnv } = require("./config/env");
 const { initializeLogArchiver } = require("./jobs/logArchiver");
 
 const PORT = process.env.PORT || 5000;
@@ -10,6 +11,7 @@ const PORT = process.env.PORT || 5000;
 // Handles start server.
 async function startServer() {
   try {
+    validateEnv();
     await connectDB();
 
     // Initialize log archiver job

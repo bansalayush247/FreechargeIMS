@@ -2,6 +2,7 @@ const logger = require("../config/logger");
 const { getEnforcer } = require("../config/casbin");
 const {
   getAuthzCache,
+  invalidateByUser,
   setAuthzCache,
 } = require("../services/rbacCache");
 
@@ -22,9 +23,6 @@ const { USER_TYPES } = require("../constants/user");
 // System-level permissions that don't require a space ID
 const SYSTEM_LEVEL_PERMISSIONS = new Set([
   PERMISSIONS.CREATE_SPACE,
-  PERMISSIONS.CREATE_ROLE,
-  PERMISSIONS.CREATE_WAREHOUSE,
-  PERMISSIONS.CREATE_PRODUCT,
   PERMISSIONS.CREATE_USER,
   PERMISSIONS.VIEW_AUDIT_LOGS,
   PERMISSIONS.MANAGE_LOGS,
@@ -99,6 +97,7 @@ const authorize = (...requiredPermissions) => {
         const cached = getAuthzCache(String(userId), String(spaceId));
 
         if (!cached) {
+          invalidateByUser(String(userId));
           await enforcer.removeFilteredGroupingPolicy(0, String(userId));
 
           for (const roleSubject of roleSubjects) {

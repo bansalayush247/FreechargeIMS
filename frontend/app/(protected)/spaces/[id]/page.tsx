@@ -19,6 +19,7 @@ import {
 } from "../../../../src/lib/assetRequestClient";
 import { listProducts } from "../../../../src/lib/productClient";
 import { getInventoryItemAuditTrail } from "../../../../src/lib/inventoryTransactionClient";
+import TransitTimeline from "../../../../src/components/transitTimeline";
 
 export default function SpaceDetailPage() {
   const params = useParams();
@@ -120,6 +121,52 @@ export default function SpaceDetailPage() {
   const canCreateAssetRequest = Boolean(currentUserId) || isAdminUserType || permissions.includes("CREATE_ASSET_REQUEST");
   const selectedInventoryProduct = products.find((product) => String(product._id ?? product.id) === inventoryForm.productId);
   const selectedInventoryProductIsConsumable = selectedInventoryProduct?.assetType === "CONSUMABLE";
+
+  function formatEntityLabel(entity: any, fallback = "Unknown") {
+    if (!entity) return fallback;
+    if (typeof entity === "string") return entity;
+
+    const label = [entity.name, entity.code].filter(Boolean).join(" ");
+    if (label) return label;
+
+    const person = [entity.firstName, entity.lastName].filter(Boolean).join(" ").trim();
+    if (person) return person;
+
+    return entity.email ?? entity.employeeId ?? entity._id ?? entity.id ?? fallback;
+  }
+
+  function formatCurrentLocation(transaction: any) {
+    if (!transaction) return "Unknown";
+    if (transaction.toUserId) return `User: ${formatEntityLabel(transaction.toUserId)}`;
+    if (transaction.toWarehouseId) return `Warehouse: ${formatEntityLabel(transaction.toWarehouseId)}`;
+    if (transaction.newStatus) return transaction.newStatus;
+    return "Unknown";
+  }
+
+  function formatRequestRoute(request: any) {
+    if (!request) return "Unknown";
+
+    const hops = Array.isArray(request.forwardedHistory) ? request.forwardedHistory : [];
+    const parts: string[] = [];
+
+    parts.push(`Origin: ${formatEntityLabel(request.originSpaceId ?? request.spaceId)}`);
+
+    hops.forEach((hop: any) => {
+      parts.push(
+        `${formatEntityLabel(hop.fromSpaceId)} → ${formatEntityLabel(hop.toSpaceId)}`
+      );
+    });
+
+    if (request.status === "MANAGER_APPROVED" || request.status === "FULFILLED") {
+      parts.push(`IT queue: ${formatEntityLabel(request.spaceId)}`);
+    }
+
+    if (request.itApprovalBy || request.inventoryItemId) {
+      parts.push(`Assigned to user: ${formatEntityLabel(request.employeeId)}`);
+    }
+
+    return parts.join(" · ");
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -767,7 +814,7 @@ export default function SpaceDetailPage() {
     }
   }
 
-  async function openTransitModal(inventoryItemId: string) {
+  async function openTransitModal(inventoryItemId: string, request?: any) {
     if (!id) return;
     setTransitOpen(true);
     setTransitInventoryItemId(inventoryItemId);
@@ -778,7 +825,29 @@ export default function SpaceDetailPage() {
       const res = await getInventoryItemAuditTrail(inventoryItemId, id);
       const payload = res.data ?? res ?? {};
       const items = payload.data ?? payload.items ?? payload;
-      setTransitTransactions(Array.isArray(items) ? items : []);
+      let txns = Array.isArray(items) ? items : [];
+
+      // If the caller passed a request with forwarded history, prepend synthetic "FORWARDED" hops
+      if (request && Array.isArray(request.forwardedHistory) && request.forwardedHistory.length > 0) {
+        const hops = request.forwardedHistory.map((hop: any, idx: number) => ({
+          _id: `fh-${idx}-${hop.forwardedAt ? new Date(hop.forwardedAt).getTime() : idx}`,
+          transactionType: "FORWARDED",
+          performedBy: hop.forwardedBy ?? null,
+          transactionDate: hop.forwardedAt ?? null,
+          previousStatus: hop.fromSpaceId ? hop.fromSpaceId.name ?? hop.fromSpaceId.code ?? null : null,
+          newStatus: hop.toSpaceId ? hop.toSpaceId.name ?? hop.toSpaceId.code ?? null : null,
+          fromWarehouseId: null,
+          toWarehouseId: null,
+          fromUserId: null,
+          toUserId: null,
+          remarks: `Forwarded from ${hop.fromSpaceId ? (hop.fromSpaceId.name ?? hop.fromSpaceId.code) : 'unknown'} to ${hop.toSpaceId ? (hop.toSpaceId.name ?? hop.toSpaceId.code) : 'unknown'}`,
+        }));
+
+        // Prepend hops in chronological order
+        txns = [...hops, ...txns];
+      }
+
+      setTransitTransactions(txns);
     } catch (err: any) {
       setTransitError("Failed to load transit details.");
       setTransitTransactions([]);
@@ -1285,6 +1354,9 @@ export default function SpaceDetailPage() {
                             {r.rejectionReason && <div className="text-xs text-red-200">Rejection reason: {r.rejectionReason}</div>}
                             {r.managerApprovalAt && <div className="text-xs text-orange-50/80">Manager approved at: {formatDate(r.managerApprovalAt)}</div>}
                             {r.forwardedAt && <div className="text-xs text-orange-50/80">Sent to IT Team queue at: {formatDate(r.forwardedAt)}</div>}
+                            {Array.isArray(r.forwardedHistory) && r.forwardedHistory.length > 0 && (
+                              <div className="text-xs text-orange-50/80">Route: {formatRequestRoute(r)}</div>
+                            )}
                             {r.itApprovalAt && <div className="text-xs text-orange-50/80">IT approved at: {formatDate(r.itApprovalAt)}</div>}
                             {inventoryItemId && <div className="text-xs text-orange-50/80">Inventory item: {inventoryItemId}</div>}
                             {r.fulfilledAt && <div className="text-xs text-orange-50/80">Fulfilled at: {formatDate(r.fulfilledAt)}</div>}
@@ -1325,7 +1397,7 @@ export default function SpaceDetailPage() {
                               )}
                               {inventoryItemId && (
                                 <button
-                                  onClick={() => openTransitModal(inventoryItemId)}
+                                  onClick={() => openTransitModal(inventoryItemId, r)}
                                   className="rounded-md bg-white/10 px-3 py-1 text-sm text-white"
                                 >
                                   View transit
@@ -1412,20 +1484,16 @@ export default function SpaceDetailPage() {
                     <p className="mt-2 text-sm text-orange-100">No transit activity found.</p>
                   )}
                   {!transitLoading && transitTransactions.length > 0 && (
-                    <div className="mt-3 space-y-3">
-                      {transitTransactions.map((t) => (
-                        <div key={t._id ?? t.id} className="rounded-md border border-white/8 bg-white/3 p-3">
-                          <div className="text-sm text-white">{t.transactionType ?? "Transaction"}</div>
-                          <div className="text-xs text-orange-50/80">Performed by: {formatUserLabel(t.performedBy)}</div>
-                          <div className="text-xs text-orange-50/80">Date: {formatDate(t.transactionDate)}</div>
-                          <div className="text-xs text-orange-50/80">Status: {t.previousStatus} → {t.newStatus}</div>
-                          {t.remarks && <div className="text-xs text-orange-50/80">Remarks: {t.remarks}</div>}
-                          {t.fromWarehouseId && <div className="text-xs text-orange-50/80">From warehouse: {t.fromWarehouseId}</div>}
-                          {t.toWarehouseId && <div className="text-xs text-orange-50/80">To warehouse: {t.toWarehouseId}</div>}
-                          {t.fromUserId && <div className="text-xs text-orange-50/80">From user: {t.fromUserId}</div>}
-                          {t.toUserId && <div className="text-xs text-orange-50/80">To user: {t.toUserId}</div>}
-                        </div>
-                      ))}
+                    <div className="mt-3">
+                      <div className="rounded-md border border-white/8 bg-white/5 p-3 text-xs text-orange-50/80 mb-3">
+                        Current location: {formatCurrentLocation(transitTransactions[transitTransactions.length - 1])}
+                      </div>
+                      <TransitTimeline
+                        transactions={transitTransactions}
+                        formatUserLabel={formatUserLabel}
+                        formatEntityLabel={formatEntityLabel}
+                        formatDate={formatDate}
+                      />
                     </div>
                   )}
                 </div>

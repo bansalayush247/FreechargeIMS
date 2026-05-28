@@ -7,6 +7,7 @@ const Space = require("../models/space");
 const assetRequestRepository = require(
   "../repositories/assetRequest"
 );
+const roleRepository = require("../repositories/role");
 const userRoleRepository = require(
   "../repositories/userRole"
 );
@@ -21,6 +22,9 @@ const {
   ASSET_REQUEST_STATUS,
   ASSET_REQUEST_PERMISSIONS,
 } = require("../constants/assetRequest");
+const { ROLE_CODES } = require("../constants/role");
+const { SYSTEM_SPACES } = require("../constants/space");
+const { PERMISSIONS } = require("../constants/permission");
 
 const {
   INVENTORY_STATUS,
@@ -44,11 +48,7 @@ const AppError = require("../utils/appError");
 const logger = require("../config/logger");
 const { USER_TYPES } = require("../constants/user");
 
-const IT_TEAM_SPACE = {
-  name: "IT Team",
-  code: "IT_TEAM",
-  description: "Central IT approval queue space",
-};
+const IT_TEAM_SPACE = SYSTEM_SPACES.IT_TEAM;
 
 const ensureItTeamSpace = async (userId) => {
   let itSpace = await Space.findOne({
@@ -58,17 +58,42 @@ const ensureItTeamSpace = async (userId) => {
     .select("_id name code")
     .lean();
 
-  if (itSpace) return itSpace;
+  if (!itSpace) {
+    const created = await Space.create({
+      ...IT_TEAM_SPACE,
+      isActive: true,
+      createdBy: userId || null,
+      updatedBy: userId || null,
+    });
 
-  const created = await Space.create({
-    ...IT_TEAM_SPACE,
-    isActive: true,
-    createdBy: userId || null,
-    updatedBy: userId || null,
-  });
+    itSpace = await Space.findById(created._id).select("_id name code").lean();
+    logger.info("Created IT Team space for approval queue", { spaceId: itSpace?._id });
+  }
 
-  itSpace = await Space.findById(created._id).select("_id name code").lean();
-  logger.info("Created IT Team space for approval queue", { spaceId: itSpace?._id });
+  const existingRole = await roleRepository.findBySpaceAndCode(
+    itSpace._id,
+    ROLE_CODES.INVENTORY_APPROVAL
+  );
+
+  if (!existingRole) {
+    await roleRepository.create({
+      spaceId: itSpace._id,
+      name: "Inventory Approval",
+      code: ROLE_CODES.INVENTORY_APPROVAL,
+      description: "Approves asset requests in the IT Team queue",
+      permissions: [
+        PERMISSIONS.IT_APPROVE_ASSET_REQUEST,
+        PERMISSIONS.VIEW_ASSET_REQUEST,
+        PERMISSIONS.VIEW_INVENTORY,
+        PERMISSIONS.VIEW_INVENTORY_TRANSACTION,
+      ],
+      isSystemRole: true,
+      isActive: true,
+      createdBy: userId || null,
+      updatedBy: userId || null,
+    });
+  }
+
   return itSpace;
 };
 

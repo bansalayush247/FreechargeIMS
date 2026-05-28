@@ -14,7 +14,7 @@ const auditLogService = require("./auditLog");
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
 const {
-  invalidateByUserAndSpace,
+  invalidateByUser,
 } = require("./rbacCache");
 
 const {
@@ -105,7 +105,7 @@ const addMember = async (
             memberId: existingMember._id,
             roleId: viewerRole._id,
           });
-          invalidateByUserAndSpace(payload.userId, spaceId);
+          invalidateByUser(payload.userId);
         }
       } catch (error) {
         logger.warn("Failed to auto-assign VIEWER role on reactivation", { 
@@ -161,7 +161,7 @@ const addMember = async (
         memberId: member._id,
         roleId: viewerRole._id,
       });
-      invalidateByUserAndSpace(payload.userId, spaceId);
+      invalidateByUser(payload.userId);
     }
   } catch (error) {
     logger.warn("Failed to auto-assign VIEWER role", { error: error.message });
@@ -266,7 +266,7 @@ const removeMember = async (
     spaceId,
     deletePayload
   );
-  invalidateByUserAndSpace(member.userId._id || member.userId, spaceId);
+  invalidateByUser(member.userId._id || member.userId);
 
   await auditLogService.recordAuditLog({
     spaceId,
@@ -370,7 +370,7 @@ const assignRole = async (
   logger.info("Role assigned to user", {
     userRoleId: assignment._id,
   });
-  invalidateByUserAndSpace(payload.userId, spaceId);
+  invalidateByUser(payload.userId);
 
   return assignment;
 };
@@ -472,7 +472,7 @@ const replaceRole = async (
     replacedRoleAssignmentCount:
       removeResult.modifiedCount || 0,
   });
-  invalidateByUserAndSpace(payload.userId, spaceId);
+  invalidateByUser(payload.userId);
 
   return {
     assignment,
@@ -519,10 +519,7 @@ const removeRole = async (
       deletedBy: userId,
       updatedBy: userId,
     });
-  invalidateByUserAndSpace(
-    assignment.userId._id || assignment.userId,
-    spaceId
-  );
+  invalidateByUser(assignment.userId._id || assignment.userId);
 
   await auditLogService.recordAuditLog({
     spaceId,

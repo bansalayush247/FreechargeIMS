@@ -14,16 +14,28 @@ const UserRole = require("../models/userRole");
 
 const { USER_TYPES } = require("../constants/user");
 const { ROLE_CODES } = require("../constants/role");
+const { SYSTEM_SPACES } = require("../constants/space");
 const {
   PERMISSIONS,
 } = require("../constants/permission");
 
 const logger = require("../config/logger");
+const SUPER_ADMIN_SPACE = SYSTEM_SPACES.SUPER_ADMIN;
 
-const SUPER_ADMIN_SPACE = {
-  name: "Super Admin Space",
-  code: "SUPER_ADMIN",
-  description: "System administration space",
+const getSeedAdminConfig = () => {
+  const config = {
+    email: process.env.SEED_ADMIN_EMAIL,
+    password: process.env.SEED_ADMIN_PASSWORD,
+    employeeId: process.env.SEED_ADMIN_EMPLOYEE_ID,
+    firstName: process.env.SEED_ADMIN_FIRST_NAME || "Super",
+    lastName: process.env.SEED_ADMIN_LAST_NAME || "Admin",
+  };
+
+  if (!config.email || !config.password || !config.employeeId) {
+    throw new Error("SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD and SEED_ADMIN_EMPLOYEE_ID are required");
+  }
+
+  return config;
 };
 
 const SYSTEM_ROLES = [
@@ -140,8 +152,10 @@ const upsertSystemRoles = async (spaceId, adminId) => {
 
 // Handles upsert admin.
 const upsertAdmin = async () => {
+  const seedAdminConfig = getSeedAdminConfig();
+
   let admin = await User.findOne({
-    email: "admin@freecharge.com",
+    email: seedAdminConfig.email,
     isDeleted: {
       $ne: true,
     },
@@ -156,11 +170,11 @@ const upsertAdmin = async () => {
   }
 
   admin = await User.create({
-    employeeId: "EMP001",
-    firstName: "Super",
-    lastName: "Admin",
-    email: "admin@freecharge.com",
-    password: "Admin@123",
+    employeeId: seedAdminConfig.employeeId,
+    firstName: seedAdminConfig.firstName,
+    lastName: seedAdminConfig.lastName,
+    email: seedAdminConfig.email,
+    password: seedAdminConfig.password,
     userType: USER_TYPES.ADMIN,
   });
 

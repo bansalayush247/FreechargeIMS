@@ -1,7 +1,12 @@
 const winston = require("winston");
 const path = require("path");
+const fs = require("fs");
 
-const LOGS_DIR = path.resolve(__dirname, "../../../src/logs");
+const LOGS_DIR = process.env.LOGS_DIR
+  ? path.resolve(process.env.LOGS_DIR)
+  : path.resolve(__dirname, "../../logs");
+
+fs.mkdirSync(LOGS_DIR, { recursive: true });
 
 const logger = winston.createLogger({
   level: "info",

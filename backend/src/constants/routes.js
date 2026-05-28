@@ -4,10 +4,49 @@
  */
 
 const API_VERSION = "/api/v1";
+const INVENTORY_TRANSACTION_ROUTES = Object.freeze({
+  CREATE: "/",
+  LIST: "/",
+  GET_BY_ID: "/:id",
+  ITEM_AUDIT_TRAIL: "/item/:inventoryItemId",
+});
+const ASSET_REQUEST_ROUTES = Object.freeze({
+  CREATE: "/",
+  LIST: "/",
+  GET_BY_ID: "/:id",
+  MANAGER_APPROVE: "/:id/manager-approve",
+  IT_APPROVE: "/:id/it-approve",
+  REJECT: "/:id/reject",
+  CANCEL: "/:id/cancel",
+  FORWARD: "/:id/forward",
+});
+const REPAIR_ROUTES = Object.freeze({
+  CREATE: "/",
+  LIST: "/",
+  GET_BY_ID: "/:id",
+  UPDATE: "/:id",
+  COMPLETE: "/:id/complete",
+  CANCEL: "/:id/cancel",
+});
+const NOTIFICATION_ROUTES = Object.freeze({
+  SEND_EMAIL: "/email",
+  LIST: "/",
+  GET_BY_ID: "/:id",
+});
+const WORKFLOW_ROUTES = Object.freeze({
+  DEFINITIONS: "/definitions",
+  DEFINITION_BY_ID: "/definitions/:id",
+  INSTANCES: "/instances",
+  INSTANCE_BY_ID: "/instances/:id",
+  INSTANCE_TRANSITION: "/instances/:id/transition",
+});
+const AUDIT_LOG_ROUTES = Object.freeze({
+  LIST: "/",
+  GET_BY_ID: "/:id",
+});
 
 const ENDPOINTS = Object.freeze({
   HEALTH: `${API_VERSION}/health`,
-  TEST_ERROR: `${API_VERSION}/test-error`,
 
   BASE: API_VERSION,
 
@@ -85,95 +124,39 @@ const ENDPOINTS = Object.freeze({
 
   INVENTORY_TRANSACTIONS: Object.freeze({
     BASE: `${API_VERSION}/inventoryTransactions`,
-    CREATE: "/",
-    LIST: "/",
-    GET_BY_ID: "/:id",
-    ITEM_AUDIT_TRAIL: "/item/:inventoryItemId",
+    ...INVENTORY_TRANSACTION_ROUTES,
   }),
-  INVENTORY_TRANSACTION_ROUTES: Object.freeze({
-    CREATE: "/",
-    LIST: "/",
-    GET_BY_ID: "/:id",
-    ITEM_AUDIT_TRAIL: "/item/:inventoryItemId",
-  }),
+  INVENTORY_TRANSACTION_ROUTES,
 
   ASSET_REQUESTS: Object.freeze({
     BASE: `${API_VERSION}/asset-requests`,
-    CREATE: "/",
-    LIST: "/",
-    GET_BY_ID: "/:id",
-    MANAGER_APPROVE: "/:id/manager-approve",
-    IT_APPROVE: "/:id/it-approve",
-    REJECT: "/:id/reject",
-    CANCEL: "/:id/cancel",
-    FORWARD: "/:id/forward",
+    ...ASSET_REQUEST_ROUTES,
   }),
-  ASSET_REQUEST_ROUTES: Object.freeze({
-    CREATE: "/",
-    LIST: "/",
-    GET_BY_ID: "/:id",
-    MANAGER_APPROVE: "/:id/manager-approve",
-    IT_APPROVE: "/:id/it-approve",
-    REJECT: "/:id/reject",
-    CANCEL: "/:id/cancel",
-    FORWARD: "/:id/forward",
-  }),
+  ASSET_REQUEST_ROUTES,
 
   REPAIRS: Object.freeze({
     BASE: `${API_VERSION}/repairs`,
-    CREATE: "/",
-    LIST: "/",
-    GET_BY_ID: "/:id",
-    UPDATE: "/:id",
-    COMPLETE: "/:id/complete",
-    CANCEL: "/:id/cancel",
+    ...REPAIR_ROUTES,
   }),
-  REPAIR_ROUTES: Object.freeze({
-    CREATE: "/",
-    LIST: "/",
-    GET_BY_ID: "/:id",
-    UPDATE: "/:id",
-    COMPLETE: "/:id/complete",
-    CANCEL: "/:id/cancel",
-  }),
+  REPAIR_ROUTES,
 
   NOTIFICATIONS: Object.freeze({
     BASE: `${API_VERSION}/notifications`,
-    SEND_EMAIL: "/email",
-    LIST: "/",
-    GET_BY_ID: "/:id",
+    ...NOTIFICATION_ROUTES,
   }),
-  NOTIFICATION_ROUTES: Object.freeze({
-    SEND_EMAIL: "/email",
-    LIST: "/",
-    GET_BY_ID: "/:id",
-  }),
+  NOTIFICATION_ROUTES,
 
   WORKFLOWS: Object.freeze({
     BASE: `${API_VERSION}/workflows`,
-    DEFINITIONS: "/definitions",
-    DEFINITION_BY_ID: "/definitions/:id",
-    INSTANCES: "/instances",
-    INSTANCE_BY_ID: "/instances/:id",
-    INSTANCE_TRANSITION: "/instances/:id/transition",
+    ...WORKFLOW_ROUTES,
   }),
-  WORKFLOW_ROUTES: Object.freeze({
-    DEFINITIONS: "/definitions",
-    DEFINITION_BY_ID: "/definitions/:id",
-    INSTANCES: "/instances",
-    INSTANCE_BY_ID: "/instances/:id",
-    INSTANCE_TRANSITION: "/instances/:id/transition",
-  }),
+  WORKFLOW_ROUTES,
 
   AUDIT_LOGS: Object.freeze({
     BASE: `${API_VERSION}/audit-logs`,
-    LIST: "/",
-    GET_BY_ID: "/:id",
+    ...AUDIT_LOG_ROUTES,
   }),
-  AUDIT_LOG_ROUTES: Object.freeze({
-    LIST: "/",
-    GET_BY_ID: "/:id",
-  }),
+  AUDIT_LOG_ROUTES,
 
   LOGS: Object.freeze({
     BASE: `${API_VERSION}/logs`,

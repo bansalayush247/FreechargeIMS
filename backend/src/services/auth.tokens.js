@@ -1,9 +1,17 @@
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 
+const getRequiredEnv = (key) => {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`${key} is required`);
+  }
+  return value;
+};
+
 // Handles generate access token.
 const generateAccessToken = (user) => {
-  const privateKey = process.env.JWT_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const privateKey = getRequiredEnv("JWT_PRIVATE_KEY").replace(/\\n/g, "\n");
 
   return jwt.sign(
     {
@@ -21,7 +29,7 @@ const generateAccessToken = (user) => {
 
 // Handles generate refresh token.
 const generateRefreshToken = (user) => {
-  const refreshTokenSecret = process.env.JWT_REFRESH_TOKEN_SECRET || "refresh-secret-key";
+  const refreshTokenSecret = getRequiredEnv("JWT_REFRESH_TOKEN_SECRET");
 
   return jwt.sign(
     {
@@ -39,7 +47,7 @@ const generateRefreshToken = (user) => {
 
 // Handles verify access token.
 const verifyAccessToken = (token) => {
-  const publicKey = process.env.JWT_PUBLIC_KEY?.replace(/\\n/g, "\n");
+  const publicKey = getRequiredEnv("JWT_PUBLIC_KEY").replace(/\\n/g, "\n");
 
   try {
     return { decoded: jwt.verify(token, publicKey, { algorithms: ["RS256"] }) };
@@ -53,7 +61,7 @@ const verifyAccessToken = (token) => {
 
 // Handles verify refresh token.
 const verifyRefreshToken = (token) => {
-  const refreshTokenSecret = process.env.JWT_REFRESH_TOKEN_SECRET || "refresh-secret-key";
+  const refreshTokenSecret = getRequiredEnv("JWT_REFRESH_TOKEN_SECRET");
 
   try {
     return { decoded: jwt.verify(token, refreshTokenSecret, { algorithms: ["HS256"] }) };

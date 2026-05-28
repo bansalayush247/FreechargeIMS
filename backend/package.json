@@ -6,7 +6,6 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "wipe:db": "node src/scripts/wipeDatabase.js",
     "seed:admin": "node src/scripts/seedAdmin.js",
     "sync:indexes": "node src/scripts/syncIndexes.js",
     "migrate:lifecycle": "node src/scripts/migrateLifecycle.js"
@@ -25,6 +24,7 @@
     "express": "^5.2.1",
     "express-async-handler": "^1.2.0",
     "helmet": "^8.1.0",
+    "http-status-codes": "^2.3.0",
     "joi": "^18.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.6.2",

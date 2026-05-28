@@ -37,7 +37,7 @@ const findActiveRolesByIds = async (roleIds) => {
     isDeleted: false,
     isActive: true,
   })
-    .select("permissions")
+    .select("permissions code")
     .lean();
 };
 

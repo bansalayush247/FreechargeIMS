@@ -11,11 +11,17 @@ const findById = async (id) => {
     _id: id,
     isDeleted: false,
   })
+    .populate("spaceId", "name code")
+    .populate("originSpaceId", "name code")
     .populate("employeeId", "firstName lastName email employeeId")
     .populate("productId", "name sku")
     .populate("managerApprovalBy", "firstName lastName email")
     .populate("itApprovalBy", "firstName lastName email")
     .populate("forwardedBy", "firstName lastName email")
+    .populate("forwardedFromSpaceId", "name code")
+    .populate("forwardedHistory.fromSpaceId", "name code")
+    .populate("forwardedHistory.toSpaceId", "name code")
+    .populate("forwardedHistory.forwardedBy", "firstName lastName email")
     .lean();
 };
 
@@ -73,11 +79,17 @@ const paginate = async (filters) => {
 
   const [items, total] = await Promise.all([
     AssetRequest.find(query)
+      .populate("spaceId", "name code")
+      .populate("originSpaceId", "name code")
       .populate("employeeId", "firstName lastName")
       .populate("productId", "name sku")
       .populate("managerApprovalBy", "firstName lastName email")
       .populate("itApprovalBy", "firstName lastName email")
       .populate("forwardedBy", "firstName lastName email")
+      .populate("forwardedFromSpaceId", "name code")
+      .populate("forwardedHistory.fromSpaceId", "name code")
+      .populate("forwardedHistory.toSpaceId", "name code")
+      .populate("forwardedHistory.forwardedBy", "firstName lastName email")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
