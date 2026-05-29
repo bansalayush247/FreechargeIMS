@@ -1,9 +1,5 @@
-const notificationRepository = require(
-  "../repositories/notification"
-);
-const { findActiveUserById } = require(
-  "../repositories/user"
-);
+const notificationRepository = require("../repositories/notification");
+const { findActiveUserById } = require("../repositories/user");
 const emailService = require("./email");
 
 const AppError = require("../utils/appError");

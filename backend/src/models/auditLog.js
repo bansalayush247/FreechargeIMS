@@ -1,9 +1,6 @@
 const mongoose = require("mongoose");
 
-const {
-  AUDIT_ACTIONS,
-  AUDIT_ENTITY_TYPES,
-} = require("../constants/auditLog");
+const { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } = require("../constants/auditLog");
 
 const auditLogSchema = new mongoose.Schema(
   {

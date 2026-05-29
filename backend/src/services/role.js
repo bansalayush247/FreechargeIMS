@@ -1,8 +1,6 @@
 const roleRepository = require("../repositories/role");
 const spaceRepository = require("../repositories/space");
-const userRoleRepository = require(
-  "../repositories/userRole"
-);
+const userRoleRepository = require("../repositories/userRole");
 const auditLogService = require("./auditLog");
 
 const AppError = require("../utils/appError");

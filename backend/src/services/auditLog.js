@@ -1,6 +1,4 @@
-const auditLogRepository = require(
-  "../repositories/auditLog"
-);
+const auditLogRepository = require("../repositories/auditLog");
 
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");

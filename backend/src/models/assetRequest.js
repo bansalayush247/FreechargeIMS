@@ -1,9 +1,6 @@
 const mongoose = require("mongoose");
 
-const {
-  ASSET_REQUEST_STATUS,
-  ASSET_REQUEST_PRIORITY,
-} = require("../constants/assetRequest");
+const { ASSET_REQUEST_STATUS, ASSET_REQUEST_PRIORITY } = require("../constants/assetRequest");
 
 const assetRequestSchema = new mongoose.Schema(
   {

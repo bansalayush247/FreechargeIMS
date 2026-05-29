@@ -1,6 +1,4 @@
-const notificationService = require(
-  "../services/notification"
-);
+const notificationService = require("../services/notification");
 
 const asyncHandler = require("../utils/asyncHandler");
 

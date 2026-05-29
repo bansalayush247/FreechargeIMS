@@ -47,11 +47,20 @@ const findUserByEmail = async (email) => {
   });
 };
 
+// Handles find user by employeeId.
+const findUserByEmployeeId = async (employeeId) => {
+  return User.findOne({
+    employeeId,
+    isDeleted: false,
+  });
+};
+
 module.exports = {
   findActiveUserByEmailWithPassword,
   findActiveUserById,
   updateLastLoginAt,
   createUser,
   findUserByEmail,
+  findUserByEmployeeId,
 };
 

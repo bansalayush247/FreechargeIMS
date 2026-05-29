@@ -1,9 +1,5 @@
-const workflowDefinitionRepository = require(
-  "../repositories/workflowDefinition"
-);
-const workflowInstanceRepository = require(
-  "../repositories/workflowInstance"
-);
+const workflowDefinitionRepository = require("../repositories/workflowDefinition");
+const workflowInstanceRepository = require("../repositories/workflowInstance");
 const auditLogService = require("./auditLog");
 
 const AppError = require("../utils/appError");

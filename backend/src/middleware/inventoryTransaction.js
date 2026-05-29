@@ -1,14 +1,8 @@
 const InventoryItem = require("../models/inventory");
 
-const {
-  INVENTORY_STATUS,
-  normalizeInventoryStatus,
-} = require("../constants/inventory");
+const { INVENTORY_STATUS, normalizeInventoryStatus } = require("../constants/inventory");
 
-const {
-  INVENTORY_TRANSACTION_TYPES,
-  normalizeInventoryTransactionType,
-} = require("../constants/inventoryTransaction");
+const { INVENTORY_TRANSACTION_TYPES, normalizeInventoryTransactionType } = require("../constants/inventoryTransaction");
 
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");

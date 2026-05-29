@@ -1,20 +1,10 @@
-const assetRequestService = require(
-  "../services/assetRequest"
-);
+const assetRequestService = require("../services/assetRequest");
 const userRoleRepository = require("../repositories/userRole");
 const roleRepository = require("../repositories/role");
 
 const asyncHandler = require("../utils/asyncHandler");
 
-const {
-  createAssetRequestSchema,
-  approvalSchema,
-  rejectionSchema,
-  forwardSchema,
-  getAssetRequestsSchema,
-} = require(
-  "../validators/assetRequest"
-);
+const { createAssetRequestSchema, approvalSchema, rejectionSchema, forwardSchema, getAssetRequestsSchema } = require("../validators/assetRequest");
 const { USER_TYPES } = require("../constants/user");
 
 const getRequestPermissions = async (req, userId, spaceId) => {

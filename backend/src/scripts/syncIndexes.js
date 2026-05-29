@@ -31,9 +31,7 @@ const syncIndexes = async () => {
     for (const modelName of mongoose.modelNames()) {
       const model = mongoose.model(modelName);
 
-      logger.info("Syncing indexes", {
-        modelName,
-      });
+      logger.info("Syncing indexes", { modelName });
 
       await model.syncIndexes();
     }
@@ -42,10 +40,7 @@ const syncIndexes = async () => {
 
     process.exit(0);
   } catch (error) {
-    logger.error("Index sync failed", {
-      error: error.message,
-      stack: error.stack,
-    });
+    logger.error("Index sync failed", { error: error.message, stack: error.stack });
 
     process.exit(1);
   }

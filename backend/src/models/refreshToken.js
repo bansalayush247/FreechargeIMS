@@ -9,10 +9,16 @@ const refreshTokenSchema = new mongoose.Schema(
       index: true,
     },
 
-    token: {
+    tokenHash: {
       type: String,
       required: true,
       unique: true,
+    },
+
+    jti: {
+      type: String,
+      required: true,
+      index: true,
     },
 
     expiresAt: {
@@ -31,7 +37,12 @@ const refreshTokenSchema = new mongoose.Schema(
       default: null,
     },
 
-    ipAddress: {
+    replacedByToken: {
+      type: String,
+      default: null,
+    },
+
+    createdByIp: {
       type: String,
       default: null,
     },

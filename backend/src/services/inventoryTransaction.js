@@ -1,8 +1,6 @@
 const mongoose = require("mongoose");
 
-const inventoryTransactionRepository = require(
-  "../repositories/inventoryTransaction"
-);
+const inventoryTransactionRepository = require("../repositories/inventoryTransaction");
 const auditLogService = require("./auditLog");
 
 const InventoryItem = require("../models/inventory");

@@ -1,6 +1,4 @@
-const inventoryTransactionService = require(
-  "../services/inventoryTransaction"
-);
+const inventoryTransactionService = require("../services/inventoryTransaction");
 
 const asyncHandler = require("../utils/asyncHandler");
 

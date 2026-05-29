@@ -1,43 +1,55 @@
 const RefreshToken = require("../models/refreshToken");
 
 // Handles create refresh token.
-const createRefreshToken = async (userId, token, ipAddress, userAgent) => {
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
-
+const createRefreshToken = async ({
+  userId,
+  tokenHash,
+  jti,
+  expiresAt,
+  createdByIp,
+  userAgent,
+}) => {
   return RefreshToken.create({
     userId,
-    token,
+    tokenHash,
+    jti,
     expiresAt,
-    ipAddress,
-    userAgent,
+    createdByIp: createdByIp || null,
+    userAgent: userAgent || null,
   });
 };
 
-// Handles find refresh token.
-const findRefreshToken = async (token) => {
-  return RefreshToken.findOne({
-    token,
-    isRevoked: false,
-    expiresAt: { $gt: new Date() },
-  });
+// Handles find refresh token by hash.
+const findRefreshTokenByHash = async (tokenHash) => {
+  return RefreshToken.findOne({ tokenHash });
 };
 
-// Handles revoke refresh token.
-const revokeRefreshToken = async (token) => {
+// Handles revoke refresh token by hash.
+const revokeRefreshToken = async (tokenHash, replacedByToken = null) => {
   return RefreshToken.updateOne(
-    { token },
+    { tokenHash, isRevoked: false },
     {
       $set: {
         isRevoked: true,
         revokedAt: new Date(),
+        replacedByToken,
       },
     }
   );
 };
 
+// Handles replace refresh token.
+const replaceRefreshToken = async ({
+  oldTokenHash,
+  replacedByToken,
+  newToken,
+}) => {
+  await revokeRefreshToken(oldTokenHash, replacedByToken);
+  return createRefreshToken(newToken);
+};
+
 // Handles revoke all user tokens.
-const revokeAllUserTokens = async (userId) => {
+const revokeAllForUser = async (userId) => {
   return RefreshToken.updateMany(
     { userId, isRevoked: false },
     {
@@ -51,9 +63,8 @@ const revokeAllUserTokens = async (userId) => {
 
 module.exports = {
   createRefreshToken,
-  findRefreshToken,
+  findRefreshTokenByHash,
   revokeRefreshToken,
-  revokeAllUserTokens,
+  replaceRefreshToken,
+  revokeAllForUser,
 };
-
-

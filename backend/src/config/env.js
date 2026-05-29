@@ -2,7 +2,7 @@ const REQUIRED_ENV = [
   "MONGO_URI",
   "JWT_PRIVATE_KEY",
   "JWT_PUBLIC_KEY",
-  "JWT_REFRESH_TOKEN_SECRET",
+  "REFRESH_TOKEN_HASH_SECRET",
 ];
 
 const validateEnv = () => {

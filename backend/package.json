@@ -8,7 +8,10 @@
     "dev": "nodemon src/server.js",
     "seed:admin": "node src/scripts/seedAdmin.js",
     "sync:indexes": "node src/scripts/syncIndexes.js",
-    "migrate:lifecycle": "node src/scripts/migrateLifecycle.js"
+    "migrate:lifecycle": "node src/scripts/migrateLifecycle.js",
+    "test": "node --test tests/**/*.test.js",
+    "test:unit": "node --test tests/unit/**/*.test.js",
+    "test:integration": "node --test tests/integration/**/*.test.js"
   },
   "keywords": [],
   "author": "",

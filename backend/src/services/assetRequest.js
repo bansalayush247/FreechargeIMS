@@ -4,17 +4,11 @@ const InventoryItem = require("../models/inventory");
 const Warehouse = require("../models/warehouse");
 const Space = require("../models/space");
 
-const assetRequestRepository = require(
-  "../repositories/assetRequest"
-);
+const assetRequestRepository = require("../repositories/assetRequest");
 const roleRepository = require("../repositories/role");
-const userRoleRepository = require(
-  "../repositories/userRole"
-);
+const userRoleRepository = require("../repositories/userRole");
 
-const inventoryTransactionService = require(
-  "./inventoryTransaction"
-);
+const inventoryTransactionService = require("./inventoryTransaction");
 const auditLogService = require("./auditLog");
 const notificationService = require("./notification");
 
@@ -31,18 +25,12 @@ const {
   getInventoryStatusQueryValues,
 } = require("../constants/inventory");
 
-const {
-  INVENTORY_TRANSACTION_TYPES,
-} = require(
-  "../constants/inventoryTransaction"
-);
+const { INVENTORY_TRANSACTION_TYPES } = require("../constants/inventoryTransaction");
 const {
   AUDIT_ACTIONS,
   AUDIT_ENTITY_TYPES,
 } = require("../constants/auditLog");
-const {
-  NOTIFICATION_TYPES,
-} = require("../constants/notification");
+const { NOTIFICATION_TYPES } = require("../constants/notification");
 
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");

@@ -1,12 +1,8 @@
-const auditLogService = require(
-  "../services/auditLog"
-);
+const auditLogService = require("../services/auditLog");
 
 const asyncHandler = require("../utils/asyncHandler");
 
-const {
-  getAuditLogsSchema,
-} = require("../validators/auditLog");
+const { getAuditLogsSchema } = require("../validators/auditLog");
 
 // Handles get audit logs.
 const getAuditLogs = asyncHandler(async (req, res) => {

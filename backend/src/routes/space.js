@@ -2,9 +2,7 @@ const express = require("express");
 
 const router = express.Router();
 
-const spaceController = require(
-  "../controllers/space"
-);
+const spaceController = require("../controllers/space");
 
 const joinRequestController = require("../controllers/joinRequest");
 
@@ -15,75 +13,26 @@ const authMiddleware = require("../middleware/auth");
 
 const ROUTES = require("../constants/routes");
 
-router.post(
-  ROUTES.SPACES.CREATE,
-  authMiddleware,
-  // Allow authenticated users to create a space; creator will be auto-assigned as space admin
-  spaceController.createSpace
-);
-
-router.get(
-  ROUTES.SPACES.LIST,
-  authMiddleware,
-  spaceController.getSpaces
-);
+router.post(ROUTES.SPACES.CREATE, authMiddleware, spaceController.createSpace); // Allow authenticated users to create a space; creator will be auto-assigned as space admin
+router.get(ROUTES.SPACES.LIST, authMiddleware, spaceController.getSpaces);
 
 // Spaces for current user
-router.get(
-  ROUTES.SPACES.MY,
-  authMiddleware,
-  spaceController.getMySpaces
-);
+router.get(ROUTES.SPACES.MY, authMiddleware, spaceController.getMySpaces);
 
-router.get(
-  ROUTES.SPACES.GET_BY_ID,
-  authMiddleware,
-  // Allow authenticated users to fetch a single space
-  spaceController.getSpaceById
-);
-
-router.patch(
-  ROUTES.SPACES.UPDATE,
-  authMiddleware,
-  authorize(PERMISSIONS.UPDATE_SPACE),
-  spaceController.updateSpace
-);
-
-router.delete(
-  ROUTES.SPACES.DELETE,
-  authMiddleware,
-  authorize(PERMISSIONS.DELETE_SPACE),
-  spaceController.deleteSpace
-);
+router.get(ROUTES.SPACES.GET_BY_ID, authMiddleware, spaceController.getSpaceById); // Allow authenticated users to fetch a single space
+router.patch(ROUTES.SPACES.UPDATE, authMiddleware, authorize(PERMISSIONS.UPDATE_SPACE), spaceController.updateSpace);
+router.delete(ROUTES.SPACES.DELETE, authMiddleware, authorize(PERMISSIONS.DELETE_SPACE), spaceController.deleteSpace);
 
 // Join requests - create (any authenticated user)
-router.post(
-  ROUTES.SPACES.CREATE_JOIN_REQUEST,
-  authMiddleware,
-  joinRequestController.createJoinRequest
-);
+router.post(ROUTES.SPACES.CREATE_JOIN_REQUEST, authMiddleware, joinRequestController.createJoinRequest);
 
 // Join requests - list for space admins
-router.get(
-  ROUTES.SPACES.LIST_JOIN_REQUESTS,
-  authMiddleware,
-  authorize(PERMISSIONS.UPDATE_SPACE),
-  joinRequestController.getJoinRequests
-);
+router.get(ROUTES.SPACES.LIST_JOIN_REQUESTS, authMiddleware, authorize(PERMISSIONS.UPDATE_SPACE), joinRequestController.getJoinRequests);
 
 // Join requests - list for requester
-router.get(
-  ROUTES.SPACES.LIST_MY_JOIN_REQUESTS,
-  authMiddleware,
-  joinRequestController.getMyJoinRequests
-);
+router.get(ROUTES.SPACES.LIST_MY_JOIN_REQUESTS, authMiddleware, joinRequestController.getMyJoinRequests);
 
 // Review (approve/reject) join request - space admins
-router.patch(
-  ROUTES.SPACES.REVIEW_JOIN_REQUEST,
-  authMiddleware,
-  authorize(PERMISSIONS.UPDATE_SPACE),
-  joinRequestController.reviewJoinRequest
-);
+router.patch(ROUTES.SPACES.REVIEW_JOIN_REQUEST, authMiddleware, authorize(PERMISSIONS.UPDATE_SPACE), joinRequestController.reviewJoinRequest);
 
 module.exports = router;

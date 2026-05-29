@@ -8,11 +8,6 @@ const { PERMISSIONS } = require("../constants/permission");
 
 const router = express.Router();
 
-router.get(
-  "/",
-  authMiddleware,
-  authorize(PERMISSIONS.VIEW_AUDIT_LOGS),
-  getAuditLogs
-);
+router.get("/", authMiddleware, authorize(PERMISSIONS.VIEW_AUDIT_LOGS), getAuditLogs);
 
 module.exports = router;

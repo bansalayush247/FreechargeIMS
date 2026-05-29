@@ -1,21 +1,13 @@
 const logger = require("../config/logger");
 const { getEnforcer } = require("../config/casbin");
-const {
-  getAuthzCache,
-  invalidateByUser,
-  setAuthzCache,
-} = require("../services/rbacCache");
+const { getAuthzCache, invalidateByUser, setAuthzCache } = require("../services/rbacCache");
 
 const AppError = require("../utils/appError");
 const { ERRORS } = require("../constants/error");
 
-const {
-  findUserRolesByUserAndSpace,
-} = require("../repositories/userRole");
+const { findUserRolesByUserAndSpace } = require("../repositories/userRole");
 
-const {
-  findActiveRolesByIds,
-} = require("../repositories/role");
+const { findActiveRolesByIds } = require("../repositories/role");
 
 const { PERMISSIONS } = require("../constants/permission");
 const { USER_TYPES } = require("../constants/user");

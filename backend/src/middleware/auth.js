@@ -28,7 +28,8 @@ const authMiddleware = async (req, res, next) => {
       throw new AppError(tokenResult.error, HTTP_STATUS.UNAUTHORIZED);
     }
 
-    const user = await findActiveUserById(tokenResult.decoded.userId);
+    const userId = tokenResult.decoded.sub || tokenResult.decoded.userId;
+    const user = await findActiveUserById(userId);
 
     if (!user) {
       throw new AppError(

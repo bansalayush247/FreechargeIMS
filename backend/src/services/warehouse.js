@@ -1,6 +1,4 @@
-const warehouseRepository = require(
-  "../repositories/warehouse"
-);
+const warehouseRepository = require("../repositories/warehouse");
 const auditLogService = require("./auditLog");
 
 const logger = require("../config/logger");

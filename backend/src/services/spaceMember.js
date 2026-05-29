@@ -1,14 +1,8 @@
-const spaceMemberRepository = require(
-  "../repositories/spaceMember"
-);
-const userRoleRepository = require(
-  "../repositories/userRole"
-);
+const spaceMemberRepository = require("../repositories/spaceMember");
+const userRoleRepository = require("../repositories/userRole");
 const roleRepository = require("../repositories/role");
 const spaceRepository = require("../repositories/space");
-const { findActiveUserById } = require(
-  "../repositories/user"
-);
+const { findActiveUserById } = require("../repositories/user");
 const auditLogService = require("./auditLog");
 
 const AppError = require("../utils/appError");

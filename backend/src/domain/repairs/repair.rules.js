@@ -1,12 +1,6 @@
-const {
-  REPAIR_STATUS,
-  REPAIR_OUTCOME,
-} = require("../../constants/repair");
+const { REPAIR_STATUS, REPAIR_OUTCOME } = require("../../constants/repair");
 
-const {
-  INVENTORY_STATUS,
-  normalizeInventoryStatus,
-} = require("../../constants/inventory");
+const { INVENTORY_STATUS, normalizeInventoryStatus } = require("../../constants/inventory");
 
 const OPEN_REPAIR_STATUSES = [
   REPAIR_STATUS.OPEN,

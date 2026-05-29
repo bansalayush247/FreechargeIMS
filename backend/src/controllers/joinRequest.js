@@ -3,7 +3,8 @@ const asyncHandler = require("../utils/asyncHandler");
 const { createJoinRequestSchema, reviewJoinRequestSchema, getJoinRequestsSchema } = require("../validators/joinRequest");
 
 const createJoinRequest = asyncHandler(async (req, res) => {
-  const userId = req.user._id || req.user.id;
+  const rawUserId = req.user && (req.user._id || req.user.id);
+  const userId = rawUserId && typeof rawUserId.toString === "function" ? rawUserId.toString() : String(rawUserId);
   const { error, value } = createJoinRequestSchema.validate(req.body);
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
@@ -31,7 +32,8 @@ const getJoinRequests = asyncHandler(async (req, res) => {
 });
 
 const getMyJoinRequests = asyncHandler(async (req, res) => {
-  const userId = req.user._id || req.user.id;
+  const rawUserId = req.user && (req.user._id || req.user.id);
+  const userId = rawUserId && typeof rawUserId.toString === "function" ? rawUserId.toString() : String(rawUserId);
   const { error, value } = getJoinRequestsSchema.validate({
     ...req.query,
     spaceId: req.params.id,
@@ -48,7 +50,8 @@ const getMyJoinRequests = asyncHandler(async (req, res) => {
 });
 
 const reviewJoinRequest = asyncHandler(async (req, res) => {
-  const userId = req.user._id || req.user.id;
+  const rawUserId = req.user && (req.user._id || req.user.id);
+  const userId = rawUserId && typeof rawUserId.toString === "function" ? rawUserId.toString() : String(rawUserId);
   const { error, value } = reviewJoinRequestSchema.validate(req.body);
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 

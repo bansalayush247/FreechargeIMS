@@ -77,9 +77,7 @@ const archiveLogs = async ({ force = false } = {}) => {
 
     // Handle archive events
     output.on("close", () => {
-      logger.info(
-        `Log archive created successfully: ${archiveFilename} (${archive.pointer()} bytes)`
-      );
+      logger.info(`Log archive created successfully: ${archiveFilename} (${archive.pointer()} bytes)`);
 
       // Clear archived log files
       filesToArchive.forEach((file) => {

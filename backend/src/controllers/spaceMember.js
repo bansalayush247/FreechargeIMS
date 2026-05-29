@@ -1,6 +1,4 @@
-const spaceMemberService = require(
-  "../services/spaceMember"
-);
+const spaceMemberService = require("../services/spaceMember");
 
 const asyncHandler = require("../utils/asyncHandler");
 

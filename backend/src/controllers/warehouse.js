@@ -1,10 +1,5 @@
-const warehouseService = require(
-  "../services/warehouse"
-);
-
-const asyncHandler = require(
-  "../utils/asyncHandler"
-);
+const warehouseService = require("../services/warehouse");
+const asyncHandler = require("../utils/asyncHandler");
 
 const createWarehouse = asyncHandler(
   async (req, res) => {

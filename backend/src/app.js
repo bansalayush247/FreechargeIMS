@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const cookieParser = require("cookie-parser");
 
 const routes = require("./routes");
 const { getAllowedOrigins } = require("./config/env");
@@ -16,6 +17,7 @@ const allowedOrigins = getAllowedOrigins();
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 app.set("trust proxy", 1);
 

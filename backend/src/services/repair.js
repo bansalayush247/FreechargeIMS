@@ -1,13 +1,8 @@
 const Repair = require("../models/repair");
 const InventoryItem = require("../models/inventory");
 
-const repairRepository = require(
-  "../repositories/repair"
-);
-
-const inventoryTransactionService = require(
-  "./inventoryTransaction"
-);
+const repairRepository = require("../repositories/repair");
+const inventoryTransactionService = require("./inventoryTransaction");
 const auditLogService = require("./auditLog");
 const notificationService = require("./notification");
 
@@ -17,9 +12,7 @@ const {
 
 const {
   INVENTORY_TRANSACTION_TYPES,
-} = require(
-  "../constants/inventoryTransaction"
-);
+} = require("../constants/inventoryTransaction");
 const {
   AUDIT_ACTIONS,
   AUDIT_ENTITY_TYPES,
