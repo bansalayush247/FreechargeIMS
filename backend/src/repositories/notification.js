@@ -50,7 +50,7 @@ const updateById = async (id, payload) => {
     },
     payload,
     {
-      new: true,
+      returnDocument: "after",
     }
   ).lean();
 };

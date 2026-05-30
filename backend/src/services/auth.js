@@ -25,6 +25,11 @@ const {
   revokeAllForUser,
 } = require("../repositories/refreshToken");
 
+const spaceRepository = require("../repositories/space");
+const spaceMemberService = require("./spaceMember");
+const { SPACE_TYPES, SYSTEM_SPACES } = require("../constants/space");
+const { USER_TYPES } = require("../constants/user");
+
 // Handles generate tokens.
 const generateTokens = async (user, ipAddress, userAgent) => {
   const accessToken = generateAccessToken(user);
@@ -88,6 +93,30 @@ const signupUser = async (userData, ipAddress, userAgent) => {
     userType: userData.userType,
     isActive: true,
   });
+
+  // Auto-join user to a system space based on their userType
+  try {
+    let targetSpace = null;
+    if (user.userType === USER_TYPES.EMPLOYEE) {
+      targetSpace = await spaceRepository.findByType(SPACE_TYPES.EMPLOYEE);
+    } else if (user.userType === USER_TYPES.MERCHANT) {
+      targetSpace = await spaceRepository.findByType(SPACE_TYPES.MERCHANT);
+    }
+
+    if (targetSpace) {
+      await spaceMemberService.addMember(
+        targetSpace._id,
+        { userId: user._id },
+        user._id,
+        { ipAddress, userAgent }
+      );
+    }
+  } catch (err) {
+    // don't block signup if auto-join fails
+    // log and continue
+    // eslint-disable-next-line no-console
+    console.warn("Auto-join to system space failed", err.message || err);
+  }
 
   const tokens = await generateTokens(user, ipAddress, userAgent);
   const userResponse = user.toObject();

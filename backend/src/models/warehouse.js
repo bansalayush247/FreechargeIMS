@@ -117,6 +117,15 @@ warehouseSchema.index({
   type: 1,
 });
 
+// Virtual alias: expose storageLocationId mapping to _id for migration compatibility
+warehouseSchema.virtual("storageLocationId").get(function () {
+  return this._id;
+});
+
+// Ensure virtuals are included when converting to JSON/Object
+warehouseSchema.set("toJSON", { virtuals: true });
+warehouseSchema.set("toObject", { virtuals: true });
+
 module.exports = mongoose.model(
   "Warehouse",
   warehouseSchema

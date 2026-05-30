@@ -6,6 +6,10 @@ import { hasPermission, type PermissionCheckInput } from "@/src/lib/permissions"
 
 export function usePermission(input: PermissionCheckInput) {
   const { user } = useAuth();
+  const { action, ownerId, resource, spaceId } = input;
 
-  return useMemo(() => hasPermission(user, input), [user, input.action, input.ownerId, input.resource, input.spaceId]);
+  return useMemo(
+    () => hasPermission(user, { action, ownerId, resource, spaceId }),
+    [action, ownerId, resource, spaceId, user],
+  );
 }

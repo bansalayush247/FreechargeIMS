@@ -4,16 +4,16 @@ const Product = require("../models/product");
 const createProduct = async (payload) => Product.create(payload);
 
 // Handles find product by sku.
-const findProductBySku = async (spaceId, sku) => Product.findOne({ spaceId, sku, isDeleted: false }).lean();
+const findProductBySku = async (sku) => Product.findOne({ sku, isDeleted: false }).lean();
 
 // Handles find product by id.
 const findProductById = async (id) => Product.findOne({ _id: id, isDeleted: false }).lean();
 
 // Handles get products.
-const getProducts = async ({ spaceId, page, limit }) => {
+const getProducts = async ({ page, limit }) => {
   const skip = (page - 1) * limit;
 
-  const query = { spaceId, isDeleted: false };
+  const query = { isDeleted: false };
 
   const [products, total] = await Promise.all([
     Product.find(query).select("-__v").sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
@@ -32,14 +32,14 @@ const getProducts = async ({ spaceId, page, limit }) => {
 };
 
 // Handles update product.
-const updateProduct = async (id, updateData) => Product.findByIdAndUpdate(id, updateData, { new: true }).lean();
+const updateProduct = async (id, updateData) => Product.findByIdAndUpdate(id, updateData, { returnDocument: "after" }).lean();
 
 // Handles soft delete product.
 const softDeleteProduct = async (id, deletedBy) => Product.findByIdAndUpdate(id, {
   isDeleted: true,
   deletedAt: new Date(),
   deletedBy,
-}, { new: true }).lean();
+}, { returnDocument: "after" }).lean();
 
 module.exports = {
   createProduct,

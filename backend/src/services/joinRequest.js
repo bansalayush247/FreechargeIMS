@@ -10,13 +10,18 @@ const auditLogService = require("./auditLog");
 const { ROLE_CODES } = require("../constants/role");
 const { NOTIFICATION_TYPES } = require("../constants/notification");
 const { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } = require("../constants/auditLog");
+const { USER_TYPES } = require("../constants/user");
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
 
 // Create join request
-const createJoinRequest = async (spaceId, payload, userId, context = {}) => {
+const createJoinRequest = async (spaceId, payload, userId, userType, context = {}) => {
   const space = await spaceRepository.findById(spaceId);
   if (!space) throw new AppError("Space not found", 404);
+
+  if (userType !== USER_TYPES.ADMIN && (!space.type || space.type !== userType)) {
+    throw new AppError("Space type does not match your user type", 403);
+  }
 
   const activeMember = await spaceMemberRepository.findByUserAndSpace(
     userId,

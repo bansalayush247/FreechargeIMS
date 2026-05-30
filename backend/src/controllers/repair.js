@@ -42,9 +42,15 @@ const createRepair = asyncHandler(async (req, res) => {
 
 // Handles get repairs.
 const getRepairs = asyncHandler(async (req, res) => {
+  // Accept storageLocationId alias in query params
+  const query = { ...req.query };
+  if (!query.warehouseId && query.storageLocationId) {
+    query.warehouseId = query.storageLocationId;
+  }
+
   const { error, value } =
     getRepairsSchema.validate({
-      ...req.query,
+      ...query,
       spaceId:
         req.query.spaceId ||
         req.headers["x-space-id"],

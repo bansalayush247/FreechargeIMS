@@ -28,6 +28,8 @@ router.use(ROUTES.ROLES.BASE, roleRoutes);
 router.use(ROUTES.SPACE_MEMBERS, spaceMemberRoutes);
 router.use(ROUTES.PRODUCTS.BASE, productRoutes);
 router.use(ROUTES.WAREHOUSE.BASE, warehouseRoutes);
+// alias route for storage-locations to preserve backwards compatibility
+router.use(ROUTES.STORAGE_LOCATIONS.BASE, warehouseRoutes);
 router.use(ROUTES.INVENTORY_ITEMS, inventoryRoutes);
 router.use(ROUTES.INVENTORY_TRANSACTIONS.BASE, inventoryTransactionRoutes);
 router.use(ROUTES.ASSET_REQUESTS.BASE, assetRequestRoutes);

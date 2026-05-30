@@ -34,14 +34,18 @@ export type NotificationListResponse = {
 };
 
 export async function listNotifications(options?: {
+  spaceId?: string;
   page?: number;
   limit?: number;
   status?: string;
   type?: string;
   channel?: string;
 }) {
+  const { spaceId, ...params } = options ?? {};
+
   const res = await apiClient.get("/notifications", {
-    params: options,
+    params,
+    headers: spaceId ? { "x-space-id": spaceId } : undefined,
   });
 
   return res.data?.data ?? res.data;

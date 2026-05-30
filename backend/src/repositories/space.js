@@ -21,6 +21,14 @@ const findByCode = async (code) => {
   }).lean();
 };
 
+// Handles find by type.
+const findByType = async (type) => {
+  return Space.findOne({
+    type,
+    isDeleted: false,
+  }).lean();
+};
+
 // Handles find by name.
 const findByName = async (name) => {
   return Space.findOne({
@@ -38,14 +46,14 @@ const updateById = async (id, payload) => {
     },
     payload,
     {
-      new: true,
+      returnDocument: "after",
     }
   ).lean();
 };
 
 // Handles paginate.
 const paginate = async (filters) => {
-  const { page, limit, search, isActive } = filters;
+  const { page, limit, search, isActive, type } = filters;
 
   const skip = (page - 1) * limit;
 
@@ -55,6 +63,10 @@ const paginate = async (filters) => {
 
   if (typeof isActive === "boolean") {
     query.isActive = isActive;
+  }
+
+  if (type) {
+    query.type = type;
   }
 
   if (search) {
@@ -67,6 +79,12 @@ const paginate = async (filters) => {
       },
       {
         code: {
+          $regex: search,
+          $options: "i",
+        },
+      },
+      {
+        type: {
           $regex: search,
           $options: "i",
         },
@@ -99,6 +117,7 @@ module.exports = {
   create,
   findById,
   findByCode,
+  findByType,
   findByName,
   updateById,
   paginate,

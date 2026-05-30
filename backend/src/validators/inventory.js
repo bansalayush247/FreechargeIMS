@@ -10,6 +10,8 @@ const createInventoryItemSchema = Joi.object({
   productId: Joi.string().hex().length(24).required(),
 
   warehouseId: Joi.string().hex().length(24).required(),
+  // alias for migration: accept storageLocationId as a synonym for warehouseId
+  storageLocationId: Joi.string().hex().length(24).optional(),
 
   assignedUserId: Joi.string().hex().length(24).optional().allow(null),
 
@@ -41,6 +43,7 @@ const updateInventoryItemSchema = Joi.object({
   productId: Joi.string().hex().length(24).optional(),
 
   warehouseId: Joi.string().hex().length(24).optional(),
+  storageLocationId: Joi.string().hex().length(24).optional(),
 
   assignedUserId: Joi.string().hex().length(24).allow(null).optional(),
 
@@ -79,6 +82,7 @@ const getInventoryItemsSchema = Joi.object({
     .optional(),
 
   warehouseId: Joi.string().hex().length(24).optional(),
+  storageLocationId: Joi.string().hex().length(24).optional(),
 
   productId: Joi.string().hex().length(24).optional(),
 

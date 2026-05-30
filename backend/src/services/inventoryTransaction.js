@@ -1,10 +1,14 @@
 const mongoose = require("mongoose");
 
+const AssetRequest = require("../models/assetRequest");
 const inventoryTransactionRepository = require("../repositories/inventoryTransaction");
 const auditLogService = require("./auditLog");
+const userRoleRepository = require("../repositories/userRole");
+const roleRepository = require("../repositories/role");
 
 const InventoryItem = require("../models/inventory");
 const Warehouse = require("../models/warehouse");
+const Space = require("../models/space");
 const User = require("../models/user");
 
 const {
@@ -23,6 +27,9 @@ const {
 
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
+const { ROLE_CODES } = require("../constants/role");
+const { SYSTEM_SPACES } = require("../constants/space");
+const { USER_TYPES } = require("../constants/user");
 
 const TRANSACTION_UNSUPPORTED_ERROR_MESSAGE =
   "Transaction numbers are only allowed on a replica set member or mongos";
@@ -35,6 +42,95 @@ const isTransactionUnsupportedError = (error) =>
         TRANSACTION_UNSUPPORTED_ERROR_MESSAGE
       )
   );
+
+const readId = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") return String(value._id || value.id || "");
+  return String(value);
+};
+
+const userHasRoleInSpace = async (userId, spaceId, roleCode) => {
+  if (!spaceId) {
+    return false;
+  }
+
+  const userRoles = await userRoleRepository.findUserRolesByUserAndSpace(userId, spaceId);
+
+  if (!userRoles.length) {
+    return false;
+  }
+
+  const roleIds = userRoles.map((item) => item.roleId);
+  const roles = await roleRepository.findActiveRolesByIds(roleIds);
+
+  return roles.some((role) => String(role.code) === String(roleCode));
+};
+
+const resolveAuditTrailAccessSpaceId = async (inventoryItemId) => {
+  const assetRequest = await AssetRequest.findOne({
+    inventoryItemId,
+    isDeleted: false,
+  })
+    .select("spaceId originSpaceId employeeId")
+    .lean();
+
+  if (assetRequest) {
+    return {
+      ownerUserId: readId(assetRequest.employeeId),
+      spaceId: readId(assetRequest.originSpaceId || assetRequest.spaceId),
+    };
+  }
+
+  const inventoryItem = await InventoryItem.findOne({
+    _id: inventoryItemId,
+    isDeleted: false,
+  })
+    .select("warehouseId assignedUserId")
+    .lean();
+
+  if (!inventoryItem) {
+    return { ownerUserId: "", spaceId: "" };
+  }
+
+  const warehouse = await Warehouse.findById(inventoryItem.warehouseId)
+    .select("spaceId")
+    .lean();
+
+  return {
+    ownerUserId: readId(inventoryItem.assignedUserId),
+    spaceId: readId(warehouse?.spaceId),
+  };
+};
+
+const canViewItemAuditTrail = async ({ inventoryItemId, userId, userType }) => {
+  if (!inventoryItemId || !userId) {
+    return false;
+  }
+
+  if (userType === USER_TYPES.ADMIN) {
+    return true;
+  }
+
+  const { ownerUserId, spaceId } = await resolveAuditTrailAccessSpaceId(inventoryItemId);
+
+  if (ownerUserId && String(ownerUserId) === String(userId)) {
+    return true;
+  }
+
+  const superSpace = await Space.findOne({
+    code: SYSTEM_SPACES.SUPER_ADMIN.code,
+    isDeleted: false,
+  })
+    .select("_id")
+    .lean();
+
+  if (superSpace && await userHasRoleInSpace(userId, superSpace._id, ROLE_CODES.SUPER_ADMIN)) {
+    return true;
+  }
+
+  return userHasRoleInSpace(userId, spaceId, ROLE_CODES.INVENTORY_MANAGER);
+};
 
 // Handles the core inventory transaction flow.
 const runCreateTransaction = async (
@@ -288,7 +384,17 @@ const getTransactionById = async (id) => {
 };
 
 // Handles get item audit trail.
-const getItemAuditTrail = async (inventoryItemId) => {
+const getItemAuditTrail = async (inventoryItemId, context = {}) => {
+  const allowed = await canViewItemAuditTrail({
+    inventoryItemId,
+    userId: context.userId,
+    userType: context.userType,
+  });
+
+  if (!allowed) {
+    throw new AppError("Insufficient permissions", 403);
+  }
+
   return inventoryTransactionRepository.getItemAuditTrail(
     inventoryItemId
   );

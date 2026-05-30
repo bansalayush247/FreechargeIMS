@@ -5,7 +5,12 @@ const {
 } = require("../constants/inventory");
 
 // Handles create.
-const create = async (payload) => {
+const create = async (payload, options = {}) => {
+  if (options.session) {
+    const [created] = await InventoryItem.create([payload], { session: options.session });
+    return created;
+  }
+
   return InventoryItem.create(payload);
 };
 
@@ -23,7 +28,7 @@ const findOne = async (filter) => {
 };
 
 // Handles update by id.
-const updateById = async (id, payload) => {
+const updateById = async (id, payload, options = {}) => {
   return InventoryItem.findOneAndUpdate(
     {
       _id: id,
@@ -31,7 +36,8 @@ const updateById = async (id, payload) => {
     },
     payload,
     {
-      new: true,
+      session: options.session,
+      returnDocument: "after",
     }
   ).lean();
 };

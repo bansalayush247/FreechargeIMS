@@ -8,6 +8,7 @@ import { useProducts } from "@/src/features/products";
 import { useWarehouses } from "@/src/features/warehouses/hooks/use-warehouses";
 import { listAssetRequests } from "@/src/lib/assetRequestClient";
 import { listNotifications } from "@/src/lib/notificationClient";
+import { useCurrentSpace } from "@/src/hooks/useCurrentSpace";
 
 function readTotal(payload: unknown) {
   if (!payload || typeof payload !== "object") {
@@ -35,17 +36,20 @@ function readTotal(payload: unknown) {
 }
 
 export default function DashboardPage() {
+  const { activeSpaceId } = useCurrentSpace();
   const { data: products = [], isLoading: productsLoading } = useProducts();
-  const { data: warehouses = [], isLoading: warehousesLoading } = useWarehouses();
+  const { data: warehouses = [], isLoading: warehousesLoading } = useWarehouses({ spaceId: activeSpaceId ?? undefined });
 
   const { data: requestCount, isLoading: requestsLoading } = useQuery({
-    queryKey: ["dashboard", "asset-requests-count"],
-    queryFn: async () => readTotal(await listAssetRequests({ page: 1, limit: 1 })),
+    queryKey: ["dashboard", "asset-requests-count", activeSpaceId],
+    queryFn: async () => readTotal(await listAssetRequests({ spaceId: activeSpaceId ?? undefined, page: 1, limit: 1 })),
+    enabled: Boolean(activeSpaceId),
   });
 
   const { data: alertCount, isLoading: alertsLoading } = useQuery({
-    queryKey: ["dashboard", "notifications-count"],
-    queryFn: async () => readTotal(await listNotifications({ page: 1, limit: 1 })),
+    queryKey: ["dashboard", "notifications-count", activeSpaceId],
+    queryFn: async () => readTotal(await listNotifications({ spaceId: activeSpaceId ?? undefined, page: 1, limit: 1 })),
+    enabled: Boolean(activeSpaceId),
   });
 
   const metrics = [

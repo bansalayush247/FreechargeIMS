@@ -10,6 +10,14 @@ const {
 // Handles create transaction.
 const createTransaction = asyncHandler(async (req, res) => {
   const userId = req.user._id || req.user.id;
+  // Accept alias fields for migration: map storageLocationId -> warehouseId
+  if (!req.body.fromWarehouseId && req.body.fromStorageLocationId) {
+    req.body.fromWarehouseId = req.body.fromStorageLocationId;
+  }
+  if (!req.body.toWarehouseId && req.body.toStorageLocationId) {
+    req.body.toWarehouseId = req.body.toStorageLocationId;
+  }
+
   const { error, value } =
     createTransactionSchema.validate(req.body);
 
@@ -40,6 +48,11 @@ const createTransaction = asyncHandler(async (req, res) => {
 
 // Handles get transactions.
 const getTransactions = asyncHandler(async (req, res) => {
+  // Accept storageLocationId alias in query params
+  if (!req.query.warehouseId && req.query.storageLocationId) {
+    req.query.warehouseId = req.query.storageLocationId;
+  }
+
   const { error, value } =
     getTransactionsSchema.validate(req.query);
 
@@ -80,7 +93,11 @@ const getTransactionById = asyncHandler(async (req, res) => {
 const getItemAuditTrail = asyncHandler(async (req, res) => {
   const transactions =
     await inventoryTransactionService.getItemAuditTrail(
-      req.params.inventoryItemId
+      req.params.inventoryItemId,
+      {
+        userId: req.user._id || req.user.id,
+        userType: req.user.userType,
+      }
     );
 
   return res.status(200).json({

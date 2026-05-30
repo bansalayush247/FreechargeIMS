@@ -1,5 +1,7 @@
 const USER_TYPES = {
   ADMIN: "ADMIN",
+  EMPLOYEE: "EMPLOYEE",
+  MERCHANT: "MERCHANT",
   OPS: "OPS",
   FOS: "FOS",
   SUPPORT: "SUPPORT",
@@ -7,6 +9,12 @@ const USER_TYPES = {
   WAREHOUSE: "WAREHOUSE",
 };
 
+const SIGNUP_USER_TYPES = {
+  EMPLOYEE: "EMPLOYEE",
+  MERCHANT: "MERCHANT",
+};
+
 module.exports = {
   USER_TYPES,
+  SIGNUP_USER_TYPES,
 };

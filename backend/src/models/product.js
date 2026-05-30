@@ -3,8 +3,6 @@ const mongoose = require("mongoose");
 const { PRODUCT_ASSET_TYPES } = require("../constants/product");
 
 const productSchema = new mongoose.Schema({
-  spaceId: { type: mongoose.Schema.Types.ObjectId, ref: "Space", required: true, index: true },
-
   sku: { type: String, required: true, trim: true, uppercase: true },
 
   name: { type: String, required: true, trim: true },
@@ -36,9 +34,8 @@ const productSchema = new mongoose.Schema({
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 }, { timestamps: true });
 
-productSchema.index({ spaceId: 1, sku: 1 }, { 
-  unique: true, 
-  partialFilterExpression: { isDeleted: false } 
+productSchema.index({ sku: 1 }, {
+  unique: true,
 });
 
 productSchema.index({ category: 1 });

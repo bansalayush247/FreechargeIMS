@@ -11,6 +11,8 @@ const {
 // Handles get user id.
 const getUserId = (req) => req.user._id || req.user.id;
 
+const getUserType = (req) => req.user?.userType || null;
+
 // Handles get request context.
 const getRequestContext = (req) => ({
   ipAddress: req.ip,
@@ -33,6 +35,7 @@ const createSpace = asyncHandler(async (req, res) => {
   const space = await spaceService.createSpace(
     value,
     getUserId(req),
+    getUserType(req),
     getRequestContext(req)
   );
 
@@ -56,7 +59,7 @@ const getSpaces = asyncHandler(async (req, res) => {
     });
   }
 
-  const spaces = await spaceService.getSpaces(value);
+  const spaces = await spaceService.getSpaces(value, getUserType(req));
 
   return res.status(200).json({
     success: true,
@@ -128,6 +131,7 @@ const updateSpace = asyncHandler(async (req, res) => {
     req.params.id,
     value,
     getUserId(req),
+    getUserType(req),
     getRequestContext(req)
   );
 

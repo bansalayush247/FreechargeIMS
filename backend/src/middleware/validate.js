@@ -6,10 +6,23 @@ const validate = (schema) => {
     });
 
     if (error) {
+      const errors = [];
+      const seen = new Set();
+
+      for (const detail of error.details) {
+        const key = `${detail.path.join(".") || "root"}::${detail.message}`;
+        if (seen.has(key)) {
+          continue;
+        }
+
+        seen.add(key);
+        errors.push(detail.message);
+      }
+
       return res.status(400).json({
         success: false,
         message: "Validation failed",
-        errors: error.details.map((err) => err.message),
+        errors,
       });
     }
 

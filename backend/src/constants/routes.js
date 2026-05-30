@@ -119,6 +119,15 @@ const ENDPOINTS = Object.freeze({
     UPDATE: "/:id",
     DELETE: "/:id",
   }),
+  // New alias endpoints for storage locations (backwards-compatible)
+  STORAGE_LOCATIONS: Object.freeze({
+    BASE: `${API_VERSION}/storage-locations`,
+    CREATE: "/",
+    LIST: "/",
+    GET_BY_ID: "/:id",
+    UPDATE: "/:id",
+    DELETE: "/:id",
+  }),
 
   INVENTORY_ITEMS: `${API_VERSION}/inventory-items`,
 

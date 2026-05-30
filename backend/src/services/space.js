@@ -12,7 +12,8 @@ const {
   AUDIT_ENTITY_TYPES,
 } = require("../constants/auditLog");
 const { ROLE_CODES } = require("../constants/role");
-const { SPACE_CODES } = require("../constants/space");
+const { SPACE_CODES, SPACE_TYPES } = require("../constants/space");
+const { USER_TYPES } = require("../constants/user");
 const {
   PERMISSIONS,
 } = require("../constants/permission");
@@ -52,6 +53,25 @@ const DEFAULT_SYSTEM_ROLES = [
   },
 ];
 
+const normalizeSpacePayload = (payload) => {
+  const normalized = { ...payload };
+
+  if (!normalized.type) {
+    if (Object.values(SPACE_TYPES).includes(normalized.spaceType)) {
+      normalized.type = normalized.spaceType;
+    } else if (Object.values(SPACE_TYPES).includes(normalized.code)) {
+      normalized.type = normalized.code;
+    } else if (Object.values(SPACE_TYPES).includes(normalized.spaceCode)) {
+      normalized.type = normalized.spaceCode;
+    }
+  }
+
+  delete normalized.spaceType;
+  delete normalized.spaceCode;
+
+  return normalized;
+};
+
 // Handles assert unique space fields.
 const assertUniqueSpaceFields = async (
   payload,
@@ -83,13 +103,19 @@ const assertUniqueSpaceFields = async (
 };
 
 // Handles create space.
-const createSpace = async (payload, userId, context = {}) => {
+const createSpace = async (payload, userId, userType, context = {}) => {
   logger.info("Creating space");
 
-  await assertUniqueSpaceFields(payload);
+  const normalizedPayload = normalizeSpacePayload(payload);
+
+  if (userType !== USER_TYPES.ADMIN && normalizedPayload.type && normalizedPayload.type !== userType) {
+    throw new AppError("Space type must match your user type", 403);
+  }
+
+  await assertUniqueSpaceFields(normalizedPayload);
 
   const space = await spaceRepository.create({
-    ...payload,
+    ...normalizedPayload,
     createdBy: userId,
     updatedBy: userId,
   });
@@ -140,6 +166,7 @@ const createSpace = async (payload, userId, context = {}) => {
     after: space,
     metadata: {
       code: space.code,
+      type: space.type,
     },
     ipAddress: context.ipAddress || "",
     userAgent: context.userAgent || "",
@@ -184,8 +211,14 @@ const createSpace = async (payload, userId, context = {}) => {
 };
 
 // Handles get spaces.
-const getSpaces = async (filters) => {
-  return spaceRepository.paginate(filters);
+const getSpaces = async (filters, userType) => {
+  const query = { ...filters };
+
+  if (userType && userType !== USER_TYPES.ADMIN) {
+    query.type = userType;
+  }
+
+  return spaceRepository.paginate(query);
 };
 
 // Handles get space by id.
@@ -204,14 +237,21 @@ const updateSpace = async (
   id,
   payload,
   userId,
+  userType,
   context = {}
 ) => {
   const space = await getSpaceById(id);
 
-  await assertUniqueSpaceFields(payload, id);
+  const normalizedPayload = normalizeSpacePayload(payload);
+
+  if (userType !== USER_TYPES.ADMIN && normalizedPayload.type && normalizedPayload.type !== userType) {
+    throw new AppError("Space type must match your user type", 403);
+  }
+
+  await assertUniqueSpaceFields(normalizedPayload, id);
 
   const updatedSpace = await spaceRepository.updateById(id, {
-    ...payload,
+    ...normalizedPayload,
     updatedBy: userId,
   });
 

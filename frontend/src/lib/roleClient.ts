@@ -2,8 +2,8 @@ import { apiClient } from "@/src/lib/api";
 
 export type RolePayload = { name: string; description?: string; permissions: string[] };
 
-export async function listRoles() {
-  const res = await apiClient.get("/roles");
+export async function listRoles(spaceId?: string) {
+  const res = await apiClient.get("/roles", { headers: spaceId ? { "x-space-id": spaceId } : undefined });
   return res.data?.data?.items ?? res.data?.data ?? [];
 }
 
@@ -18,7 +18,7 @@ export async function createRole(payload: RolePayload) {
 }
 
 export async function updateRole(id: string, payload: Partial<RolePayload>) {
-  const res = await apiClient.put(`/roles/${id}`, payload);
+  const res = await apiClient.patch(`/roles/${id}`, payload);
   return res.data?.data ?? res.data;
 }
 

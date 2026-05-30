@@ -8,22 +8,30 @@ function unwrapItems(payload: unknown) {
   return Array.isArray(items) ? (items as Warehouse[]) : [];
 }
 
-export async function getWarehouses() {
-  const response = await apiClient.get("/warehouse");
+export async function getWarehouses(spaceId?: string) {
+  const response = await apiClient.get("/warehouse", {
+    headers: spaceId ? { "x-space-id": spaceId } : undefined,
+  });
   return unwrapItems(response.data);
 }
 
-export async function getWarehouse(id: string) {
-  const response = await apiClient.get(`/warehouse/${id}`);
+export async function getWarehouse(id: string, spaceId?: string) {
+  const response = await apiClient.get(`/warehouse/${id}`, {
+    headers: spaceId ? { "x-space-id": spaceId } : undefined,
+  });
   return response.data?.data ?? response.data;
 }
 
-export async function updateWarehouse(id: string, payload: Record<string, unknown>) {
-  const response = await apiClient.put(`/warehouse/${id}`, payload);
+export async function updateWarehouse(id: string, payload: Record<string, unknown>, spaceId?: string) {
+  const response = await apiClient.put(`/warehouse/${id}`, payload, {
+    headers: spaceId ? { "x-space-id": spaceId } : undefined,
+  });
   return response.data?.data ?? response.data;
 }
 
-export async function deleteWarehouse(id: string) {
-  const response = await apiClient.delete(`/warehouse/${id}`);
+export async function deleteWarehouse(id: string, spaceId?: string) {
+  const response = await apiClient.delete(`/warehouse/${id}`, {
+    headers: spaceId ? { "x-space-id": spaceId } : undefined,
+  });
   return response.data?.data ?? response.data;
 }

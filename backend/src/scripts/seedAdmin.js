@@ -45,6 +45,11 @@ const SYSTEM_ROLES = [
     permissions: Object.values(PERMISSIONS),
   },
   {
+    name: "Super Admin",
+    code: ROLE_CODES.SUPER_ADMIN,
+    permissions: Object.values(PERMISSIONS).filter((p) => !String(p).startsWith("DELETE_")),
+  },
+  {
     name: "Inventory Manager",
     code: ROLE_CODES.INVENTORY_MANAGER,
     permissions: [
@@ -81,6 +86,28 @@ const SYSTEM_ROLES = [
     ],
   },
 ];
+
+// Handles upsert generic system space.
+const upsertSystemSpace = async (spacePayload, adminId, type = null) => {
+  let space = await Space.findOne({
+    code: spacePayload.code,
+    isDeleted: { $ne: true },
+  });
+
+  if (space) return space;
+
+  space = await Space.create({
+    ...spacePayload,
+    type,
+    isActive: true,
+    createdBy: adminId,
+    updatedBy: adminId,
+  });
+
+  logger.info(`System space seeded: ${spacePayload.code}`, { spaceId: space._id });
+
+  return space;
+};
 
 // Handles upsert super admin space.
 const upsertSuperAdminSpace = async (adminId) => {
@@ -135,7 +162,7 @@ const upsertSystemRoles = async (spaceId, adminId) => {
         },
       },
       {
-        new: true,
+        returnDocument: "after",
         upsert: true,
       }
     );
@@ -208,7 +235,7 @@ const upsertAdminMembership = async (
       },
     },
     {
-      new: true,
+      returnDocument: "after",
       upsert: true,
     }
   );
@@ -230,7 +257,7 @@ const upsertAdminMembership = async (
       },
     },
     {
-      new: true,
+      returnDocument: "after",
       upsert: true,
     }
   );
@@ -260,6 +287,28 @@ const seedAdmin = async () => {
       admin._id,
       spaceAdminRole
     );
+
+    // Also ensure IT team and warehouse system spaces and roles exist
+    try {
+      const itSpace = await upsertSystemSpace(SYSTEM_SPACES.IT_TEAM, admin._id, "EMPLOYEE");
+      const warehouseSpace = await upsertSystemSpace(SYSTEM_SPACES.WAREHOUSE, admin._id, "MERCHANT");
+
+      await upsertSystemRoles(itSpace._id, admin._id);
+      await upsertSystemRoles(warehouseSpace._id, admin._id);
+
+      // Assign space admin role in those system spaces to the seeded admin
+      const itRoles = await Role.find({ spaceId: itSpace._id, code: ROLE_CODES.SPACE_ADMIN, isDeleted: { $ne: true } });
+      const warehouseRoles = await Role.find({ spaceId: warehouseSpace._id, code: ROLE_CODES.SPACE_ADMIN, isDeleted: { $ne: true } });
+
+      if (Array.isArray(itRoles) && itRoles[0]) {
+        await upsertAdminMembership(itSpace._id, admin._id, itRoles[0]);
+      }
+      if (Array.isArray(warehouseRoles) && warehouseRoles[0]) {
+        await upsertAdminMembership(warehouseSpace._id, admin._id, warehouseRoles[0]);
+      }
+    } catch (error) {
+      logger.warn("Failed to bootstrap additional system spaces/roles", { error: error.message });
+    }
 
     logger.info("Admin bootstrap completed");
 

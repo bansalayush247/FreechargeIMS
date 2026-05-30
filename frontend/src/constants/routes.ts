@@ -9,7 +9,10 @@ export const routePaths = {
   dashboard: {
     home: "/dashboard",
     products: "/products",
-    warehouses: "/warehouses",
+    // storage-locations replaces warehouses path
+    storageLocations: "/storage-locations",
+    // keep legacy key for compatibility
+    warehouses: "/storage-locations",
     inventory: "/inventory",
     requests: "/requests",
     users: "/users",

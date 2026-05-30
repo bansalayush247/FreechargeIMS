@@ -15,6 +15,7 @@ const findById = async (id) => {
     .populate("originSpaceId", "name code")
     .populate("employeeId", "firstName lastName email employeeId")
     .populate("productId", "name sku")
+    .populate("inventoryItemId", "_id")
     .populate("managerApprovalBy", "firstName lastName email")
     .populate("itApprovalBy", "firstName lastName email")
     .populate("forwardedBy", "firstName lastName email")
@@ -34,7 +35,7 @@ const updateById = async (id, payload) => {
     },
     payload,
     {
-      new: true,
+      returnDocument: "after",
     }
   ).lean();
 };
@@ -83,6 +84,7 @@ const paginate = async (filters) => {
       .populate("originSpaceId", "name code")
       .populate("employeeId", "firstName lastName")
       .populate("productId", "name sku")
+      .populate("inventoryItemId", "_id")
       .populate("managerApprovalBy", "firstName lastName email")
       .populate("itApprovalBy", "firstName lastName email")
       .populate("forwardedBy", "firstName lastName email")

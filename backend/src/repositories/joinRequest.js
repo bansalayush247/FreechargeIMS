@@ -25,7 +25,7 @@ const updateById = async (id, payload) => {
   return JoinRequest.findOneAndUpdate(
     { _id: id, isDeleted: false },
     payload,
-    { new: true }
+    { returnDocument: "after" }
   ).lean();
 };
 

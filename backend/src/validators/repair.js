@@ -64,6 +64,8 @@ const getRepairsSchema = Joi.object({
   productId: mongoId.optional(),
 
   warehouseId: mongoId.optional(),
+  // alias for migration
+  storageLocationId: mongoId.optional(),
 
   assignedUserId: mongoId.optional(),
 

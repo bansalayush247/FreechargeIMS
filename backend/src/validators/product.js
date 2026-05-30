@@ -1,13 +1,15 @@
 const Joi = require("joi");
 
-const { PRODUCT_ASSET_TYPES } = require("../constants/product");
+const { PRODUCT_ASSET_TYPES, PRODUCT_CATEGORIES } = require("../constants/product");
+
+const PRODUCT_CATEGORY_VALUES = Object.values(PRODUCT_CATEGORIES);
 
 const createProductSchema = Joi.object({
   sku: Joi.string().trim().uppercase().required(),
 
   name: Joi.string().trim().required(),
 
-  category: Joi.string().trim().required(),
+  category: Joi.string().trim().valid(...PRODUCT_CATEGORY_VALUES).required(),
 
   brand: Joi.string().allow("", null),
 
@@ -27,7 +29,7 @@ const createProductSchema = Joi.object({
 const updateProductSchema = Joi.object({
   name: Joi.string().trim(),
 
-  category: Joi.string().trim(),
+  category: Joi.string().trim().valid(...PRODUCT_CATEGORY_VALUES),
 
   brand: Joi.string().allow("", null),
 

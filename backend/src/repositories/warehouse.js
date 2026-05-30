@@ -70,7 +70,7 @@ const updateWarehouse = async (
     id,
     updateData,
     {
-      new: true,
+      returnDocument: "after",
     }
   ).lean();
 };
@@ -88,7 +88,7 @@ const softDeleteWarehouse = async (
       deletedBy,
     },
     {
-      new: true,
+      returnDocument: "after",
     }
   ).lean();
 };

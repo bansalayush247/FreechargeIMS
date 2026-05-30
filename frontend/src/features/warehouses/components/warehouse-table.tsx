@@ -7,8 +7,8 @@ export function WarehouseTable({ warehouses }: { warehouses: Warehouse[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Warehouses</CardTitle>
-        <CardDescription>Starter table architecture with location and capacity columns.</CardDescription>
+        <CardTitle>Storage locations (warehouses)</CardTitle>
+        <CardDescription>Starter table architecture with storage location and capacity columns.</CardDescription>
       </CardHeader>
       <CardContent className="overflow-x-auto p-0">
         <Table>
@@ -38,8 +38,8 @@ export function WarehouseTable({ warehouses }: { warehouses: Warehouse[] }) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-slate-500">
-                  No warehouses have been loaded yet.
+                  <TableCell colSpan={5} className="py-10 text-center text-slate-500">
+                  No storage locations have been loaded yet.
                 </TableCell>
               </TableRow>
             )}

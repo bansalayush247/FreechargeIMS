@@ -8,6 +8,9 @@ const { ERRORS } = require("../constants/error");
 const { findUserRolesByUserAndSpace } = require("../repositories/userRole");
 
 const { findActiveRolesByIds } = require("../repositories/role");
+const spaceRepository = require("../repositories/space");
+const { ROLE_CODES } = require("../constants/role");
+const { SYSTEM_SPACES } = require("../constants/space");
 
 const { PERMISSIONS } = require("../constants/permission");
 const { USER_TYPES } = require("../constants/user");
@@ -15,6 +18,7 @@ const { USER_TYPES } = require("../constants/user");
 // System-level permissions that don't require a space ID
 const SYSTEM_LEVEL_PERMISSIONS = new Set([
   PERMISSIONS.CREATE_SPACE,
+  PERMISSIONS.DELETE_SPACE,
   PERMISSIONS.CREATE_USER,
   PERMISSIONS.VIEW_AUDIT_LOGS,
   PERMISSIONS.MANAGE_LOGS,
@@ -24,9 +28,11 @@ const SYSTEM_LEVEL_PERMISSIONS = new Set([
 const authorize = (...requiredPermissions) => {
   return async (req, res, next) => {
     try {
-      const userId = req.user._id;
-      const spaceId = req.headers["x-space-id"];
+      const userId = req.user._id || req.user.id;
+      // Prefer `req.spaceId` (set by validateSpaceId) when available, fallback to header string
+      const spaceId = req.spaceId || req.headers["x-space-id"];
       const enforcer = await getEnforcer();
+      let bypassEnforce = false;
 
       // Check if all required permissions are system-level
       const isSystemLevelOperation = requiredPermissions.every(
@@ -38,17 +44,57 @@ const authorize = (...requiredPermissions) => {
       let roles = [];
       let roleSubjects = [];
 
-      // ADMIN users can perform any authorized operation without role lookup.
-      if (req.user.userType === USER_TYPES.ADMIN) {
-        permissionSet = new Set(requiredPermissions);
-      } else if (isSystemLevelOperation) {
-        logger.warn(`Non-admin user ${userId} attempted system-level operation`);
-        throw new AppError(
-          ERRORS.INSUFFICIENT_PERMISSIONS.message,
-          ERRORS.INSUFFICIENT_PERMISSIONS.statusCode,
-          ERRORS.INSUFFICIENT_PERMISSIONS.errorCode
-        );
-      } else {
+          // ADMIN users can perform any authorized operation without role lookup.
+          if (req.user.userType === USER_TYPES.ADMIN) {
+            permissionSet = new Set(requiredPermissions);
+          } else if (isSystemLevelOperation) {
+            // Allow SUPER_ADMIN (a role in the super-admin space) to perform system operations
+            // except delete operations. Otherwise deny.
+            try {
+              const superSpace = await spaceRepository.findByCode(SYSTEM_SPACES.SUPER_ADMIN.code);
+              let isSuperAdmin = false;
+              let globalPermissionSet = new Set();
+              if (superSpace) {
+                const globalUserRoles = await findUserRolesByUserAndSpace(userId, superSpace._id);
+                if (globalUserRoles && globalUserRoles.length) {
+                  const globalRoleIds = globalUserRoles.map((r) => r.roleId);
+                  const globalRoles = await findActiveRolesByIds(globalRoleIds);
+                  isSuperAdmin = globalRoles.some((r) => String(r.code) === String(ROLE_CODES.SUPER_ADMIN));
+                  globalPermissionSet = new Set(globalRoles.flatMap((r) => r.permissions || []));
+                }
+              }
+
+              if (isSuperAdmin) {
+                // Grant permissions from global role for this check and bypass Casbin enforcement
+                permissionSet = new Set(requiredPermissions.filter((p) => globalPermissionSet.has(p)));
+                bypassEnforce = true;
+                // If permissionSet is empty, fallthrough to deny below
+                if (!permissionSet.size) {
+                  logger.warn(`Global admin lacks required permission user=${userId}`);
+                  throw new AppError(
+                    ERRORS.INSUFFICIENT_PERMISSIONS.message,
+                    ERRORS.INSUFFICIENT_PERMISSIONS.statusCode,
+                    ERRORS.INSUFFICIENT_PERMISSIONS.errorCode
+                  );
+                }
+              } else {
+                logger.warn(`Non-admin user ${userId} attempted system-level operation`);
+                throw new AppError(
+                  ERRORS.INSUFFICIENT_PERMISSIONS.message,
+                  ERRORS.INSUFFICIENT_PERMISSIONS.statusCode,
+                  ERRORS.INSUFFICIENT_PERMISSIONS.errorCode
+                );
+              }
+            } catch (err) {
+              // bubble existing AppError or wrap others
+              if (err instanceof AppError) throw err;
+              throw new AppError(
+                ERRORS.INSUFFICIENT_PERMISSIONS.message,
+                ERRORS.INSUFFICIENT_PERMISSIONS.statusCode,
+                ERRORS.INSUFFICIENT_PERMISSIONS.errorCode
+              );
+            }
+          } else {
         // Space-scoped operations require a space ID
         if (!spaceId) {
           logger.warn("Space ID missing in request");
@@ -62,7 +108,7 @@ const authorize = (...requiredPermissions) => {
         const userRoles = await findUserRolesByUserAndSpace(userId, spaceId);
 
         if (!userRoles.length) {
-          logger.warn(`No roles found for user=${userId} space=${spaceId}`);
+          logger.warn(`No roles found for user=${userId} space=${String(spaceId)}`);
 
           throw new AppError(
             ERRORS.ACCESS_DENIED.message,
@@ -132,14 +178,38 @@ const authorize = (...requiredPermissions) => {
 
       const hasPermission = req.user.userType === USER_TYPES.ADMIN
         ? true
-        : (await Promise.all(
-          requiredPermissions.map((permission) =>
-            enforcer.enforce(String(userId), permission, "access")
-          )
-        )).every(Boolean);
+        : bypassEnforce
+          ? true
+          : (await Promise.all(
+            requiredPermissions.map(async (permission) => {
+              // Try enforcing the requested permission first
+              const ok = await enforcer.enforce(String(userId), permission, "access");
+              if (ok) return true;
+
+              // Compute simple aliases to maintain backwards compatibility
+              // e.g. CREATE_STORAGE_LOCATION <-> CREATE_WAREHOUSE, STORAGE_LOCATIONS <-> WAREHOUSES
+              const alt = permission
+                .replace(/STORAGE_LOCATION(S)?/g, (m, p1) => (p1 ? "WAREHOUSES" : "WAREHOUSE"))
+                .replace(/STORAGE_LOCATION/g, "WAREHOUSE");
+              if (alt !== permission) {
+                const okAlt = await enforcer.enforce(String(userId), alt, "access");
+                if (okAlt) return true;
+              }
+
+              // Also try the reverse mapping if permission mentions WAREHOUSE
+              const alt2 = permission
+                .replace(/WAREHOUSE(S)?/g, (m, p1) => (p1 ? "STORAGE_LOCATIONS" : "STORAGE_LOCATION"));
+              if (alt2 !== permission) {
+                const okAlt2 = await enforcer.enforce(String(userId), alt2, "access");
+                if (okAlt2) return true;
+              }
+
+              return false;
+            })
+          )).every(Boolean);
 
       if (!hasPermission) {
-        logger.warn(`Permission denied user=${userId}`);
+        logger.warn(`Permission denied user=${userId} space=${String(spaceId)} required=${JSON.stringify(requiredPermissions)}`);
 
         throw new AppError(
           ERRORS.INSUFFICIENT_PERMISSIONS.message,

@@ -58,7 +58,7 @@ const softDeleteById = async (id, payload) => {
     },
     payload,
     {
-      new: true,
+      returnDocument: "after",
     }
   ).lean();
 };

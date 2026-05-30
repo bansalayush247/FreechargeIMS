@@ -16,7 +16,10 @@ import { Select } from "@/src/components/ui/select";
 import { useAuth } from "@/src/features/auth/auth-provider";
 import { signupSchema, type SignupSchema } from "@/src/features/auth/schemas";
 
-const userTypeOptions = ["OPS", "FOS", "SUPPORT", "FINANCE", "WAREHOUSE", "ADMIN"];
+const userTypeOptions = [
+  { label: "Employee", value: "EMPLOYEE" },
+  { label: "Merchant", value: "MERCHANT" },
+];
 
 export function SignupForm() {
   const router = useRouter();
@@ -32,7 +35,7 @@ export function SignupForm() {
       employeeId: "",
       email: "",
       password: "",
-      userType: "OPS",
+      userType: "EMPLOYEE",
     },
   });
 
@@ -92,8 +95,8 @@ export function SignupForm() {
               <UserCog className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand" />
               <Select id="userType" className="pl-9" {...form.register("userType")}>
                 {userTypeOptions.map((option) => (
-                  <option key={option} value={option} className="bg-white">
-                    {option}
+                  <option key={option.value} value={option.value} className="bg-white">
+                    {option.label}
                   </option>
                 ))}
               </Select>

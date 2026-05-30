@@ -7,7 +7,6 @@ const createProduct = asyncHandler(async (req, res) => {
   const product = await productService.createProduct({
     body: req.body,
     userId: req.user._id,
-    spaceId: req.spaceId,
     context: {
       ipAddress: req.ip,
       userAgent: req.get("user-agent"),
@@ -27,11 +26,7 @@ const getProducts = asyncHandler(async (req, res) => {
 
   const limit = Number(req.query.limit) || 10;
 
-  const result = await productService.getProducts({
-    spaceId: req.spaceId,
-    page,
-    limit,
-  });
+  const result = await productService.getProducts({ page, limit });
 
   return res.status(200).json({
     success: true,

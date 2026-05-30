@@ -66,7 +66,31 @@ function getActiveSpaceId() {
     return null;
   }
 
-  return window.localStorage.getItem("freechargeims.activeSpaceId");
+  const raw = window.localStorage.getItem("freechargeims.activeSpaceId");
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+
+    // Zustand persist may store the state object (e.g. { activeSpaceId: '...' })
+    if (typeof parsed === "string") return parsed;
+
+    if (parsed && typeof parsed === "object") {
+      if ("activeSpaceId" in parsed) return (parsed as { activeSpaceId?: string }).activeSpaceId ?? null;
+      // older/newer persist shapes may nest under `state`
+      if ("state" in parsed) {
+        const state = (parsed as { state?: unknown }).state;
+        if (state && typeof state === "object" && "activeSpaceId" in state) {
+          return (state as { activeSpaceId?: string }).activeSpaceId ?? null;
+        }
+      }
+    }
+
+    // fallback to raw string value
+    return raw;
+  } catch {
+    return raw;
+  }
 }
 
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
@@ -94,7 +118,26 @@ async function requestTokenRefresh() {
   const session = normalizeSession(response.data);
 
   if (session) {
-    setSession(session);
+    // If the refresh endpoint does not return the user object (common when
+    // only tokens are rotated), attempt to fetch the current user using the
+    // newly issued access token so we don't overwrite the stored user with
+    // `null` and inadvertently show a different account in the UI.
+    if (!session.user) {
+      try {
+        const meResp = await refreshClient.get("/auth/me", {
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        });
+        const user = (meResp.data && (meResp.data.data ?? meResp.data)) || null;
+        session.user = user ?? null;
+      } catch (err) {
+        // ignore — we still persist tokens even if fetching /me fails
+      }
+    }
+
+    setSession({
+      ...session,
+      refreshToken: session.refreshToken ?? refreshToken,
+    });
   }
 
   return session;

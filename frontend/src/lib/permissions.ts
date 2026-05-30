@@ -15,6 +15,10 @@ export function hasPermission(user: AuthUser | null | undefined, input: Permissi
   if (!user) {
     return false;
   }
+  // Backend may provide `userType` (e.g. ADMIN) or a `role` string; treat either as super-admin.
+  if (user.userType && normalize(user.userType) === "ADMIN") {
+    return true;
+  }
 
   const role = normalize(user.role);
   if (role === "ADMIN" || role === "SUPERADMIN" || role === "OWNER") {

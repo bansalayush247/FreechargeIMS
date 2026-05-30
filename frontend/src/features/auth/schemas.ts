@@ -11,7 +11,9 @@ export const signupSchema = z.object({
   employeeId: z.string().min(2, "Employee ID is required."),
   email: z.string().email("Enter a valid email address."),
   password: z.string().min(8, "Password must be at least 8 characters."),
-  userType: z.string().min(1, "Select a user type."),
+  userType: z.enum(["EMPLOYEE", "MERCHANT"] as const, {
+    message: "Select a user type.",
+  }),
 });
 
 export type LoginSchema = z.infer<typeof loginSchema>;

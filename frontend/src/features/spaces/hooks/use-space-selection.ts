@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { SpaceListItem } from "@/src/features/spaces/api";
 import { useSpaceStore } from "@/src/store/spaceStore";
 
@@ -23,12 +23,30 @@ export function useSpaceSelection(spaces: SpaceListItem[]) {
     return value && OBJECT_ID_REGEX.test(value) ? value : null;
   });
 
-  const activeSpaceId = persistedSpaceId || storedSpaceId || (spaces[0] ? getSpaceId(spaces[0]) : null);
+  const activeSpaceId = useMemo(() => {
+    const candidateSpaceId = persistedSpaceId || storedSpaceId;
+
+    if (candidateSpaceId && spaces.some((space) => getSpaceId(space) === candidateSpaceId)) {
+      return candidateSpaceId;
+    }
+
+    return spaces[0] ? getSpaceId(spaces[0]) : null;
+  }, [persistedSpaceId, spaces, storedSpaceId]);
 
   const activeSpace = useMemo(
     () => spaces.find((space) => getSpaceId(space) === activeSpaceId) ?? null,
     [activeSpaceId, spaces],
   );
+
+  useEffect(() => {
+    if (activeSpaceId && activeSpaceId !== persistedSpaceId) {
+      setPersistedSpaceId(activeSpaceId);
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(STORAGE_KEY, activeSpaceId);
+      }
+    }
+  }, [activeSpaceId, persistedSpaceId, setPersistedSpaceId]);
 
   const setActiveSpaceId = (spaceId: string) => {
     setStoredSpaceId(spaceId);

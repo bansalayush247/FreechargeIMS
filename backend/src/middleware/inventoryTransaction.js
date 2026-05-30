@@ -14,6 +14,14 @@ const validateInventoryTransaction = async (
   next
 ) => {
   try {
+    // Accept alias fields for migration
+    if (!req.body.fromWarehouseId && req.body.fromStorageLocationId) {
+      req.body.fromWarehouseId = req.body.fromStorageLocationId;
+    }
+    if (!req.body.toWarehouseId && req.body.toStorageLocationId) {
+      req.body.toWarehouseId = req.body.toStorageLocationId;
+    }
+
     const {
       inventoryItemId,
       transactionType,

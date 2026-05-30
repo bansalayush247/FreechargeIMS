@@ -12,7 +12,6 @@ const refreshTokenSchema = new mongoose.Schema(
     tokenHash: {
       type: String,
       required: true,
-      unique: true,
     },
 
     jti: {
@@ -54,6 +53,16 @@ const refreshTokenSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+  }
+);
+
+refreshTokenSchema.index(
+  { tokenHash: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      tokenHash: { $type: "string" },
+    },
   }
 );
 

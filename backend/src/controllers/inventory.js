@@ -11,6 +11,11 @@ const {
 // Handles create inventory item.
 const createInventoryItem = asyncHandler(async (req, res) => {
   const userId = req.user._id || req.user.id;
+  // Accept legacy or new alias: storageLocationId -> warehouseId
+  if (!req.body.warehouseId && req.body.storageLocationId) {
+    req.body.warehouseId = req.body.storageLocationId;
+  }
+
   const { error, value } = createInventoryItemSchema.validate(req.body);
 
   if (error) {
@@ -39,6 +44,11 @@ const createInventoryItem = asyncHandler(async (req, res) => {
 
 // Handles get inventory items.
 const getInventoryItems = asyncHandler(async (req, res) => {
+  // Accept storageLocationId alias in query params
+  if (!req.query.warehouseId && req.query.storageLocationId) {
+    req.query.warehouseId = req.query.storageLocationId;
+  }
+
   const { error, value } = getInventoryItemsSchema.validate(req.query);
 
   if (error) {

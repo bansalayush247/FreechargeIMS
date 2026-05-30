@@ -32,7 +32,7 @@ const navItems: NavItem[] = [
   { href: routePaths.dashboard.home, label: "Dashboard", icon: LayoutDashboard },
   { href: routePaths.dashboard.products, label: "Products", icon: Package, permission: { action: "VIEW", resource: "PRODUCTS" } },
   { href: routePaths.dashboard.spaces, label: "Spaces", icon: Layers3 },
-  { href: routePaths.dashboard.warehouses, label: "Warehouses", icon: Warehouse, permission: { action: "VIEW", resource: "WAREHOUSES" } },
+  { href: routePaths.dashboard.storageLocations, label: "Storage locations", icon: Warehouse, permission: { action: "VIEW", resource: "WAREHOUSES" } },
   { href: routePaths.dashboard.inventory, label: "Inventory", icon: Boxes },
   { href: routePaths.dashboard.notifications, label: "Notifications", icon: Bell },
   { href: routePaths.dashboard.admin, label: "Admin", icon: Shield, permission: { action: "MANAGE", resource: "ROLES" } },
@@ -61,7 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const visibleNavItems = navItems.filter((item) =>
     item.permission ? hasPermission(user, item.permission) || isAdminRole(user?.role as string | undefined) : true,
   );
-  const userLabel = user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "Current user";
+  const userLabel = user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email;
 
   return (
     <div className="min-h-screen text-slate-900">

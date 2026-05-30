@@ -8,6 +8,12 @@ const spaceSchema = new mongoose.Schema(
       trim: true,
     },
 
+    type: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
     code: {
       type: String,
       required: true,
@@ -58,6 +64,15 @@ const spaceSchema = new mongoose.Schema(
   {
     timestamps: true,
     versionKey: false,
+  }
+);
+
+spaceSchema.index(
+  { type: 1 },
+  {
+    partialFilterExpression: {
+      isDeleted: false,
+    },
   }
 );
 

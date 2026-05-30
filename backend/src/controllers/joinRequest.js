@@ -9,8 +9,9 @@ const createJoinRequest = asyncHandler(async (req, res) => {
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
   const spaceId = req.params.id;
+  const userType = req.user?.userType;
 
-  const request = await joinRequestService.createJoinRequest(spaceId, value, userId, {
+  const request = await joinRequestService.createJoinRequest(spaceId, value, userId, userType, {
     spaceId: req.headers["x-space-id"],
     ipAddress: req.ip,
     userAgent: req.get("user-agent"),

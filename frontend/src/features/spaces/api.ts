@@ -4,7 +4,8 @@ export type SpaceListItem = {
   _id?: string;
   id?: string;
   name: string;
-  code: string;
+  type?: string;
+  code?: string;
   description?: string;
   isActive?: boolean;
 };
@@ -15,6 +16,7 @@ export type JoinRequestInput = {
 
 export type SpaceCreateInput = {
   name: string;
+  type: "EMPLOYEE" | "MERCHANT";
   code?: string;
   description?: string;
   isActive?: boolean;
@@ -68,7 +70,11 @@ export async function listJoinRequests(spaceId: string) {
 }
 
 export async function reviewJoinRequest(spaceId: string, requestId: string, action: "approve" | "reject") {
-  const response = await apiClient.patch(`/spaces/${spaceId}/join-requests/${requestId}/review`, { action });
+  // backend expects uppercase action values like "APPROVE" / "REJECT"
+  const response = await apiClient.patch(
+    `/spaces/${spaceId}/join-requests/${requestId}/review`,
+    { action: String(action).toUpperCase() },
+  );
   return response.data?.data ?? response.data;
 }
 

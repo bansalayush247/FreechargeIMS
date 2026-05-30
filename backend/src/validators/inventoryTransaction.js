@@ -9,8 +9,12 @@ const createTransactionSchema = Joi.object({
   inventoryItemId: Joi.string().hex().length(24).required(),
 
   fromWarehouseId: Joi.string().hex().length(24).allow(null),
+  // aliases for migration
+  fromStorageLocationId: Joi.string().hex().length(24).allow(null),
 
   toWarehouseId: Joi.string().hex().length(24).allow(null),
+
+  toStorageLocationId: Joi.string().hex().length(24).allow(null),
 
   fromUserId: Joi.string().hex().length(24).allow(null),
 
@@ -39,6 +43,8 @@ const getTransactionsSchema = Joi.object({
   performedBy: Joi.string().hex().length(24).optional(),
 
   warehouseId: Joi.string().hex().length(24).optional(),
+  // alias for migration
+  storageLocationId: Joi.string().hex().length(24).optional(),
 
   startDate: Joi.date().optional(),
 

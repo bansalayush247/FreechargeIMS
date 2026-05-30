@@ -17,7 +17,7 @@ export function ProductTable({ products }: { products: Product[] }) {
               <TableHead>Name</TableHead>
               <TableHead>SKU</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead>Quantity</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -28,7 +28,7 @@ export function ProductTable({ products }: { products: Product[] }) {
                   <TableCell className="font-medium text-slate-900">{product.name}</TableCell>
                   <TableCell>{product.sku ?? "-"}</TableCell>
                   <TableCell>{product.category ?? "-"}</TableCell>
-                  <TableCell>{typeof product.quantity === "number" ? product.quantity : "-"}</TableCell>
+                  <TableCell>{product.assetType ?? (product.isTrackable ? "NON_CONSUMABLE" : "CONSUMABLE")}</TableCell>
                   <TableCell>
                     <Badge variant={product.status === "ACTIVE" ? "success" : "secondary"}>{product.status ?? "UNKNOWN"}</Badge>
                   </TableCell>
@@ -37,7 +37,7 @@ export function ProductTable({ products }: { products: Product[] }) {
             ) : (
               <TableRow>
                 <TableCell colSpan={5} className="py-10 text-center text-slate-500">
-                  No products have been loaded yet.
+                  No products have been created in this space yet.
                 </TableCell>
               </TableRow>
             )}

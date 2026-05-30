@@ -11,13 +11,14 @@ const userRoleRepository = require("../repositories/userRole");
 const inventoryTransactionService = require("./inventoryTransaction");
 const auditLogService = require("./auditLog");
 const notificationService = require("./notification");
+const warehouseService = require("./warehouse");
 
 const {
   ASSET_REQUEST_STATUS,
   ASSET_REQUEST_PERMISSIONS,
 } = require("../constants/assetRequest");
 const { ROLE_CODES } = require("../constants/role");
-const { SYSTEM_SPACES } = require("../constants/space");
+const { SYSTEM_SPACES, SPACE_TYPES } = require("../constants/space");
 const { PERMISSIONS } = require("../constants/permission");
 
 const {
@@ -37,6 +38,13 @@ const logger = require("../config/logger");
 const { USER_TYPES } = require("../constants/user");
 
 const IT_TEAM_SPACE = SYSTEM_SPACES.IT_TEAM;
+const WAREHOUSE_SPACE = SYSTEM_SPACES.WAREHOUSE;
+const readId = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") return String(value._id || value.id || "");
+  return String(value);
+};
 
 const ensureItTeamSpace = async (userId) => {
   let itSpace = await Space.findOne({
@@ -85,6 +93,58 @@ const ensureItTeamSpace = async (userId) => {
   return itSpace;
 };
 
+const ensureWarehouseSpace = async (userId) => {
+  let warehouseSpace = await Space.findOne({
+    $or: [{ code: WAREHOUSE_SPACE.code }, { name: WAREHOUSE_SPACE.name }],
+    isDeleted: false,
+  })
+    .select("_id name code")
+    .lean();
+
+  if (!warehouseSpace) {
+    const created = await Space.create({
+      ...WAREHOUSE_SPACE,
+      type: SPACE_TYPES.MERCHANT,
+      isActive: true,
+      createdBy: userId || null,
+      updatedBy: userId || null,
+    });
+
+    warehouseSpace = await Space.findById(created._id).select("_id name code").lean();
+    logger.info("Created Warehouse space for merchant approval queue", { spaceId: warehouseSpace?._id });
+  }
+
+  return warehouseSpace;
+};
+
+const ensureWarehouseInSpace = async (space, userId) => {
+  const existingWarehouse = await Warehouse.findOne({
+    spaceId: space._id,
+    isDeleted: false,
+  })
+    .select("_id")
+    .sort({ createdAt: 1 })
+    .lean();
+
+  if (existingWarehouse) {
+    return existingWarehouse;
+  }
+
+  const createdWarehouse = await warehouseService.createWarehouse({
+    body: {
+      name: `${space.name || "Space"} Warehouse`,
+      code: `${String(space.code || space.name || "SPACE").toUpperCase()}_WAREHOUSE`,
+      type: "CENTRAL",
+      address: {},
+      isActive: true,
+    },
+    userId,
+    spaceId: space._id,
+  });
+
+  return { _id: createdWarehouse._id };
+};
+
 // Handles generate request number.
 const generateRequestNumber = async () => {
   const count = await AssetRequest.countDocuments();
@@ -115,9 +175,6 @@ const createAssetRequest = async (
     throw new AppError("Product not found", 404);
   }
 
-  if (String(product.spaceId) !== String(context.spaceId)) {
-    throw new AppError("Product does not belong to the requested space", 400);
-  }
 
   const requestNumber = await generateRequestNumber();
 
@@ -203,7 +260,8 @@ const managerApproveRequest = async (
 ) => {
   const request = await getAssetRequestById(id);
 
-  if (context.spaceId && String(request.spaceId) !== String(context.spaceId)) {
+  const requestSpaceId = readId(request.spaceId);
+  if (context.spaceId && requestSpaceId !== String(context.spaceId)) {
     throw new AppError("Request does not belong to this space", 403);
   }
 
@@ -226,19 +284,24 @@ const managerApproveRequest = async (
     updatedBy: userId,
   });
 
-  // Route manager-approved requests to the shared IT queue.
-  const itSpace = await ensureItTeamSpace(userId);
-  const shouldForwardToItSpace = itSpace && String(updatedRequest.spaceId) !== String(itSpace._id);
+  // Route manager-approved requests by origin space type:
+  // EMPLOYEE -> IT Team, MERCHANT -> Warehouse.
+  const originSpace = await Space.findById(request.originSpaceId || request.spaceId)
+    .select("_id type")
+    .lean();
+  const isMerchantOrigin = String(originSpace?.type || "").toUpperCase() === SPACE_TYPES.MERCHANT;
+  const targetQueueSpace = isMerchantOrigin ? await ensureWarehouseSpace(userId) : await ensureItTeamSpace(userId);
+  const shouldForward = targetQueueSpace && readId(updatedRequest.spaceId) !== String(targetQueueSpace._id);
 
-  const finalRequest = shouldForwardToItSpace
+  const finalRequest = shouldForward
     ? await forwardRequest(
         id,
-        { targetSpaceId: itSpace._id },
+        { targetSpaceId: targetQueueSpace._id },
         userId,
         {
           ...context,
           userType: "ADMIN",
-          spaceId: updatedRequest.spaceId,
+          spaceId: readId(updatedRequest.spaceId),
         }
       )
     : updatedRequest;
@@ -286,7 +349,8 @@ const itApproveRequest = async (
     throw new AppError("Space ID is required", 400);
   }
 
-  if (String(request.spaceId) !== String(context.spaceId)) {
+  const requestSpaceId = readId(request.spaceId);
+  if (requestSpaceId !== String(context.spaceId)) {
     throw new AppError("Request does not belong to this space", 403);
   }
 
@@ -325,7 +389,32 @@ const itApproveRequest = async (
     );
   }
 
-  await inventoryTransactionService.createTransaction(
+  const originSpaceId = request.originSpaceId || request.spaceId;
+  const originSpace = await Space.findById(originSpaceId)
+    .select("_id name code type")
+    .lean();
+
+  if (!originSpace) {
+    throw new AppError("Originating space not found", 404);
+  }
+
+  const destinationWarehouse = await ensureWarehouseInSpace(originSpace, userId);
+
+  if (String(inventoryItem.warehouseId) !== String(destinationWarehouse._id)) {
+    await inventoryTransactionService.createTransaction(
+      {
+        inventoryItemId: inventoryItem._id,
+        transactionType: INVENTORY_TRANSACTION_TYPES.TRANSFER,
+        fromWarehouseId: inventoryItem.warehouseId,
+        toWarehouseId: destinationWarehouse._id,
+        remarks: "Transferred to originating space before assignment",
+      },
+      userId,
+      context
+    );
+  }
+
+  const assignmentTransaction = await inventoryTransactionService.createTransaction(
     {
       inventoryItemId: inventoryItem._id,
       toUserId: request.employeeId,
@@ -338,11 +427,13 @@ const itApproveRequest = async (
     context
   );
 
+  const assignedInventoryItemId = assignmentTransaction.inventoryItemId;
+
   const updatedRequest =
     await assetRequestRepository.updateById(id, {
     status: ASSET_REQUEST_STATUS.FULFILLED,
 
-    inventoryItemId: inventoryItem._id,
+    inventoryItemId: assignedInventoryItemId,
 
     itApprovalBy: userId,
     itApprovalAt: new Date(),
@@ -394,16 +485,17 @@ const forwardRequest = async (
 ) => {
   const request = await getAssetRequestById(id);
   const targetSpaceId = payload.targetSpaceId;
+  const requestSpaceId = readId(request.spaceId);
 
   if (!context.spaceId) {
     throw new AppError("Space ID is required", 400);
   }
 
-  if (String(request.spaceId) !== String(context.spaceId)) {
+  if (requestSpaceId !== String(context.spaceId)) {
     throw new AppError("Request does not belong to this space", 403);
   }
 
-  if (String(targetSpaceId) === String(request.spaceId)) {
+  if (String(targetSpaceId) === requestSpaceId) {
     throw new AppError("Target space must be different", 400);
   }
 
@@ -425,13 +517,13 @@ const forwardRequest = async (
 
   const updatedRequest = await assetRequestRepository.updateById(id, {
     spaceId: targetSpaceId,
-    forwardedFromSpaceId: request.spaceId,
+    forwardedFromSpaceId: requestSpaceId,
     forwardedBy: userId,
     forwardedAt,
     forwardedHistory: [
       ...history,
       {
-        fromSpaceId: request.spaceId,
+        fromSpaceId: requestSpaceId,
         toSpaceId: targetSpaceId,
         forwardedBy: userId,
         forwardedAt,

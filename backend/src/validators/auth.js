@@ -1,5 +1,5 @@
 const Joi = require("joi");
-const { USER_TYPES } = require("../constants/user");
+const { SIGNUP_USER_TYPES } = require("../constants/user");
 
 const passwordPolicy = Joi.string()
   .min(8)
@@ -28,7 +28,7 @@ const signupValidation = Joi.object({
   lastName: Joi.string().trim().allow("", null),
   employeeId: Joi.string().trim().required(),
   userType: Joi.string()
-    .valid(...Object.values(USER_TYPES))
+    .valid(...Object.values(SIGNUP_USER_TYPES))
     .required(),
 });
 

@@ -18,6 +18,7 @@ require("../models/inventory");
 require("../models/assetRequest");
 require("../models/repair");
 require("../models/notification");
+require("../models/refreshToken");
 require("../models/workflowDefinition");
 require("../models/workflowInstance");
 require("../models/auditLog");
