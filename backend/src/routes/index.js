@@ -10,11 +10,12 @@ const spaceMemberRoutes = require("./spaceMember");
 const inventoryRoutes = require("./inventory");
 const inventoryTransactionRoutes = require("./inventoryTransaction");
 const assetRequestRoutes = require("./assetRequest");
-const repairRoutes = require("./repair");
+const merchantRoutes = require("./merchant");
 const notificationRoutes = require("./notification");
 const workflowRoutes = require("./workflow");
 const auditLogRoutes = require("./auditLog");
 const logsRoutes = require("./logs");
+const devSeedRoutes = require("./devSeed");
 
 const ROUTES = require("../constants/routes");
 
@@ -33,10 +34,11 @@ router.use(ROUTES.STORAGE_LOCATIONS.BASE, warehouseRoutes);
 router.use(ROUTES.INVENTORY_ITEMS, inventoryRoutes);
 router.use(ROUTES.INVENTORY_TRANSACTIONS.BASE, inventoryTransactionRoutes);
 router.use(ROUTES.ASSET_REQUESTS.BASE, assetRequestRoutes);
-router.use(ROUTES.REPAIRS.BASE, repairRoutes);
+router.use(ROUTES.MERCHANTS.BASE, merchantRoutes);
 router.use(ROUTES.NOTIFICATIONS.BASE, notificationRoutes);
 router.use(ROUTES.WORKFLOWS.BASE, workflowRoutes);
 router.use(ROUTES.AUDIT_LOGS.BASE, auditLogRoutes);
 router.use(ROUTES.LOGS.BASE, logsRoutes);
+router.use(ROUTES.DEV_SEED.BASE, devSeedRoutes);
 
 module.exports = router;

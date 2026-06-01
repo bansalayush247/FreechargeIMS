@@ -28,6 +28,16 @@ const findByUserAndSpace = async (userId, spaceId) => {
   }).lean();
 };
 
+const findActiveByUser = async (userId) => {
+  return SpaceMember.find({
+    userId,
+    isDeleted: { $ne: true },
+    isActive: true,
+  })
+    .select("spaceId userId isActive")
+    .lean();
+};
+
 // Handles update by id.
 const updateById = async (id, payload) => {
   return SpaceMember.findOneAndUpdate(
@@ -95,6 +105,7 @@ module.exports = {
   create,
   findById,
   findByUserAndSpace,
+  findActiveByUser,
   updateById,
   paginate,
 };

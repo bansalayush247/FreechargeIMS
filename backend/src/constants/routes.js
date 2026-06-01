@@ -14,19 +14,13 @@ const ASSET_REQUEST_ROUTES = Object.freeze({
   CREATE: "/",
   LIST: "/",
   GET_BY_ID: "/:id",
+  APPROVE: "/:id/approve",
+  FULFILL: "/:id/fulfill",
   MANAGER_APPROVE: "/:id/manager-approve",
   IT_APPROVE: "/:id/it-approve",
   REJECT: "/:id/reject",
   CANCEL: "/:id/cancel",
   FORWARD: "/:id/forward",
-});
-const REPAIR_ROUTES = Object.freeze({
-  CREATE: "/",
-  LIST: "/",
-  GET_BY_ID: "/:id",
-  UPDATE: "/:id",
-  COMPLETE: "/:id/complete",
-  CANCEL: "/:id/cancel",
 });
 const NOTIFICATION_ROUTES = Object.freeze({
   SEND_EMAIL: "/email",
@@ -43,6 +37,24 @@ const WORKFLOW_ROUTES = Object.freeze({
 const AUDIT_LOG_ROUTES = Object.freeze({
   LIST: "/",
   GET_BY_ID: "/:id",
+});
+const MERCHANT_ROUTES = Object.freeze({
+  CREATE: "/",
+  LIST: "/",
+  GET_BY_ID: "/:id",
+  UPDATE: "/:id",
+  DELETE: "/:id",
+});
+const DEV_SEED_ROUTES = Object.freeze({
+  ALL: "/all",
+  SUPER_ADMIN: "/super-admin",
+  SPACE_ADMIN: "/space-admin",
+  MANAGER: "/manager",
+  IT_ADMIN: "/it-admin",
+  WAREHOUSE_ADMIN: "/warehouse-admin",
+  ZONAL_MANAGER: "/zonal-manager",
+  FOS: "/fos",
+  EMPLOYEE: "/employee",
 });
 
 const ENDPOINTS = Object.freeze({
@@ -99,6 +111,7 @@ const ENDPOINTS = Object.freeze({
     CREATE: "/",
     LIST: "/",
     GET_BY_ID: "/:id",
+    QRCODE: "/:id/qrcode",
     UPDATE: "/:id",
     DELETE: "/:id",
   }),
@@ -143,11 +156,11 @@ const ENDPOINTS = Object.freeze({
   }),
   ASSET_REQUEST_ROUTES,
 
-  REPAIRS: Object.freeze({
-    BASE: `${API_VERSION}/repairs`,
-    ...REPAIR_ROUTES,
+  MERCHANTS: Object.freeze({
+    BASE: `${API_VERSION}/merchants`,
+    ...MERCHANT_ROUTES,
   }),
-  REPAIR_ROUTES,
+  MERCHANT_ROUTES,
 
   NOTIFICATIONS: Object.freeze({
     BASE: `${API_VERSION}/notifications`,
@@ -166,6 +179,12 @@ const ENDPOINTS = Object.freeze({
     ...AUDIT_LOG_ROUTES,
   }),
   AUDIT_LOG_ROUTES,
+
+  DEV_SEED: Object.freeze({
+    BASE: "/dev/seed",
+    ...DEV_SEED_ROUTES,
+  }),
+  DEV_SEED_ROUTES,
 
   LOGS: Object.freeze({
     BASE: `${API_VERSION}/logs`,

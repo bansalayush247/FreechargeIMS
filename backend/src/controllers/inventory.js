@@ -73,7 +73,8 @@ const getInventoryItems = asyncHandler(async (req, res) => {
 // Handles get inventory item by id.
 const getInventoryItemById = asyncHandler(async (req, res) => {
   const inventoryItem = await inventoryService.getInventoryItemById(
-    req.params.id
+    req.params.id,
+    { spaceId: req.spaceId }
   );
 
   return res.status(200).json({
@@ -81,6 +82,18 @@ const getInventoryItemById = asyncHandler(async (req, res) => {
     message: "Inventory item fetched successfully",
     data: inventoryItem,
   });
+});
+
+const getInventoryItemQrCode = asyncHandler(async (req, res) => {
+  const qrImageBuffer = await inventoryService.getInventoryItemQrCode(
+    req.params.id,
+    { spaceId: req.spaceId }
+  );
+
+  res.setHeader("Content-Type", "image/png");
+  res.setHeader("Cache-Control", "private, max-age=300");
+
+  return res.status(200).send(qrImageBuffer);
 });
 
 // Handles update inventory item.
@@ -136,6 +149,7 @@ module.exports = {
   createInventoryItem,
   getInventoryItems,
   getInventoryItemById,
+  getInventoryItemQrCode,
   updateInventoryItem,
   deleteInventoryItem,
 };

@@ -37,14 +37,11 @@ const resolveRecipient = async (payload) => {
 };
 
 // Handles sending email notification.
-const sendEmailNotification = async (
-  payload,
-  userId = null
-) => {
+const sendEmailNotification = async (payload, userId = null, context = {}) => {
   const recipient = await resolveRecipient(payload);
 
   const notification = await notificationRepository.create({
-    spaceId: payload.spaceId || null,
+    spaceId: context.spaceId || payload.spaceId || null,
     recipientUserId: recipient.recipientUserId,
     recipientEmail: recipient.recipientEmail,
     channel: NOTIFICATION_CHANNELS.EMAIL,
@@ -66,14 +63,14 @@ const sendEmailNotification = async (
     });
 
     if (result.skipped) {
-      return notificationRepository.updateById(notification._id, {
+      return notificationRepository.updateById(notification._id, notification.spaceId, {
         status: NOTIFICATION_STATUS.SKIPPED,
         errorMessage: result.message,
         updatedBy: userId,
       });
     }
 
-    return notificationRepository.updateById(notification._id, {
+    return notificationRepository.updateById(notification._id, notification.spaceId, {
       status: NOTIFICATION_STATUS.SENT,
       providerMessageId: result.messageId || "",
       sentAt: new Date(),
@@ -85,7 +82,7 @@ const sendEmailNotification = async (
       error: error.message,
     });
 
-    return notificationRepository.updateById(notification._id, {
+    return notificationRepository.updateById(notification._id, notification.spaceId, {
       status: NOTIFICATION_STATUS.FAILED,
       errorMessage: error.message,
       updatedBy: userId,
@@ -99,7 +96,7 @@ const notifyUserByEmail = async (
   userId = null
 ) => {
   try {
-    return await sendEmailNotification(payload, userId);
+    return await sendEmailNotification(payload, userId, { spaceId: payload.spaceId || null });
   } catch (error) {
     logger.error("Notification creation failed", {
       error: error.message,
@@ -121,6 +118,7 @@ const getNotifications = async (filters) => {
 const getNotificationById = async (id, owner = {}) => {
   const notification = await notificationRepository.findByIdForOwner(
     id,
+    owner.spaceId || null,
     owner
   );
 

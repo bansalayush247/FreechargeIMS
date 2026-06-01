@@ -4,6 +4,8 @@ const { loginUser, signupUser, refreshAccessToken, logoutUser } = require("../se
 const { HTTP_STATUS } = require("../constants/http");
 const AppError = require("../utils/appError");
 const { ERRORS } = require("../constants/error");
+const { getAuthzSnapshotByUser } = require("../services/permissionResolver");
+const spaceRepository = require("../repositories/space");
 
 const REFRESH_COOKIE_NAME = process.env.REFRESH_COOKIE_NAME || "refreshToken";
 
@@ -56,17 +58,27 @@ const getUserAgent = (req) => { return req.get("user-agent") || "Unknown";};
 
 // Handles login.
 const login = asyncHandler(async (req, res) => {
-  const ipAddress = getIpAddress(req), userAgent = getUserAgent(req), result = await loginUser(req.body, ipAddress, userAgent);
+  const ipAddress = getIpAddress(req)
+  const userAgent = getUserAgent(req)
+  const result = await loginUser(req.body, ipAddress, userAgent);
+
   setRefreshCookie(res, result.refreshToken);
+
   logger.info("User login successful", { email: req.body.email, userId: result.user?._id, timestamp: new Date().toISOString() });
+  
   return res.status(200).json({ success: true, message: "Login successful", data: result });
 });
 
 // Handles signup.
 const signup = asyncHandler(async (req, res) => {
-  const ipAddress = getIpAddress(req), userAgent = getUserAgent(req), result = await signupUser(req.body, ipAddress, userAgent);
+  const ipAddress = getIpAddress(req)
+  const userAgent = getUserAgent(req)
+  const result = await signupUser(req.body, ipAddress, userAgent);
+ 
   setRefreshCookie(res, result.refreshToken);
+ 
   logger.info("User signup successful", { email: req.body.email, userId: result.user?._id, timestamp: new Date().toISOString() });
+ 
   return res.status(HTTP_STATUS.CREATED).json({ success: true, message: "User registered successfully", data: result });
 });
 
@@ -102,8 +114,24 @@ const logout = asyncHandler(async (req, res) => {
 
 // Handles me.
 const me = asyncHandler(async (req, res) => {
+  const userId = req.user?._id || req.user?.id;
+  const activeSpaceId = req.spaceId || req.headers["x-space-id"] || null;
+  const snapshot = await getAuthzSnapshotByUser(userId);
+  const activeSpace = activeSpaceId
+    ? await spaceRepository.findById(activeSpaceId)
+    : null;
+
   logger.info("Fetched current user", { userId: req.user?._id || req.user?.id, timestamp: new Date().toISOString() });
-  return res.status(200).json({ success: true, data: req.user });
+  return res.status(200).json({
+    success: true,
+    data: {
+      user: req.user,
+      activeSpace,
+      memberships: snapshot.memberships,
+      rolesBySpace: snapshot.rolesBySpace,
+      permissionsBySpace: snapshot.permissionsBySpace,
+    },
+  });
 });
 
 module.exports = {
@@ -113,4 +141,3 @@ module.exports = {
   logout,
   me,
 };
-

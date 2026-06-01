@@ -37,6 +37,12 @@ const roleSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    type: {
+      type: String,
+      enum: ["system", "space_builtin", "custom"],
+      default: "custom",
+      index: true,
+    },
 
     isActive: {
       type: Boolean,

@@ -7,6 +7,7 @@ const Product = require("../models/product");
 const Warehouse = require("../models/warehouse");
 const Space = require("../models/space");
 const InventoryItem = require("../models/inventory");
+const AssetTagCounter = require("../models/assetTagCounter");
 const {PRODUCT_ASSET_TYPES,} = require("../constants/product");
 const { SPACE_CODES, SPACE_TYPES } = require("../constants/space");
 const { INVENTORY_STATUS } = require("../constants/inventory");
@@ -183,38 +184,98 @@ const sanitizeIdentifier = (value) => {
 // Handles is positive integer.
 const isPositiveInteger = (value) => Number.isInteger(value) && value > 0;
 
+const ASSET_TAG_PREFIX_BY_CATEGORY = Object.freeze({
+  LAPTOPS: "LAP",
+  DESKTOPS: "DSK",
+  MONITORS: "MON",
+  MOBILES: "MOB",
+  TABLETS: "TAB",
+  POS_DEVICES: "POS",
+  PRINTERS: "PRN",
+  SCANNERS: "SCN",
+  ROUTERS_SWITCHES: "NET",
+  NETWORKING_EQUIPMENT: "NET",
+  PERIPHERALS: "PER",
+  ACCESSORIES: "ACC",
+  SECURITY_DEVICES: "SEC",
+  SOFTWARE_LICENSES: "SW",
+  BIOMETRIC_DEVICES: "BIO",
+  CHARGERS_ADAPTERS: "CHG",
+  HEADSETS_AUDIO: "AUD",
+  STORAGE_DEVICES: "STO",
+});
+
+const buildAssetTagPrefix = (product) => {
+  const category = String(product.category || "").trim().toUpperCase();
+
+  if (ASSET_TAG_PREFIX_BY_CATEGORY[category]) {
+    return ASSET_TAG_PREFIX_BY_CATEGORY[category];
+  }
+
+  const skuPrefix = String(product.sku || "")
+    .trim()
+    .toUpperCase()
+    .split(/[^A-Z0-9]+/)
+    .find(Boolean);
+
+  return String(skuPrefix || product.name || "AST")
+    .replace(/[^A-Z0-9]/gi, "")
+    .toUpperCase()
+    .slice(0, 3)
+    .padEnd(3, "X");
+};
+
+const generateAssetTag = async (product, session) => {
+  const prefix = buildAssetTagPrefix(product);
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const counter = await AssetTagCounter.findOneAndUpdate(
+      { _id: prefix },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true, session }
+    ).lean();
+    const assetTag = `FC-${prefix}-${String(counter.seq).padStart(6, "0")}`;
+    const existingItem = await InventoryItem.exists({
+      assetTag,
+      isDeleted: false,
+    }).session(session);
+
+    if (!existingItem) {
+      return assetTag;
+    }
+  }
+
+  throw new AppError("Unable to generate a unique assetTag", 500);
+};
+
 // Handles assert consumable payload.
 const assertConsumablePayload = (payload) => {
   if (
     payload.serialNumber !== undefined ||
     payload.assetTag !== undefined ||
-    payload.qrCode !== undefined ||
     payload.assignedUserId !== undefined
   ) {
     throw new AppError(
-      "Consumable inventory does not support serialNumber, assetTag, qrCode, or assignedUserId",
+      "Consumable inventory does not support serialNumber, assetTag, or assignedUserId",
       400
     );
   }
 };
 
 // Handles assert serialized payload.
-const assertSerializedPayload = (payload) => {
+const assertSerializedPayload = async (payload, product, session) => {
   const serialNumber = sanitizeIdentifier(payload.serialNumber);
-  const assetTag = sanitizeIdentifier(payload.assetTag);
-  const qrCode = sanitizeIdentifier(payload.qrCode);
 
-  if (!serialNumber || !assetTag || !qrCode) {
+  if (payload.assetTag !== undefined) {
     throw new AppError(
-      "serialNumber, assetTag and qrCode are required for non-consumable products",
+      "assetTag is generated automatically and cannot be provided",
       400
     );
   }
 
   return {
     serialNumber,
-    assetTag,
-    qrCode,
+    assetTag: await generateAssetTag(product, session),
   };
 };
 
@@ -355,7 +416,6 @@ const createInventoryItem = async (
         ...payload,
         serialNumber: null,
         assetTag: null,
-        qrCode: null,
         assignedUserId: null,
         quantity,
         createdBy: userId,
@@ -386,7 +446,7 @@ const createInventoryItem = async (
       return inventoryItem;
     }
 
-    const identifiers = assertSerializedPayload(payload);
+    const identifiers = await assertSerializedPayload(payload, product, session);
 
     if (quantity !== 1) {
       throw new AppError(
@@ -457,10 +517,10 @@ const getInventoryItems = async (query) => {
 };
 
 // Handles get inventory item by id.
-const getInventoryItemById = async (id) => {
+const getInventoryItemById = async (id, context = {}) => {
   logger.info("Fetching inventory item by id", { id });
 
-  const inventoryItem = await inventoryRepository.findById(id);
+  const inventoryItem = await inventoryRepository.findById(id, context.spaceId);
 
   if (!inventoryItem) {
     logger.warn("Inventory item not found", { id });
@@ -480,7 +540,7 @@ const updateInventoryItem = async (
 ) => {
   logger.info("Updating inventory item", { id });
 
-  const existingInventoryItem = await inventoryRepository.findById(id);
+  const existingInventoryItem = await inventoryRepository.findById(id, context.spaceId);
 
   if (!existingInventoryItem) {
     logger.warn("Inventory item not found", { id });
@@ -562,29 +622,22 @@ const updateInventoryItem = async (
   if (isConsumable) {
     updatePayload.serialNumber = null;
     updatePayload.assetTag = null;
-    updatePayload.qrCode = null;
     updatePayload.assignedUserId = null;
   } else {
     updatePayload.quantity = 1;
+    if (payload.assetTag !== undefined) {
+      throw new AppError("assetTag is immutable after creation", 400);
+    }
     if (payload.serialNumber !== undefined) {
       updatePayload.serialNumber = sanitizeIdentifier(
         payload.serialNumber
-      );
-    }
-    if (payload.assetTag !== undefined) {
-      updatePayload.assetTag = sanitizeIdentifier(
-        payload.assetTag
-      );
-    }
-    if (payload.qrCode !== undefined) {
-      updatePayload.qrCode = sanitizeIdentifier(
-        payload.qrCode
       );
     }
   }
 
   const updatedInventoryItem = await inventoryRepository.updateById(
     id,
+    context.spaceId,
     updatePayload
   );
 
@@ -614,7 +667,7 @@ const deleteInventoryItem = async (
 ) => {
   logger.info("Deleting inventory item", { id });
 
-  const inventoryItem = await inventoryRepository.findById(id);
+  const inventoryItem = await inventoryRepository.findById(id, context.spaceId);
 
   if (!inventoryItem) {
     logger.warn("Inventory item not found", { id });
@@ -623,7 +676,7 @@ const deleteInventoryItem = async (
   }
 
   const deletedInventoryItem =
-    await inventoryRepository.updateById(id, {
+    await inventoryRepository.updateById(id, context.spaceId, {
     isDeleted: true,
     deletedAt: new Date(),
     deletedBy: new mongoose.Types.ObjectId(userId),
@@ -645,12 +698,34 @@ const deleteInventoryItem = async (
   });
 };
 
+const getInventoryItemQrCode = async (id, context = {}) => {
+  const inventoryItem = await getInventoryItemById(id, context);
+
+  if (!inventoryItem.assetTag) {
+    throw new AppError("Inventory item does not have an assetTag", 400);
+  }
+
+  let QRCode;
+
+  try {
+    QRCode = require("qrcode");
+  } catch (error) {
+    throw new AppError("QR code generator dependency is not installed", 500);
+  }
+
+  return QRCode.toBuffer(inventoryItem.assetTag, {
+    type: "png",
+    errorCorrectionLevel: "M",
+    margin: 1,
+    width: 256,
+  });
+};
+
 module.exports = {
   createInventoryItem,
   getInventoryItems,
   getInventoryItemById,
+  getInventoryItemQrCode,
   updateInventoryItem,
   deleteInventoryItem,
 };
-
-

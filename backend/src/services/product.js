@@ -15,12 +15,13 @@ const createProduct = async ({
   userId,
   context = {},
 }) => {
-    const existingProduct = await productRepository.findProductBySku(body.sku);
+    const existingProduct = await productRepository.findProductBySku(body.sku, context.spaceId);
 
   if (existingProduct) throw new AppError("Product SKU already exists", 400);
 
   const product = await productRepository.createProduct({
     ...body,
+    spaceId: context.spaceId,
     createdBy: userId,
     updatedBy: userId,
   });
@@ -45,7 +46,7 @@ const createProduct = async ({
 };
 
 // Handles get products.
-const getProducts = async ({ page, limit }) => productRepository.getProducts({ page, limit });
+const getProducts = async ({ page, limit, spaceId }) => productRepository.getProducts({ page, limit, spaceId });
 
 // Handles update product.
 const updateProduct = async ({
@@ -54,11 +55,11 @@ const updateProduct = async ({
   userId,
   context = {},
 }) => {
-  const product = await productRepository.findProductById(productId);
+  const product = await productRepository.findProductById(productId, context.spaceId);
 
   if (!product) throw new AppError("Product not found", 404);
 
-  const updatedProduct = await productRepository.updateProduct(productId, {
+  const updatedProduct = await productRepository.updateProduct(productId, context.spaceId, {
     ...body,
     updatedBy: userId,
   });
@@ -86,12 +87,12 @@ const deleteProduct = async ({
   userId,
   context = {},
 }) => {
-  const product = await productRepository.findProductById(productId);
+  const product = await productRepository.findProductById(productId, context.spaceId);
 
   if (!product) throw new AppError("Product not found", 404);
 
   const deletedProduct =
-    await productRepository.softDeleteProduct(productId, userId);
+    await productRepository.softDeleteProduct(productId, context.spaceId, userId);
 
   logger.info(`Product deleted productId=${productId}`);
 

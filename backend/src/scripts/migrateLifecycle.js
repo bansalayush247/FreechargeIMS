@@ -12,7 +12,6 @@ const logger = require("../config/logger");
 
 const statusMap = {
   AVAILABLE: "IN_STOCK",
-  IN_REPAIR: "REPAIR",
   RETIRED: "DISPOSED",
 };
 
@@ -20,8 +19,6 @@ const transactionTypeMap = {
   ASSIGNED: "ASSIGN",
   RETURNED: "RETURN",
   TRANSFERRED: "TRANSFER",
-  REPAIR_SENT: "REPAIR",
-  REPAIR_COMPLETED: "REPAIR",
   RETIRED: "DISPOSE",
 };
 

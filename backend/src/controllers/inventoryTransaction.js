@@ -33,7 +33,7 @@ const createTransaction = asyncHandler(async (req, res) => {
       value,
       userId,
       {
-        spaceId: req.headers["x-space-id"],
+        spaceId: req.spaceId,
         ipAddress: req.ip,
         userAgent: req.get("user-agent"),
       }
@@ -65,7 +65,7 @@ const getTransactions = asyncHandler(async (req, res) => {
 
   const transactions =
     await inventoryTransactionService.getTransactions(
-      value
+      { ...value, spaceId: req.spaceId }
     );
 
   return res.status(200).json({
@@ -79,7 +79,8 @@ const getTransactions = asyncHandler(async (req, res) => {
 const getTransactionById = asyncHandler(async (req, res) => {
   const transaction =
     await inventoryTransactionService.getTransactionById(
-      req.params.id
+      req.params.id,
+      { spaceId: req.spaceId }
     );
 
   return res.status(200).json({
@@ -95,6 +96,7 @@ const getItemAuditTrail = asyncHandler(async (req, res) => {
     await inventoryTransactionService.getItemAuditTrail(
       req.params.inventoryItemId,
       {
+        spaceId: req.spaceId,
         userId: req.user._id || req.user.id,
         userType: req.user.userType,
       }

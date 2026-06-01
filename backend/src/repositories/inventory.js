@@ -15,9 +15,10 @@ const create = async (payload, options = {}) => {
 };
 
 // Handles find by id.
-const findById = async (id) => {
+const findById = async (id, spaceId) => {
   return InventoryItem.findOne({
     _id: id,
+    spaceId,
     isDeleted: false,
   }).lean();
 };
@@ -28,10 +29,11 @@ const findOne = async (filter) => {
 };
 
 // Handles update by id.
-const updateById = async (id, payload, options = {}) => {
+const updateById = async (id, spaceId, payload, options = {}) => {
   return InventoryItem.findOneAndUpdate(
     {
       _id: id,
+      spaceId,
       isDeleted: false,
     },
     payload,
@@ -101,12 +103,6 @@ const paginate = async ({
       },
       {
         assetTag: {
-          $regex: search,
-          $options: "i",
-        },
-      },
-      {
-        qrCode: {
           $regex: search,
           $options: "i",
         },

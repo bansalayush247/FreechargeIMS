@@ -13,9 +13,10 @@ const create = async (payload, session) => {
 };
 
 // Handles find by id.
-const findById = async (id) => {
+const findById = async (id, spaceId) => {
   return InventoryTransaction.findOne({
     _id: id,
+    spaceId,
     isDeleted: false,
   })
     .populate("inventoryItemId")
@@ -39,12 +40,14 @@ const paginate = async (filters) => {
     warehouseId,
     startDate,
     endDate,
+    spaceId,
   } = filters;
 
   const skip = (page - 1) * limit;
 
   const query = {
     isDeleted: false,
+    spaceId,
   };
 
   if (inventoryItemId) {
@@ -109,9 +112,10 @@ const paginate = async (filters) => {
 };
 
 // Handles get item audit trail.
-const getItemAuditTrail = async (inventoryItemId) => {
+const getItemAuditTrail = async (inventoryItemId, spaceId) => {
   return InventoryTransaction.find({
     inventoryItemId,
+    spaceId,
     isDeleted: false,
   })
     .populate("performedBy", "firstName lastName email employeeId")
@@ -129,4 +133,3 @@ module.exports = {
   paginate,
   getItemAuditTrail,
 };
-

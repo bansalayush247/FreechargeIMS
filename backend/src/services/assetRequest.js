@@ -1,672 +1,327 @@
 const AssetRequest = require("../models/assetRequest");
+const AssetRequestApproval = require("../models/assetRequestApproval");
+const WorkflowDefinition = require("../models/workflowDefinition");
+const WorkflowInstance = require("../models/workflowInstance");
 const Product = require("../models/product");
+const Merchant = require("../models/merchant");
 const InventoryItem = require("../models/inventory");
-const Warehouse = require("../models/warehouse");
-const Space = require("../models/space");
 
 const assetRequestRepository = require("../repositories/assetRequest");
-const roleRepository = require("../repositories/role");
-const userRoleRepository = require("../repositories/userRole");
-
+const assetRequestApprovalRepository = require("../repositories/assetRequestApproval");
 const inventoryTransactionService = require("./inventoryTransaction");
-const auditLogService = require("./auditLog");
-const notificationService = require("./notification");
-const warehouseService = require("./warehouse");
 
 const {
   ASSET_REQUEST_STATUS,
-  ASSET_REQUEST_PERMISSIONS,
+  ASSET_REQUEST_TYPE,
+  ASSET_REQUEST_STEP_KEYS,
+  ASSET_REQUEST_APPROVAL_ACTIONS,
 } = require("../constants/assetRequest");
-const { ROLE_CODES } = require("../constants/role");
-const { SYSTEM_SPACES, SPACE_TYPES } = require("../constants/space");
-const { PERMISSIONS } = require("../constants/permission");
-
-const {
-  INVENTORY_STATUS,
-  getInventoryStatusQueryValues,
-} = require("../constants/inventory");
-
+const { INVENTORY_STATUS } = require("../constants/inventory");
 const { INVENTORY_TRANSACTION_TYPES } = require("../constants/inventoryTransaction");
-const {
-  AUDIT_ACTIONS,
-  AUDIT_ENTITY_TYPES,
-} = require("../constants/auditLog");
-const { NOTIFICATION_TYPES } = require("../constants/notification");
+const { WORKFLOW_ENTITY_TYPES, WORKFLOW_STATUS, WORKFLOW_ACTIONS } = require("../constants/workflow");
 
 const AppError = require("../utils/appError");
-const logger = require("../config/logger");
-const { USER_TYPES } = require("../constants/user");
 
-const IT_TEAM_SPACE = SYSTEM_SPACES.IT_TEAM;
-const WAREHOUSE_SPACE = SYSTEM_SPACES.WAREHOUSE;
-const readId = (value) => {
-  if (!value) return "";
-  if (typeof value === "string") return value;
-  if (typeof value === "object") return String(value._id || value.id || "");
-  return String(value);
+const STEP_TO_STATUS = {
+  [ASSET_REQUEST_STEP_KEYS.MANAGER_APPROVAL]: ASSET_REQUEST_STATUS.PENDING_MANAGER,
+  [ASSET_REQUEST_STEP_KEYS.IT_APPROVAL]: ASSET_REQUEST_STATUS.PENDING_IT,
+  [ASSET_REQUEST_STEP_KEYS.ZONAL_MANAGER_APPROVAL]: ASSET_REQUEST_STATUS.PENDING_ZONAL_MANAGER,
+  [ASSET_REQUEST_STEP_KEYS.WAREHOUSE_FULFILLMENT]: ASSET_REQUEST_STATUS.FULFILLMENT_PENDING,
 };
 
-const ensureItTeamSpace = async (userId) => {
-  let itSpace = await Space.findOne({
-    $or: [{ code: IT_TEAM_SPACE.code }, { name: IT_TEAM_SPACE.name }],
-    isDeleted: false,
-  })
-    .select("_id name code")
-    .lean();
+const TERMINAL_STATUSES = [
+  ASSET_REQUEST_STATUS.CANCELLED,
+  ASSET_REQUEST_STATUS.REJECTED,
+  ASSET_REQUEST_STATUS.FULFILLED,
+];
 
-  if (!itSpace) {
-    const created = await Space.create({
-      ...IT_TEAM_SPACE,
-      isActive: true,
-      createdBy: userId || null,
-      updatedBy: userId || null,
-    });
-
-    itSpace = await Space.findById(created._id).select("_id name code").lean();
-    logger.info("Created IT Team space for approval queue", { spaceId: itSpace?._id });
-  }
-
-  const existingRole = await roleRepository.findBySpaceAndCode(
-    itSpace._id,
-    ROLE_CODES.INVENTORY_APPROVAL
-  );
-
-  if (!existingRole) {
-    await roleRepository.create({
-      spaceId: itSpace._id,
-      name: "Inventory Approval",
-      code: ROLE_CODES.INVENTORY_APPROVAL,
-      description: "Approves asset requests in the IT Team queue",
-      permissions: [
-        PERMISSIONS.IT_APPROVE_ASSET_REQUEST,
-        PERMISSIONS.VIEW_ASSET_REQUEST,
-        PERMISSIONS.VIEW_INVENTORY,
-        PERMISSIONS.VIEW_INVENTORY_TRANSACTION,
-      ],
-      isSystemRole: true,
-      isActive: true,
-      createdBy: userId || null,
-      updatedBy: userId || null,
-    });
-  }
-
-  return itSpace;
+const DEFAULT_WORKFLOWS = {
+  [ASSET_REQUEST_TYPE.EMPLOYEE_ASSET]: {
+    code: "EMPLOYEE_ASSET_REQUEST",
+    name: "Employee Asset Workflow",
+    steps: [
+      { stepKey: ASSET_REQUEST_STEP_KEYS.MANAGER_APPROVAL, name: "Manager Approval", order: 1, allowedActions: [WORKFLOW_ACTIONS.APPROVE, WORKFLOW_ACTIONS.REJECT], nextStepKey: ASSET_REQUEST_STEP_KEYS.IT_APPROVAL },
+      { stepKey: ASSET_REQUEST_STEP_KEYS.IT_APPROVAL, name: "IT Approval", order: 2, allowedActions: [WORKFLOW_ACTIONS.APPROVE, WORKFLOW_ACTIONS.REJECT], nextStepKey: ASSET_REQUEST_STEP_KEYS.WAREHOUSE_FULFILLMENT },
+      { stepKey: ASSET_REQUEST_STEP_KEYS.WAREHOUSE_FULFILLMENT, name: "Warehouse Fulfillment", order: 3, allowedActions: [WORKFLOW_ACTIONS.COMPLETE, WORKFLOW_ACTIONS.REJECT], nextStepKey: "" },
+    ],
+  },
+  [ASSET_REQUEST_TYPE.MERCHANT_ASSET]: {
+    code: "MERCHANT_ASSET_REQUEST",
+    name: "Merchant Asset Workflow",
+    steps: [
+      { stepKey: ASSET_REQUEST_STEP_KEYS.ZONAL_MANAGER_APPROVAL, name: "Zonal Manager Approval", order: 1, allowedActions: [WORKFLOW_ACTIONS.APPROVE, WORKFLOW_ACTIONS.REJECT], nextStepKey: ASSET_REQUEST_STEP_KEYS.WAREHOUSE_FULFILLMENT },
+      { stepKey: ASSET_REQUEST_STEP_KEYS.WAREHOUSE_FULFILLMENT, name: "Warehouse Fulfillment", order: 2, allowedActions: [WORKFLOW_ACTIONS.COMPLETE, WORKFLOW_ACTIONS.REJECT], nextStepKey: "" },
+    ],
+  },
 };
 
-const ensureWarehouseSpace = async (userId) => {
-  let warehouseSpace = await Space.findOne({
-    $or: [{ code: WAREHOUSE_SPACE.code }, { name: WAREHOUSE_SPACE.name }],
-    isDeleted: false,
-  })
-    .select("_id name code")
-    .lean();
-
-  if (!warehouseSpace) {
-    const created = await Space.create({
-      ...WAREHOUSE_SPACE,
-      type: SPACE_TYPES.MERCHANT,
-      isActive: true,
-      createdBy: userId || null,
-      updatedBy: userId || null,
-    });
-
-    warehouseSpace = await Space.findById(created._id).select("_id name code").lean();
-    logger.info("Created Warehouse space for merchant approval queue", { spaceId: warehouseSpace?._id });
-  }
-
-  return warehouseSpace;
-};
-
-const ensureWarehouseInSpace = async (space, userId) => {
-  const existingWarehouse = await Warehouse.findOne({
-    spaceId: space._id,
-    isDeleted: false,
-  })
-    .select("_id")
-    .sort({ createdAt: 1 })
-    .lean();
-
-  if (existingWarehouse) {
-    return existingWarehouse;
-  }
-
-  const createdWarehouse = await warehouseService.createWarehouse({
-    body: {
-      name: `${space.name || "Space"} Warehouse`,
-      code: `${String(space.code || space.name || "SPACE").toUpperCase()}_WAREHOUSE`,
-      type: "CENTRAL",
-      address: {},
-      isActive: true,
-    },
-    userId,
-    spaceId: space._id,
-  });
-
-  return { _id: createdWarehouse._id };
-};
-
-// Handles generate request number.
 const generateRequestNumber = async () => {
   const count = await AssetRequest.countDocuments();
-
-  const sequence = String(count + 1).padStart(5, "0");
-
-  return `AR-${new Date().getFullYear()}-${sequence}`;
+  return `AR-${new Date().getFullYear()}-${String(count + 1).padStart(5, "0")}`;
 };
 
-// Handles create asset request.
-const createAssetRequest = async (
-  payload,
-  userId,
-  context = {}
-) => {
-  logger.info("Creating asset request");
+const ensureWorkflowDefinition = async (spaceId, requestType, userId) => {
+  const preset = DEFAULT_WORKFLOWS[requestType];
+  if (!preset) throw new AppError("Unsupported request type", 400);
 
-  if (!context.spaceId) {
-    throw new AppError("Space ID is required", 400);
+  let definition = await WorkflowDefinition.findOne({ spaceId, code: preset.code, isDeleted: false }).lean();
+  if (definition) return definition;
+
+  const created = await WorkflowDefinition.create({
+    spaceId,
+    code: preset.code,
+    name: preset.name,
+    entityType: WORKFLOW_ENTITY_TYPES.ASSET_REQUEST,
+    steps: preset.steps,
+    isActive: true,
+    createdBy: userId,
+    updatedBy: userId,
+  });
+
+  return created.toObject();
+};
+
+const createAssetRequest = async (payload, userId, context = {}) => {
+  if (!context.spaceId) throw new AppError("Space ID is required", 400);
+
+  const product = await Product.findOne({ _id: payload.productId, isDeleted: false }).lean();
+  if (!product) throw new AppError("Product not found", 404);
+
+  if (payload.requestType === ASSET_REQUEST_TYPE.MERCHANT_ASSET) {
+    if (!payload.merchantId) throw new AppError("merchantId is required for merchant asset request", 400);
+    const merchant = await Merchant.findOne({ _id: payload.merchantId, spaceId: context.spaceId, isDeleted: false }).lean();
+    if (!merchant) throw new AppError("Merchant not found", 404);
   }
 
-  const product = await Product.findOne({
-    _id: payload.productId,
-    isDeleted: false,
-  }).lean();
-
-  if (!product) {
-    throw new AppError("Product not found", 404);
-  }
-
-
-  const requestNumber = await generateRequestNumber();
+  const definition = await ensureWorkflowDefinition(context.spaceId, payload.requestType, userId);
+  const firstStep = [...definition.steps].sort((a, b) => a.order - b.order)[0];
 
   const request = await assetRequestRepository.create({
-    ...payload,
-    requestNumber,
+    requestNumber: await generateRequestNumber(),
     spaceId: context.spaceId,
-    originSpaceId: context.spaceId,
+    requestType: payload.requestType,
     employeeId: userId,
+    merchantId: payload.requestType === ASSET_REQUEST_TYPE.MERCHANT_ASSET ? payload.merchantId : null,
+    productId: payload.productId,
+    requestedQuantity: payload.requestedQuantity,
+    businessJustification: payload.businessJustification,
+    priority: payload.priority,
+    status: STEP_TO_STATUS[firstStep.stepKey],
     createdBy: userId,
-  });
-
-  logger.info("Asset request created", {
-    requestId: request._id,
-  });
-
-  await auditLogService.recordAuditLog({
-    spaceId: context.spaceId || null,
-    actorId: userId,
-    action: AUDIT_ACTIONS.CREATE,
-    entityType: AUDIT_ENTITY_TYPES.ASSET_REQUEST,
-    entityId: request._id,
-    before: null,
-    after: request,
-    metadata: {
-      requestNumber: request.requestNumber,
-      productId: payload.productId,
-    },
-    ipAddress: context.ipAddress || "",
-    userAgent: context.userAgent || "",
-  });
-
-  await notificationService.notifyUserByEmail(
-    {
-      spaceId: context.spaceId || null,
-      recipientUserId: request.employeeId,
-      type: NOTIFICATION_TYPES.ASSET_REQUEST_CREATED,
-      subject: `Asset request ${request.requestNumber} created`,
-      body: `Your asset request ${request.requestNumber} has been created and is pending manager approval.`,
-      metadata: { assetRequestId: request._id },
-    },
-    userId
-  );
-
-  return request;
-};
-
-// Handles get asset requests.
-const getAssetRequests = async (filters, context = {}) => {
-  const nextFilters = { ...filters };
-  const requestPermissions = new Set(context.permissions || []);
-  const hasViewPermission = requestPermissions.has(ASSET_REQUEST_PERMISSIONS.VIEW_ASSET_REQUEST)
-    || requestPermissions.has(ASSET_REQUEST_PERMISSIONS.MANAGER_APPROVE_ASSET_REQUEST)
-    || requestPermissions.has(ASSET_REQUEST_PERMISSIONS.IT_APPROVE_ASSET_REQUEST)
-    || requestPermissions.has(ASSET_REQUEST_PERMISSIONS.REJECT_ASSET_REQUEST)
-    || requestPermissions.has(ASSET_REQUEST_PERMISSIONS.FORWARD_ASSET_REQUEST);
-  const isAdmin = context.userType === USER_TYPES.ADMIN;
-
-  if (!isAdmin && !hasViewPermission && context.userId) {
-    nextFilters.employeeId = context.userId;
-  }
-
-  return assetRequestRepository.paginate(nextFilters);
-};
-
-// Handles get asset request by id.
-const getAssetRequestById = async (id) => {
-  const request = await assetRequestRepository.findById(id);
-
-  if (!request) {
-    throw new AppError("Asset request not found", 404);
-  }
-
-  return request;
-};
-
-// Handles manager approve request.
-const managerApproveRequest = async (
-  id,
-  payload,
-  userId,
-  context = {}
-) => {
-  const request = await getAssetRequestById(id);
-
-  const requestSpaceId = readId(request.spaceId);
-  if (context.spaceId && requestSpaceId !== String(context.spaceId)) {
-    throw new AppError("Request does not belong to this space", 403);
-  }
-
-  if (
-    request.status !== ASSET_REQUEST_STATUS.PENDING
-  ) {
-    throw new AppError(
-      "Only pending requests can be approved",
-      400
-    );
-  }
-
-  const updatedRequest =
-    await assetRequestRepository.updateById(id, {
-    status:
-      ASSET_REQUEST_STATUS.MANAGER_APPROVED,
-    managerApprovalBy: userId,
-    managerApprovalAt: new Date(),
-    managerRemarks: payload.remarks,
     updatedBy: userId,
   });
 
-  // Route manager-approved requests by origin space type:
-  // EMPLOYEE -> IT Team, MERCHANT -> Warehouse.
-  const originSpace = await Space.findById(request.originSpaceId || request.spaceId)
-    .select("_id type")
-    .lean();
-  const isMerchantOrigin = String(originSpace?.type || "").toUpperCase() === SPACE_TYPES.MERCHANT;
-  const targetQueueSpace = isMerchantOrigin ? await ensureWarehouseSpace(userId) : await ensureItTeamSpace(userId);
-  const shouldForward = targetQueueSpace && readId(updatedRequest.spaceId) !== String(targetQueueSpace._id);
-
-  const finalRequest = shouldForward
-    ? await forwardRequest(
-        id,
-        { targetSpaceId: targetQueueSpace._id },
-        userId,
-        {
-          ...context,
-          userType: "ADMIN",
-          spaceId: readId(updatedRequest.spaceId),
-        }
-      )
-    : updatedRequest;
-
-  await auditLogService.recordAuditLog({
-    spaceId: context.spaceId || null,
-    actorId: userId,
-    action: AUDIT_ACTIONS.APPROVE,
-    entityType: AUDIT_ENTITY_TYPES.ASSET_REQUEST,
-    entityId: id,
-    before: request,
-    after: updatedRequest,
-    metadata: {
-      approvalLevel: "MANAGER",
-    },
-    ipAddress: context.ipAddress || "",
-    userAgent: context.userAgent || "",
+  await WorkflowInstance.create({
+    spaceId: context.spaceId,
+    workflowDefinitionId: definition._id,
+    entityType: WORKFLOW_ENTITY_TYPES.ASSET_REQUEST,
+    entityId: request._id,
+    status: WORKFLOW_STATUS.ACTIVE,
+    currentStepKey: firstStep.stepKey,
+    startedBy: userId,
+    createdBy: userId,
+    updatedBy: userId,
   });
 
-  await notificationService.notifyUserByEmail(
-    {
-      spaceId: context.spaceId || null,
-      recipientUserId: request.employeeId,
-      type: NOTIFICATION_TYPES.ASSET_REQUEST_MANAGER_APPROVED,
-      subject: `Asset request ${request.requestNumber} manager approved`,
-      body: `Your asset request ${request.requestNumber} has been approved by manager and is pending IT approval.`,
-      metadata: { assetRequestId: id },
-    },
-    userId
-  );
-
-  return finalRequest;
+  return request;
 };
 
-// Handles it approve request.
-const itApproveRequest = async (
-  id,
-  payload,
-  userId,
-  context = {}
-) => {
-  const request = await getAssetRequestById(id);
+const getAssetRequests = async (filters) => assetRequestRepository.paginate(filters);
 
-  if (!context.spaceId) {
-    throw new AppError("Space ID is required", 400);
-  }
+const getAssetRequestById = async (id, context = {}) => {
+  const request = await assetRequestRepository.findById(id, context.spaceId);
+  if (!request) throw new AppError("Asset request not found", 404);
 
-  const requestSpaceId = readId(request.spaceId);
-  if (requestSpaceId !== String(context.spaceId)) {
-    throw new AppError("Request does not belong to this space", 403);
-  }
+  const approvals = await assetRequestApprovalRepository.findByAssetRequestId(id);
+  return { ...request, approvals };
+};
 
-  if (
-    request.status !==
-    ASSET_REQUEST_STATUS.MANAGER_APPROVED
-  ) {
-    throw new AppError("Manager approval required", 400);
-  }
-
-  const warehouses = await Warehouse.find({
-    spaceId: context.spaceId,
+const getActiveWorkflowInstance = async (request) => {
+  const instance = await WorkflowInstance.findOne({
+    spaceId: request.spaceId,
+    entityType: WORKFLOW_ENTITY_TYPES.ASSET_REQUEST,
+    entityId: request._id,
+    status: WORKFLOW_STATUS.ACTIVE,
     isDeleted: false,
-  })
-    .select("_id")
-    .lean();
+  }).populate("workflowDefinitionId", "steps");
 
-  const warehouseIds = warehouses.map((w) => w._id);
+  if (!instance) throw new AppError("Workflow instance not found", 404);
+  return instance;
+};
 
-  const inventoryItem =
-    await InventoryItem.findOne({
-      productId: request.productId,
-      warehouseId: { $in: warehouseIds },
-      status: {
-        $in: getInventoryStatusQueryValues(
-          INVENTORY_STATUS.IN_STOCK
-        ),
-      },
-      isDeleted: false,
+const transition = async ({ request, stepKey, action, userId, remarks, rejectionReason }) => {
+  if (TERMINAL_STATUSES.includes(request.status)) {
+    throw new AppError("Request is already closed", 400);
+  }
+
+  const instance = await getActiveWorkflowInstance(request);
+  if (instance.currentStepKey !== stepKey) throw new AppError("Action does not match current workflow step", 400);
+
+  const definition = instance.workflowDefinitionId;
+  const currentStep = definition.steps.find((s) => s.stepKey === instance.currentStepKey);
+  if (!currentStep) throw new AppError("Workflow step not found", 400);
+
+  await AssetRequestApproval.create({
+    spaceId: request.spaceId,
+    assetRequestId: request._id,
+    stepKey,
+    approverId: userId,
+    action: action === WORKFLOW_ACTIONS.REJECT ? ASSET_REQUEST_APPROVAL_ACTIONS.REJECTED : ASSET_REQUEST_APPROVAL_ACTIONS.APPROVED,
+    remarks: remarks || rejectionReason || "",
+    actionAt: new Date(),
+  });
+
+  const history = [
+    ...(instance.history || []),
+    { stepKey, action, remarks: remarks || rejectionReason || "", performedBy: userId, performedAt: new Date(), metadata: {} },
+  ];
+
+  if (action === WORKFLOW_ACTIONS.REJECT) {
+    await WorkflowInstance.findByIdAndUpdate(instance._id, {
+      status: WORKFLOW_STATUS.CANCELLED,
+      completedAt: new Date(),
+      history,
+      updatedBy: userId,
     });
 
-  if (!inventoryItem) {
-    throw new AppError(
-      "No available inventory item found",
-      400
-    );
+    return assetRequestRepository.updateById(request._id, request.spaceId, {
+      status: ASSET_REQUEST_STATUS.REJECTED,
+      rejectionReason: rejectionReason || remarks || "",
+      updatedBy: userId,
+    });
   }
 
-  const originSpaceId = request.originSpaceId || request.spaceId;
-  const originSpace = await Space.findById(originSpaceId)
-    .select("_id name code type")
-    .lean();
+  const nextStepKey = currentStep.nextStepKey || "";
 
-  if (!originSpace) {
-    throw new AppError("Originating space not found", 404);
-  }
+  // If approving and the next step is warehouse fulfillment, ensure an available inventory item exists
+  if (action === WORKFLOW_ACTIONS.APPROVE && nextStepKey === ASSET_REQUEST_STEP_KEYS.WAREHOUSE_FULFILLMENT) {
+    const availableItem = await InventoryItem.findOne({
+      spaceId: request.spaceId,
+      productId: request.productId,
+      status: INVENTORY_STATUS.AVAILABLE,
+      isDeleted: false,
+    }).lean();
 
-  const destinationWarehouse = await ensureWarehouseInSpace(originSpace, userId);
-
-  if (String(inventoryItem.warehouseId) !== String(destinationWarehouse._id)) {
-    await inventoryTransactionService.createTransaction(
-      {
-        inventoryItemId: inventoryItem._id,
-        transactionType: INVENTORY_TRANSACTION_TYPES.TRANSFER,
-        fromWarehouseId: inventoryItem.warehouseId,
-        toWarehouseId: destinationWarehouse._id,
-        remarks: "Transferred to originating space before assignment",
-      },
-      userId,
-      context
-    );
-  }
-
-  const assignmentTransaction = await inventoryTransactionService.createTransaction(
-    {
-      inventoryItemId: inventoryItem._id,
-      toUserId: request.employeeId,
-      transactionType:
-        INVENTORY_TRANSACTION_TYPES.ASSIGNED,
-      remarks:
-        "Asset assigned through request workflow",
-    },
-    userId,
-    context
-  );
-
-  const assignedInventoryItemId = assignmentTransaction.inventoryItemId;
-
-  const updatedRequest =
-    await assetRequestRepository.updateById(id, {
-    status: ASSET_REQUEST_STATUS.FULFILLED,
-
-    inventoryItemId: assignedInventoryItemId,
-
-    itApprovalBy: userId,
-    itApprovalAt: new Date(),
-    itRemarks: payload.remarks,
-
-    approvedAt: new Date(),
-    fulfilledAt: new Date(),
-
-    updatedBy: userId,
-  });
-
-  await auditLogService.recordAuditLog({
-    spaceId: context.spaceId || null,
-    actorId: userId,
-    action: AUDIT_ACTIONS.APPROVE,
-    entityType: AUDIT_ENTITY_TYPES.ASSET_REQUEST,
-    entityId: id,
-    before: request,
-    after: updatedRequest,
-    metadata: {
-      approvalLevel: "IT",
-      inventoryItemId: inventoryItem._id,
-    },
-    ipAddress: context.ipAddress || "",
-    userAgent: context.userAgent || "",
-  });
-
-  await notificationService.notifyUserByEmail(
-    {
-      spaceId: context.spaceId || null,
-      recipientUserId: request.employeeId,
-      type: NOTIFICATION_TYPES.ASSET_REQUEST_FULFILLED,
-      subject: `Asset request ${request.requestNumber} fulfilled`,
-      body: `Your asset request ${request.requestNumber} has been approved by IT and fulfilled.`,
-      metadata: { assetRequestId: id, inventoryItemId: inventoryItem._id },
-    },
-    userId
-  );
-
-  return updatedRequest;
-};
-
-// Handles forward request.
-const forwardRequest = async (
-  id,
-  payload,
-  userId,
-  context = {}
-) => {
-  const request = await getAssetRequestById(id);
-  const targetSpaceId = payload.targetSpaceId;
-  const requestSpaceId = readId(request.spaceId);
-
-  if (!context.spaceId) {
-    throw new AppError("Space ID is required", 400);
-  }
-
-  if (requestSpaceId !== String(context.spaceId)) {
-    throw new AppError("Request does not belong to this space", 403);
-  }
-
-  if (String(targetSpaceId) === requestSpaceId) {
-    throw new AppError("Target space must be different", 400);
-  }
-
-  if (context.userType !== "ADMIN") {
-    const roles = await userRoleRepository.findUserRolesByUserAndSpace(
-      userId,
-      targetSpaceId
-    );
-
-    if (!roles.length) {
-      throw new AppError("User must be a member of the target space", 403);
+    if (!availableItem) {
+      throw new AppError("No available inventory item found for fulfillment", 400);
     }
   }
 
-  const forwardedAt = new Date();
-  const history = Array.isArray(request.forwardedHistory)
-    ? request.forwardedHistory
-    : [];
+  if (!nextStepKey) {
+    await WorkflowInstance.findByIdAndUpdate(instance._id, {
+      status: WORKFLOW_STATUS.COMPLETED,
+      completedAt: new Date(),
+      history,
+      updatedBy: userId,
+    });
 
-  const updatedRequest = await assetRequestRepository.updateById(id, {
-    spaceId: targetSpaceId,
-    forwardedFromSpaceId: requestSpaceId,
-    forwardedBy: userId,
-    forwardedAt,
-    forwardedHistory: [
-      ...history,
-      {
-        fromSpaceId: requestSpaceId,
-        toSpaceId: targetSpaceId,
-        forwardedBy: userId,
-        forwardedAt,
-      },
-    ],
-    updatedBy: userId,
-  });
-
-  await auditLogService.recordAuditLog({
-    spaceId: context.spaceId || null,
-    actorId: userId,
-    action: AUDIT_ACTIONS.UPDATE,
-    entityType: AUDIT_ENTITY_TYPES.ASSET_REQUEST,
-    entityId: id,
-    before: request,
-    after: updatedRequest,
-    metadata: {
-      forwardedToSpaceId: targetSpaceId,
-    },
-    ipAddress: context.ipAddress || "",
-    userAgent: context.userAgent || "",
-  });
-
-  return updatedRequest;
-};
-
-// Handles reject request.
-const rejectRequest = async (
-  id,
-  payload,
-  userId,
-  context = {}
-) => {
-  const request = await getAssetRequestById(id);
-
-  if (
-    [
-      ASSET_REQUEST_STATUS.REJECTED,
-      ASSET_REQUEST_STATUS.CANCELLED,
-      ASSET_REQUEST_STATUS.FULFILLED,
-    ].includes(request.status)
-  ) {
-    throw new AppError("Request cannot be rejected", 400);
+    return assetRequestRepository.updateById(request._id, request.spaceId, {
+      status: ASSET_REQUEST_STATUS.FULFILLED,
+      fulfilledAt: new Date(),
+      updatedBy: userId,
+    });
   }
 
-  const updatedRequest =
-    await assetRequestRepository.updateById(id, {
-    status: ASSET_REQUEST_STATUS.REJECTED,
-    rejectionReason: payload.rejectionReason,
+  await WorkflowInstance.findByIdAndUpdate(instance._id, {
+    currentStepKey: nextStepKey,
+    history,
     updatedBy: userId,
   });
 
-  await auditLogService.recordAuditLog({
-    spaceId: context.spaceId || null,
-    actorId: userId,
-    action: AUDIT_ACTIONS.REJECT,
-    entityType: AUDIT_ENTITY_TYPES.ASSET_REQUEST,
-    entityId: id,
-    before: request,
-    after: updatedRequest,
-    metadata: {
-      rejectionReason: payload.rejectionReason,
-    },
-    ipAddress: context.ipAddress || "",
-    userAgent: context.userAgent || "",
+  return assetRequestRepository.updateById(request._id, request.spaceId, {
+    status: STEP_TO_STATUS[nextStepKey] || request.status,
+    updatedBy: userId,
   });
-
-  await notificationService.notifyUserByEmail(
-    {
-      spaceId: context.spaceId || null,
-      recipientUserId: request.employeeId,
-      type: NOTIFICATION_TYPES.ASSET_REQUEST_REJECTED,
-      subject: `Asset request ${request.requestNumber} rejected`,
-      body: `Your asset request ${request.requestNumber} was rejected. Reason: ${payload.rejectionReason}.`,
-      metadata: { assetRequestId: id },
-    },
-    userId
-  );
-
-  return updatedRequest;
 };
 
-// Handles cancel request.
-const cancelRequest = async (
-  id,
-  userId,
-  context = {}
-) => {
-  const request = await getAssetRequestById(id);
-
-  if (
-    request.status ===
-    ASSET_REQUEST_STATUS.FULFILLED
-  ) {
-    throw new AppError(
-      "Fulfilled request cannot be cancelled",
-      400
-    );
+const approveRequest = async (id, payload, userId) => {
+  const request = await AssetRequest.findOne({ _id: id, isDeleted: false });
+  if (!request) throw new AppError("Asset request not found", 404);
+  if (TERMINAL_STATUSES.includes(request.status)) {
+    throw new AppError("Request cannot be approved", 400);
   }
 
-  const updatedRequest =
-    await assetRequestRepository.updateById(id, {
-    status: ASSET_REQUEST_STATUS.CANCELLED,
-    updatedBy: userId,
-  });
+  return transition({ request, stepKey: payload.stepKey, action: WORKFLOW_ACTIONS.APPROVE, userId, remarks: payload.remarks });
+};
 
-  await auditLogService.recordAuditLog({
-    spaceId: context.spaceId || null,
-    actorId: userId,
-    action: AUDIT_ACTIONS.CANCEL,
-    entityType: AUDIT_ENTITY_TYPES.ASSET_REQUEST,
-    entityId: id,
-    before: request,
-    after: updatedRequest,
-    metadata: {},
-    ipAddress: context.ipAddress || "",
-    userAgent: context.userAgent || "",
-  });
+const fulfillRequest = async (id, payload, userId, context = {}) => {
+  const request = await AssetRequest.findOne({ _id: id, isDeleted: false });
+  if (!request) throw new AppError("Asset request not found", 404);
 
-  await notificationService.notifyUserByEmail(
-    {
-      spaceId: context.spaceId || null,
-      recipientUserId: request.employeeId,
-      type: NOTIFICATION_TYPES.ASSET_REQUEST_CANCELLED,
-      subject: `Asset request ${request.requestNumber} cancelled`,
-      body: `Your asset request ${request.requestNumber} has been cancelled.`,
-      metadata: { assetRequestId: id },
-    },
-    userId
+  const inventoryItem = await InventoryItem.findOne({
+    spaceId: request.spaceId,
+    productId: request.productId,
+    status: INVENTORY_STATUS.AVAILABLE,
+    isDeleted: false,
+  }).lean();
+
+  if (!inventoryItem) throw new AppError("No available inventory item found for fulfillment", 400);
+
+  if (request.requestType === ASSET_REQUEST_TYPE.MERCHANT_ASSET) {
+    await inventoryTransactionService.createTransaction({
+      inventoryItemId: inventoryItem._id,
+      transactionType: INVENTORY_TRANSACTION_TYPES.ASSIGN_MERCHANT,
+      toMerchantId: request.merchantId,
+      remarks: payload.remarks || "Assigned to merchant via asset request",
+    }, userId, context);
+  } else {
+    await inventoryTransactionService.createTransaction({
+      inventoryItemId: inventoryItem._id,
+      transactionType: INVENTORY_TRANSACTION_TYPES.ASSIGN_EMPLOYEE,
+      toUserId: request.employeeId,
+      remarks: payload.remarks || "Assigned to employee via asset request",
+    }, userId, context);
+  }
+
+  await assetRequestRepository.updateById(request._id, request.spaceId, { inventoryItemId: inventoryItem._id, updatedBy: userId });
+
+  return transition({
+    request: { ...request.toObject(), inventoryItemId: inventoryItem._id },
+    stepKey: ASSET_REQUEST_STEP_KEYS.WAREHOUSE_FULFILLMENT,
+    action: WORKFLOW_ACTIONS.COMPLETE,
+    userId,
+    remarks: payload.remarks,
+  });
+};
+
+const rejectRequest = async (id, payload, userId) => {
+  const request = await AssetRequest.findOne({ _id: id, isDeleted: false });
+  if (!request) throw new AppError("Asset request not found", 404);
+
+  return transition({ request, stepKey: payload.stepKey, action: WORKFLOW_ACTIONS.REJECT, userId, remarks: payload.remarks, rejectionReason: payload.rejectionReason });
+};
+
+const cancelRequest = async (id, userId) => {
+  const request = await AssetRequest.findOne({ _id: id, isDeleted: false });
+  if (!request) throw new AppError("Asset request not found", 404);
+  if (String(request.employeeId) !== String(userId)) throw new AppError("Only the requester can cancel this request", 403);
+  if (TERMINAL_STATUSES.includes(request.status)) throw new AppError("Request is already closed", 400);
+  if (request.status === ASSET_REQUEST_STATUS.FULFILLED) throw new AppError("Fulfilled request cannot be cancelled", 400);
+
+  await WorkflowInstance.findOneAndUpdate(
+    { spaceId: request.spaceId, entityType: WORKFLOW_ENTITY_TYPES.ASSET_REQUEST, entityId: request._id, status: WORKFLOW_STATUS.ACTIVE, isDeleted: false },
+    { status: WORKFLOW_STATUS.CANCELLED, completedAt: new Date(), updatedBy: userId }
   );
 
-  return updatedRequest;
+  return assetRequestRepository.updateById(id, request.spaceId, { status: ASSET_REQUEST_STATUS.CANCELLED, updatedBy: userId });
+};
+
+const managerApproveRequest = (id, payload, userId) => approveRequest(id, { ...payload, stepKey: ASSET_REQUEST_STEP_KEYS.MANAGER_APPROVAL }, userId);
+const itApproveRequest = (id, payload, userId) => approveRequest(id, { ...payload, stepKey: ASSET_REQUEST_STEP_KEYS.IT_APPROVAL }, userId);
+
+const forwardRequest = async () => {
+  throw new AppError("Forward flow removed in v1 workflow architecture", 400);
 };
 
 module.exports = {
   createAssetRequest,
   getAssetRequests,
   getAssetRequestById,
+  approveRequest,
+  fulfillRequest,
   managerApproveRequest,
   itApproveRequest,
   rejectRequest,
   cancelRequest,
   forwardRequest,
 };
-
-

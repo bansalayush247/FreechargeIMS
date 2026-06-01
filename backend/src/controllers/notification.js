@@ -30,9 +30,10 @@ const sendEmailNotification = asyncHandler(
       await notificationService.sendEmailNotification(
         {
           ...value,
-          spaceId: req.headers["x-space-id"],
+          spaceId: req.spaceId,
         },
-        getUserId(req)
+        getUserId(req),
+        { spaceId: req.spaceId }
       );
 
     return res.status(201).json({
@@ -65,6 +66,7 @@ const getNotifications = asyncHandler(async (req, res) => {
   const notifications =
     await notificationService.getNotifications({
       ...filters,
+      spaceId: req.spaceId,
       ownerUserId: getUserId(req),
       ownerEmail: getUserEmail(req),
     });
@@ -84,6 +86,7 @@ const getNotificationById = asyncHandler(async (req, res) => {
       {
         ownerUserId: getUserId(req),
         ownerEmail: getUserEmail(req),
+        spaceId: req.spaceId,
       }
     );
 

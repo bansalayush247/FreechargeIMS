@@ -2,6 +2,8 @@ const joinRequestService = require("../services/joinRequest");
 const asyncHandler = require("../utils/asyncHandler");
 const { createJoinRequestSchema, reviewJoinRequestSchema, getJoinRequestsSchema } = require("../validators/joinRequest");
 
+const isMongoId = (value) => /^[a-f\d]{24}$/i.test(String(value || ""));
+
 const createJoinRequest = asyncHandler(async (req, res) => {
   const rawUserId = req.user && (req.user._id || req.user.id);
   const userId = rawUserId && typeof rawUserId.toString === "function" ? rawUserId.toString() : String(rawUserId);
@@ -58,6 +60,13 @@ const reviewJoinRequest = asyncHandler(async (req, res) => {
 
   const spaceId = req.params.id;
   const requestId = req.params.requestId;
+
+  if (!isMongoId(spaceId) || !isMongoId(requestId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Valid spaceId and joinRequestId are required",
+    });
+  }
 
   const updated = await joinRequestService.reviewJoinRequest(spaceId, requestId, value, userId, {
     spaceId: req.headers["x-space-id"],

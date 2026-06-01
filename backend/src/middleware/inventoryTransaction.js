@@ -1,20 +1,13 @@
 const InventoryItem = require("../models/inventory");
 
 const { INVENTORY_STATUS, normalizeInventoryStatus } = require("../constants/inventory");
-
 const { INVENTORY_TRANSACTION_TYPES, normalizeInventoryTransactionType } = require("../constants/inventoryTransaction");
 
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
 
-// Handles validate inventory transaction.
-const validateInventoryTransaction = async (
-  req,
-  res,
-  next
-) => {
+const validateInventoryTransaction = async (req, res, next) => {
   try {
-    // Accept alias fields for migration
     if (!req.body.fromWarehouseId && req.body.fromStorageLocationId) {
       req.body.fromWarehouseId = req.body.fromStorageLocationId;
     }
@@ -22,118 +15,43 @@ const validateInventoryTransaction = async (
       req.body.toWarehouseId = req.body.toStorageLocationId;
     }
 
-    const {
-      inventoryItemId,
-      transactionType,
-      toUserId,
-      toWarehouseId,
-    } = req.body;
+    const { inventoryItemId, transactionType, toUserId, toMerchantId, toWarehouseId } = req.body;
 
-    const inventoryItem = await InventoryItem.findOne({
-      _id: inventoryItemId,
-      isDeleted: false,
-    }).lean();
-
+    const inventoryItem = await InventoryItem.findOne({ _id: inventoryItemId, isDeleted: false }).lean();
     if (!inventoryItem) {
-      logger.warn("Inventory item not found", {
-        inventoryItemId,
-      });
-
+      logger.warn("Inventory item not found", { inventoryItemId });
       throw new AppError("Inventory item not found", 404);
     }
 
-    const normalizedTransactionType =
-      normalizeInventoryTransactionType(transactionType);
-    const currentStatus = normalizeInventoryStatus(
-      inventoryItem.status
-    );
+    const normalizedTransactionType = normalizeInventoryTransactionType(transactionType);
+    const currentStatus = normalizeInventoryStatus(inventoryItem.status);
 
     switch (normalizedTransactionType) {
-      case INVENTORY_TRANSACTION_TYPES.ASSIGN:
-        if (
-          currentStatus !==
-          INVENTORY_STATUS.IN_STOCK
-        ) {
-          throw new AppError("Only available inventory can be assigned", 400);
-        }
+      case INVENTORY_TRANSACTION_TYPES.ASSIGN_EMPLOYEE:
+        if (currentStatus !== INVENTORY_STATUS.AVAILABLE) throw new AppError("Only available inventory can be assigned", 400);
+        if (!toUserId) throw new AppError("toUserId is required for employee assignment", 400);
+        break;
 
-        if (!toUserId) {
-          throw new AppError(
-            "toUserId is required for assignment",
-            400
-          );
-        }
-
+      case INVENTORY_TRANSACTION_TYPES.ASSIGN_MERCHANT:
+        if (currentStatus !== INVENTORY_STATUS.AVAILABLE) throw new AppError("Only available inventory can be assigned", 400);
+        if (!toMerchantId) throw new AppError("toMerchantId is required for merchant assignment", 400);
         break;
 
       case INVENTORY_TRANSACTION_TYPES.RETURN:
-        if (
-          currentStatus !==
-          INVENTORY_STATUS.ASSIGNED
-        ) {
-          throw new AppError(
-            "Only assigned inventory can be returned",
-            400
-          );
+        if (![INVENTORY_STATUS.ASSIGNED_EMPLOYEE, INVENTORY_STATUS.ASSIGNED_MERCHANT].includes(currentStatus)) {
+          throw new AppError("Only assigned inventory can be returned", 400);
         }
-
         break;
 
       case INVENTORY_TRANSACTION_TYPES.TRANSFER:
-        if (!toWarehouseId) {
-          throw new AppError(
-            "toWarehouseId is required for transfer",
-            400
-          );
+        if (!toWarehouseId) throw new AppError("toWarehouseId is required for transfer", 400);
+        if (String(inventoryItem.warehouseId) === String(toWarehouseId)) {
+          throw new AppError("Source and destination warehouse cannot be same", 400);
         }
-
-        if (
-          inventoryItem.warehouseId.toString() ===
-          toWarehouseId
-        ) {
-          throw new AppError(
-            "Source and destination warehouse cannot be same",
-            400
-          );
-        }
-
-        break;
-
-      case INVENTORY_TRANSACTION_TYPES.REPAIR:
-        if (
-          currentStatus ===
-          INVENTORY_STATUS.DISPOSED
-        ) {
-          throw new AppError(
-            "Disposed inventory cannot be repaired",
-            400
-          );
-        }
-
-        break;
-
-
-      case INVENTORY_TRANSACTION_TYPES.LOST:
-        if (
-          currentStatus ===
-          INVENTORY_STATUS.DISPOSED
-        ) {
-          throw new AppError(
-            "Disposed inventory cannot be marked lost",
-            400
-          );
-        }
-
         break;
 
       case INVENTORY_TRANSACTION_TYPES.DISPOSE:
-        if (
-          currentStatus ===
-          INVENTORY_STATUS.DISPOSED
-        ) {
-          throw new AppError("Inventory already disposed", 400);
-        }
-
+        if (currentStatus === INVENTORY_STATUS.DISPOSED) throw new AppError("Inventory already disposed", 400);
         break;
 
       default:
@@ -141,7 +59,6 @@ const validateInventoryTransaction = async (
     }
 
     req.inventoryItem = inventoryItem;
-
     next();
   } catch (error) {
     next(error);
@@ -149,5 +66,3 @@ const validateInventoryTransaction = async (
 };
 
 module.exports = validateInventoryTransaction;
-
-

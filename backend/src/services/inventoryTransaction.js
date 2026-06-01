@@ -186,12 +186,12 @@ const runCreateTransaction = async (
   let newStatus = previousStatus;
 
   switch (transactionType) {
-    case INVENTORY_TRANSACTION_TYPES.STOCK_IN:
-      inventoryItem.status = INVENTORY_STATUS.IN_STOCK;
-      newStatus = INVENTORY_STATUS.IN_STOCK;
+    case INVENTORY_TRANSACTION_TYPES.CREATE:
+      inventoryItem.status = INVENTORY_STATUS.AVAILABLE;
+      newStatus = INVENTORY_STATUS.AVAILABLE;
       break;
 
-    case INVENTORY_TRANSACTION_TYPES.ASSIGN:
+    case INVENTORY_TRANSACTION_TYPES.ASSIGN_EMPLOYEE:
       // If consumable stock has quantity > 1, decrement and create an assigned item
       // so assigned items remain single-quantity records.
       if ((inventoryItem.quantity || 0) > 1) {
@@ -200,10 +200,11 @@ const runCreateTransaction = async (
         // save will happen below; create the assigned item
         const assignedPayload = {
           productId: inventoryItem.productId,
+          spaceId: inventoryItem.spaceId,
           warehouseId: inventoryItem.warehouseId,
           assignedUserId: payload.toUserId,
           quantity: 1,
-          status: INVENTORY_STATUS.ASSIGNED,
+          status: INVENTORY_STATUS.ASSIGNED_EMPLOYEE,
           createdBy: userId,
           updatedBy: userId,
         };
@@ -216,42 +217,53 @@ const runCreateTransaction = async (
         // and return it later via transaction record.
         payload._assignedInventoryItemId = assignedItem._id;
 
-        newStatus = INVENTORY_STATUS.ASSIGNED;
+        newStatus = INVENTORY_STATUS.ASSIGNED_EMPLOYEE;
       } else {
-        inventoryItem.status = INVENTORY_STATUS.ASSIGNED;
+        inventoryItem.status = INVENTORY_STATUS.ASSIGNED_EMPLOYEE;
         inventoryItem.assignedUserId = payload.toUserId;
-        newStatus = INVENTORY_STATUS.ASSIGNED;
+        inventoryItem.assignedMerchantId = null;
+        newStatus = INVENTORY_STATUS.ASSIGNED_EMPLOYEE;
       }
       break;
 
-    case INVENTORY_TRANSACTION_TYPES.RETURN:
-      inventoryItem.status = INVENTORY_STATUS.IN_STOCK;
+    case INVENTORY_TRANSACTION_TYPES.ASSIGN_MERCHANT:
+      inventoryItem.status = INVENTORY_STATUS.ASSIGNED_MERCHANT;
+      inventoryItem.assignedMerchantId = payload.toMerchantId;
       inventoryItem.assignedUserId = null;
-      newStatus = INVENTORY_STATUS.IN_STOCK;
+      newStatus = INVENTORY_STATUS.ASSIGNED_MERCHANT;
+      break;
+
+    case INVENTORY_TRANSACTION_TYPES.RETURN:
+      inventoryItem.status = INVENTORY_STATUS.AVAILABLE;
+      inventoryItem.assignedUserId = null;
+      inventoryItem.assignedMerchantId = null;
+      newStatus = INVENTORY_STATUS.AVAILABLE;
       break;
 
     case INVENTORY_TRANSACTION_TYPES.TRANSFER:
       inventoryItem.warehouseId = payload.toWarehouseId;
       break;
 
-    case INVENTORY_TRANSACTION_TYPES.REPAIR:
-      if (previousStatus === INVENTORY_STATUS.REPAIR) {
-        inventoryItem.status = INVENTORY_STATUS.IN_STOCK;
-        newStatus = INVENTORY_STATUS.IN_STOCK;
-      } else {
-        inventoryItem.status = INVENTORY_STATUS.REPAIR;
-        newStatus = INVENTORY_STATUS.REPAIR;
+    case INVENTORY_TRANSACTION_TYPES.STATUS_CHANGE:
+      if (payload.newStatus) {
+        inventoryItem.status = normalizeInventoryStatus(payload.newStatus);
       }
+      newStatus = normalizeInventoryStatus(inventoryItem.status);
       break;
 
-    case INVENTORY_TRANSACTION_TYPES.LOST:
+    case "LOST":
       inventoryItem.status = INVENTORY_STATUS.LOST;
       newStatus = INVENTORY_STATUS.LOST;
       break;
 
-    case INVENTORY_TRANSACTION_TYPES.DAMAGED:
+    case "DAMAGED":
       inventoryItem.status = INVENTORY_STATUS.DAMAGED;
       newStatus = INVENTORY_STATUS.DAMAGED;
+      break;
+
+    case INVENTORY_TRANSACTION_TYPES.RETIRE:
+      inventoryItem.status = INVENTORY_STATUS.RETIRED;
+      newStatus = INVENTORY_STATUS.RETIRED;
       break;
 
     case INVENTORY_TRANSACTION_TYPES.DISPOSE:
@@ -274,6 +286,7 @@ const runCreateTransaction = async (
     const transaction =
       await inventoryTransactionRepository.create(
         {
+          spaceId: context.spaceId || payload.spaceId || inventoryItem.spaceId,
           inventoryItemId: inventoryIdForTransaction,
         productId: inventoryItem.productId,
         fromWarehouseId:
@@ -282,6 +295,8 @@ const runCreateTransaction = async (
         fromUserId:
           payload.fromUserId || inventoryItem.assignedUserId,
         toUserId: payload.toUserId || null,
+        fromMerchantId: payload.fromMerchantId || inventoryItem.assignedMerchantId || null,
+        toMerchantId: payload.toMerchantId || null,
         transactionType,
         remarks: payload.remarks,
         previousStatus,
@@ -372,9 +387,9 @@ const getTransactions = async (filters) => {
 };
 
 // Handles get transaction by id.
-const getTransactionById = async (id) => {
+const getTransactionById = async (id, context = {}) => {
   const transaction =
-    await inventoryTransactionRepository.findById(id);
+    await inventoryTransactionRepository.findById(id, context.spaceId);
 
   if (!transaction) {
     throw new AppError("Transaction not found", 404);
@@ -396,7 +411,8 @@ const getItemAuditTrail = async (inventoryItemId, context = {}) => {
   }
 
   return inventoryTransactionRepository.getItemAuditTrail(
-    inventoryItemId
+    inventoryItemId,
+    context.spaceId
   );
 };
 
@@ -406,5 +422,3 @@ module.exports = {
   getTransactionById,
   getItemAuditTrail,
 };
-
-

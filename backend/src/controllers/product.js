@@ -8,6 +8,7 @@ const createProduct = asyncHandler(async (req, res) => {
     body: req.body,
     userId: req.user._id,
     context: {
+      spaceId: req.spaceId,
       ipAddress: req.ip,
       userAgent: req.get("user-agent"),
     },
@@ -26,7 +27,7 @@ const getProducts = asyncHandler(async (req, res) => {
 
   const limit = Number(req.query.limit) || 10;
 
-  const result = await productService.getProducts({ page, limit });
+  const result = await productService.getProducts({ page, limit, spaceId: req.spaceId });
 
   return res.status(200).json({
     success: true,
@@ -41,6 +42,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     body: req.body,
     userId: req.user._id,
     context: {
+      spaceId: req.spaceId,
       ipAddress: req.ip,
       userAgent: req.get("user-agent"),
     },
@@ -59,6 +61,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
     productId: req.params.id,
     userId: req.user._id,
     context: {
+      spaceId: req.spaceId,
       ipAddress: req.ip,
       userAgent: req.get("user-agent"),
     },

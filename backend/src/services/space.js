@@ -7,10 +7,7 @@ const auditLogService = require("./auditLog");
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
 
-const {
-  AUDIT_ACTIONS,
-  AUDIT_ENTITY_TYPES,
-} = require("../constants/auditLog");
+const { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES} = require("../constants/auditLog");
 const { ROLE_CODES } = require("../constants/role");
 const { SPACE_CODES, SPACE_TYPES } = require("../constants/space");
 const { USER_TYPES } = require("../constants/user");
@@ -31,12 +28,12 @@ const DEFAULT_SYSTEM_ROLES = [
       PERMISSIONS.CREATE_INVENTORY,
       PERMISSIONS.UPDATE_INVENTORY,
       PERMISSIONS.VIEW_INVENTORY,
+      PERMISSIONS.VIEW_SPACE,
+      PERMISSIONS.VIEW_ROLE,
       PERMISSIONS.ASSIGN_INVENTORY,
-      PERMISSIONS.CREATE_REPAIR,
-      PERMISSIONS.VIEW_REPAIR,
-      PERMISSIONS.UPDATE_REPAIR,
-      PERMISSIONS.COMPLETE_REPAIR,
-      PERMISSIONS.CANCEL_REPAIR,
+      PERMISSIONS.APPROVE_ASSET_REQUEST,
+      PERMISSIONS.REJECT_ASSET_REQUEST,
+      PERMISSIONS.FULFILL_ASSET_REQUEST,
     ],
   },
   {
@@ -48,7 +45,6 @@ const DEFAULT_SYSTEM_ROLES = [
       PERMISSIONS.VIEW_ROLE,
       PERMISSIONS.VIEW_INVENTORY,
       PERMISSIONS.VIEW_INVENTORY_TRANSACTION,
-      PERMISSIONS.VIEW_REPAIR,
     ],
   },
 ];
@@ -108,7 +104,7 @@ const createSpace = async (payload, userId, userType, context = {}) => {
 
   const normalizedPayload = normalizeSpacePayload(payload);
 
-  if (userType !== USER_TYPES.ADMIN && normalizedPayload.type && normalizedPayload.type !== userType) {
+  if (normalizedPayload.type && normalizedPayload.type !== userType) {
     throw new AppError("Space type must match your user type", 403);
   }
 

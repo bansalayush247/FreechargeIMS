@@ -8,22 +8,39 @@ const {
 
 const inventorySchema = new mongoose.Schema(
   {
+    spaceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Space",
+      required: true,
+      index: true,
+    },
+
     productId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
       required: true,
+      index: true,
     },
 
     warehouseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Warehouse",
       required: true,
+      index: true,
     },
 
     assignedUserId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
+      index: true,
+    },
+
+    assignedMerchantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Merchant",
+      default: null,
+      index: true,
     },
 
     quantity: {
@@ -42,18 +59,14 @@ const inventorySchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: null,
-    },
-
-    qrCode: {
-      type: String,
-      trim: true,
-      default: null,
+      immutable: true,
     },
 
     status: {
       type: String,
       enum: INVENTORY_STATUS_VALUES,
-      default: INVENTORY_STATUS.IN_STOCK,
+      default: INVENTORY_STATUS.AVAILABLE,
+      index: true,
     },
 
     purchaseDate: {
@@ -113,6 +126,14 @@ const inventorySchema = new mongoose.Schema(
   }
 );
 
+inventorySchema.path("assignedMerchantId").validate(function validateExclusiveAssignment(value) {
+  if (!this.assignedUserId && !value) {
+    return true;
+  }
+
+  return !(this.assignedUserId && value);
+}, "Only one of assignedUserId or assignedMerchantId can be populated.");
+
 inventorySchema.index(
   { serialNumber: 1 },
   {
@@ -139,38 +160,7 @@ inventorySchema.index(
   }
 );
 
-inventorySchema.index(
-  { qrCode: 1 },
-  {
-    unique: true,
-    partialFilterExpression: {
-      qrCode: {
-        $type: "string",
-      },
-      isDeleted: false,
-    },
-  }
-);
-
-inventorySchema.index({ productId: 1 });
-inventorySchema.index({ warehouseId: 1 });
-inventorySchema.index({ status: 1 });
-inventorySchema.index({ isDeleted: 1, createdAt: -1 });
-inventorySchema.index({
-  warehouseId: 1,
-  isDeleted: 1,
-  createdAt: -1,
-});
-inventorySchema.index({
-  productId: 1,
-  isDeleted: 1,
-  createdAt: -1,
-});
-inventorySchema.index({
-  status: 1,
-  isDeleted: 1,
-  createdAt: -1,
-});
+inventorySchema.index({ spaceId: 1, productId: 1, status: 1, isDeleted: 1, createdAt: -1 });
+inventorySchema.index({ warehouseId: 1, isDeleted: 1, createdAt: -1 });
 
 module.exports = mongoose.model("InventoryItem", inventorySchema);
-

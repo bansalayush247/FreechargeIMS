@@ -19,10 +19,6 @@ const createInventoryItemSchema = Joi.object({
 
   serialNumber: Joi.string().trim().optional().allow(null, ""),
 
-  assetTag: Joi.string().trim().optional().allow(null, ""),
-
-  qrCode: Joi.string().trim().optional().allow(null, ""),
-
   status: Joi.string()
     .valid(...INVENTORY_STATUS_VALUES)
     .custom((value) => normalizeInventoryStatus(value))
@@ -50,10 +46,6 @@ const updateInventoryItemSchema = Joi.object({
   quantity: Joi.number().integer().min(0).optional(),
 
   serialNumber: Joi.string().trim().optional().allow(null, ""),
-
-  assetTag: Joi.string().trim().optional().allow(null, ""),
-
-  qrCode: Joi.string().trim().optional().allow(null, ""),
 
   status: Joi.string()
     .valid(...INVENTORY_STATUS_VALUES)

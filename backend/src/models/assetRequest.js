@@ -1,17 +1,14 @@
 const mongoose = require("mongoose");
 
-const { ASSET_REQUEST_STATUS, ASSET_REQUEST_PRIORITY } = require("../constants/assetRequest");
+const {
+  ASSET_REQUEST_STATUS,
+  ASSET_REQUEST_PRIORITY,
+  ASSET_REQUEST_TYPE,
+} = require("../constants/assetRequest");
 
 const assetRequestSchema = new mongoose.Schema(
   {
     spaceId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Space",
-      required: true,
-      index: true,
-    },
-
-    originSpaceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Space",
       required: true,
@@ -24,10 +21,24 @@ const assetRequestSchema = new mongoose.Schema(
       trim: true,
     },
 
+    requestType: {
+      type: String,
+      enum: Object.values(ASSET_REQUEST_TYPE),
+      required: true,
+      index: true,
+    },
+
     employeeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
+    },
+
+    merchantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Merchant",
+      default: null,
       index: true,
     },
 
@@ -42,6 +53,7 @@ const assetRequestSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "InventoryItem",
       default: null,
+      index: true,
     },
 
     requestedQuantity: {
@@ -57,12 +69,6 @@ const assetRequestSchema = new mongoose.Schema(
       trim: true,
     },
 
-    remarks: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-
     priority: {
       type: String,
       enum: Object.values(ASSET_REQUEST_PRIORITY),
@@ -73,47 +79,8 @@ const assetRequestSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: Object.values(ASSET_REQUEST_STATUS),
-      default: ASSET_REQUEST_STATUS.PENDING,
+      default: ASSET_REQUEST_STATUS.PENDING_MANAGER,
       index: true,
-    },
-
-    managerApprovalBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
-
-    managerApprovalAt: {
-      type: Date,
-      default: null,
-    },
-
-    managerRemarks: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-
-    itApprovalBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
-
-    itApprovalAt: {
-      type: Date,
-      default: null,
-    },
-
-    itRemarks: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-
-    approvedAt: {
-      type: Date,
-      default: null,
     },
 
     fulfilledAt: {
@@ -125,46 +92,6 @@ const assetRequestSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "",
-    },
-
-    forwardedFromSpaceId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Space",
-      default: null,
-    },
-
-    forwardedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
-
-    forwardedAt: {
-      type: Date,
-      default: null,
-    },
-
-    forwardedHistory: {
-      type: [
-        {
-          fromSpaceId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Space",
-          },
-          toSpaceId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Space",
-          },
-          forwardedBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-          },
-          forwardedAt: {
-            type: Date,
-          },
-        },
-      ],
-      default: [],
     },
 
     createdBy: {
@@ -212,27 +139,8 @@ assetRequestSchema.index(
   }
 );
 
-assetRequestSchema.index({ isDeleted: 1, createdAt: -1 });
-assetRequestSchema.index({ spaceId: 1, isDeleted: 1, createdAt: -1 });
-assetRequestSchema.index({
-  employeeId: 1,
-  isDeleted: 1,
-  createdAt: -1,
-});
-assetRequestSchema.index({
-  productId: 1,
-  isDeleted: 1,
-  createdAt: -1,
-});
-assetRequestSchema.index({
-  status: 1,
-  priority: 1,
-  isDeleted: 1,
-  createdAt: -1,
-});
+assetRequestSchema.index({ spaceId: 1, requestType: 1, status: 1, isDeleted: 1, createdAt: -1 });
+assetRequestSchema.index({ employeeId: 1, isDeleted: 1, createdAt: -1 });
+assetRequestSchema.index({ merchantId: 1, isDeleted: 1, createdAt: -1 });
 
-module.exports = mongoose.model(
-  "AssetRequest",
-  assetRequestSchema
-);
-
+module.exports = mongoose.model("AssetRequest", assetRequestSchema);

@@ -20,6 +20,12 @@ const createTransactionSchema = Joi.object({
 
   toUserId: Joi.string().hex().length(24).allow(null),
 
+  fromMerchantId: Joi.string().hex().length(24).allow(null),
+
+  toMerchantId: Joi.string().hex().length(24).allow(null),
+
+  newStatus: Joi.string().optional(),
+
   transactionType: Joi.string()
     .valid(...INVENTORY_TRANSACTION_TYPE_VALUES)
     .custom((value) => normalizeInventoryTransactionType(value))

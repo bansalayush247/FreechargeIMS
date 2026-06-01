@@ -11,6 +11,7 @@
     "migrate:product-sku-uniqueness": "node src/scripts/migrateProductSkuUniqueness.js",
     "migrate:user-space-types": "node src/scripts/migrateUserAndSpaceTypes.js",
     "migrate:lifecycle": "node src/scripts/migrateLifecycle.js",
+    "migrate:inventory-asset-identifiers": "node src/scripts/migrateInventoryAssetIdentifiers.js",
     "migrate:super-admin-role": "node src/scripts/migrateSuperAdminRole.js",
     "test": "node --test tests/**/*.test.js",
     "test:unit": "node --test tests/unit/**/*.test.js",
@@ -39,6 +40,7 @@
     "multer": "^2.1.1",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.7",
+    "qrcode": "^1.5.4",
     "uuid": "^14.0.0",
     "winston": "^3.19.0"
   },

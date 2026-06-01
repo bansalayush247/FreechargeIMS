@@ -6,9 +6,10 @@ const create = async (payload) => {
 };
 
 // Handles find notification by id.
-const findById = async (id) => {
+const findById = async (id, spaceId) => {
   return Notification.findOne({
     _id: id,
+    spaceId,
     isDeleted: false,
   })
     .populate("recipientUserId", "firstName lastName email employeeId")
@@ -16,9 +17,10 @@ const findById = async (id) => {
 };
 
 // Handles find notification by id for a user owner.
-const findByIdForOwner = async (id, owner = {}) => {
+const findByIdForOwner = async (id, spaceId, owner = {}) => {
   const query = {
     _id: id,
+    spaceId,
     isDeleted: false,
   };
 
@@ -42,10 +44,11 @@ const findByIdForOwner = async (id, owner = {}) => {
 };
 
 // Handles update notification by id.
-const updateById = async (id, payload) => {
+const updateById = async (id, spaceId, payload) => {
   return Notification.findOneAndUpdate(
     {
       _id: id,
+      spaceId,
       isDeleted: false,
     },
     payload,

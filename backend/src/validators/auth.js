@@ -17,12 +17,22 @@ const passwordPolicy = Joi.string()
   });
 
 const loginValidation = Joi.object({
-  email: Joi.string().trim().lowercase().email().max(254).required(),
+  email: Joi.string()
+    .trim()
+    .lowercase()
+    .email({ tlds: { allow: false } })
+    .max(254)
+    .required(),
   password: Joi.string().min(8).required(),
 });
 
 const signupValidation = Joi.object({
-  email: Joi.string().trim().lowercase().email().max(254).required(),
+  email: Joi.string()
+    .trim()
+    .lowercase()
+    .email({ tlds: { allow: false } })
+    .max(254)
+    .required(),
   password: passwordPolicy.required(),
   firstName: Joi.string().trim().required(),
   lastName: Joi.string().trim().allow("", null),
@@ -36,4 +46,3 @@ module.exports = {
   loginValidation,
   signupValidation,
 };
-
