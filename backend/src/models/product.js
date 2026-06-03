@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 
-const { PRODUCT_ASSET_TYPES } = require("../constants/product");
+const {
+  PRODUCT_ASSET_TYPES,
+  PRODUCT_TRACKING_TYPES,
+  TRACKING_TYPE_BY_ASSET_TYPE,
+} = require("../constants/product");
 
 const productSchema = new mongoose.Schema({
   sku: { type: String, required: true, trim: true, uppercase: true },
@@ -18,6 +22,16 @@ const productSchema = new mongoose.Schema({
   imageUrl: { type: String, trim: true, default: "" },
 
   assetType: { type: String, enum: Object.values(PRODUCT_ASSET_TYPES), required: true },
+
+  trackingType: {
+    type: String,
+    enum: Object.values(PRODUCT_TRACKING_TYPES),
+    required: true,
+    default: function defaultTrackingType() {
+      return TRACKING_TYPE_BY_ASSET_TYPE[this.assetType] || PRODUCT_TRACKING_TYPES.SERIALIZED;
+    },
+    index: true,
+  },
 
   minimumStock: { type: Number, default: 0 },
 
@@ -39,6 +53,7 @@ productSchema.index({ sku: 1 }, {
 });
 
 productSchema.index({ category: 1 });
+productSchema.index({ trackingType: 1, isDeleted: 1 });
 
 module.exports = mongoose.model("Product", productSchema);
 

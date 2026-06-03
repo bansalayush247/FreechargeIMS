@@ -1,6 +1,7 @@
 const Joi = require("joi");
 
 const {
+  ASSET_REQUEST_STATUS,
   ASSET_REQUEST_PRIORITY,
   ASSET_REQUEST_TYPE,
   ASSET_REQUEST_STEP_KEYS,
@@ -21,7 +22,19 @@ const approveRequestSchema = Joi.object({
 });
 
 const fulfillRequestSchema = Joi.object({
-  remarks: Joi.string().trim().allow("").optional(),
+  inventoryAssetIds: Joi.array().items(Joi.string().hex().length(24)).optional(),
+  fulfillmentStatus: Joi.string().valid(
+    ASSET_REQUEST_STATUS.FULFILLED,
+    ASSET_REQUEST_STATUS.PARTIALLY_FULFILLED,
+    ASSET_REQUEST_STATUS.OUT_OF_STOCK,
+    ASSET_REQUEST_STATUS.PROCUREMENT_REQUIRED,
+    ASSET_REQUEST_STATUS.FULFILLMENT_DELAYED
+  ).optional(),
+  remarks: Joi.when("fulfillmentStatus", {
+    is: ASSET_REQUEST_STATUS.FULFILLMENT_DELAYED,
+    then: Joi.string().trim().required(),
+    otherwise: Joi.string().trim().allow("").optional(),
+  }),
 });
 
 const rejectionSchema = Joi.object({

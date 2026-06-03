@@ -1,3 +1,4 @@
+const logger = require("../config/logger");
 const roleService = require("../services/role");
 
 const asyncHandler = require("../utils/asyncHandler");
@@ -29,7 +30,6 @@ const createRole = asyncHandler(async (req, res) => {
       message: error.details[0].message,
     });
   }
-
   const role = await roleService.createRole(
     req.spaceId,
     value,

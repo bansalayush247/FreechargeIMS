@@ -13,6 +13,7 @@ const INVENTORY_TRANSACTION_ROUTES = Object.freeze({
 const ASSET_REQUEST_ROUTES = Object.freeze({
   CREATE: "/",
   LIST: "/",
+  FULFILLMENT_QUEUE: "/fulfillment-queue",
   GET_BY_ID: "/:id",
   APPROVE: "/:id/approve",
   FULFILL: "/:id/fulfill",
@@ -21,6 +22,11 @@ const ASSET_REQUEST_ROUTES = Object.freeze({
   REJECT: "/:id/reject",
   CANCEL: "/:id/cancel",
   FORWARD: "/:id/forward",
+});
+const ASSET_REGISTRY_ROUTES = Object.freeze({
+  LIST: "/",
+  ME: "/me",
+  USER: "/user/:userId",
 });
 const NOTIFICATION_ROUTES = Object.freeze({
   SEND_EMAIL: "/email",
@@ -50,8 +56,8 @@ const DEV_SEED_ROUTES = Object.freeze({
   SUPER_ADMIN: "/super-admin",
   SPACE_ADMIN: "/space-admin",
   MANAGER: "/manager",
-  IT_ADMIN: "/it-admin",
-  WAREHOUSE_ADMIN: "/warehouse-admin",
+  IT_APPROVER: "/it-approver",
+  FULFILLMENT_TEAM: "/fulfillment-team",
   ZONAL_MANAGER: "/zonal-manager",
   FOS: "/fos",
   EMPLOYEE: "/employee",
@@ -110,6 +116,14 @@ const ENDPOINTS = Object.freeze({
   INVENTORY_ROUTES: Object.freeze({
     CREATE: "/",
     LIST: "/",
+    ASSETS: "/assets",
+    ASSET_BY_ID: "/assets/:id",
+    STOCKS: "/stocks",
+    LOW_STOCK: "/stocks/low-stock",
+    OUT_OF_STOCK: "/stocks/out-of-stock",
+    PROCUREMENT_REQUIRED: "/stocks/procurement-required",
+    STOCK_BY_PRODUCT_ID: "/stocks/:productId",
+    ADJUST_STOCK: "/stocks/:productId/adjust",
     GET_BY_ID: "/:id",
     QRCODE: "/:id/qrcode",
     UPDATE: "/:id",
@@ -142,6 +156,7 @@ const ENDPOINTS = Object.freeze({
     DELETE: "/:id",
   }),
 
+  INVENTORY: `${API_VERSION}/inventory`,
   INVENTORY_ITEMS: `${API_VERSION}/inventory-items`,
 
   INVENTORY_TRANSACTIONS: Object.freeze({
@@ -155,6 +170,12 @@ const ENDPOINTS = Object.freeze({
     ...ASSET_REQUEST_ROUTES,
   }),
   ASSET_REQUEST_ROUTES,
+
+  ASSET_REGISTRY: Object.freeze({
+    BASE: `${API_VERSION}/asset-registry`,
+    ...ASSET_REGISTRY_ROUTES,
+  }),
+  ASSET_REGISTRY_ROUTES,
 
   MERCHANTS: Object.freeze({
     BASE: `${API_VERSION}/merchants`,

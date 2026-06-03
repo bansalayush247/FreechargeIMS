@@ -15,13 +15,12 @@ const createProduct = async ({
   userId,
   context = {},
 }) => {
-    const existingProduct = await productRepository.findProductBySku(body.sku, context.spaceId);
+    const existingProduct = await productRepository.findProductBySku(body.sku);
 
   if (existingProduct) throw new AppError("Product SKU already exists", 400);
 
   const product = await productRepository.createProduct({
     ...body,
-    spaceId: context.spaceId,
     createdBy: userId,
     updatedBy: userId,
   });
@@ -46,7 +45,7 @@ const createProduct = async ({
 };
 
 // Handles get products.
-const getProducts = async ({ page, limit, spaceId }) => productRepository.getProducts({ page, limit, spaceId });
+const getProducts = async ({ page, limit }) => productRepository.getProducts({ page, limit });
 
 // Handles update product.
 const updateProduct = async ({

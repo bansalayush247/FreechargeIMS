@@ -6,48 +6,57 @@ const auditLogService = require("./auditLog");
 
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
+const { getEnforcer } = require("../config/casbin");
 
 const { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES} = require("../constants/auditLog");
 const { ROLE_CODES } = require("../constants/role");
 const { SPACE_CODES, SPACE_TYPES } = require("../constants/space");
-const { USER_TYPES } = require("../constants/user");
 const {
   PERMISSIONS,
+  PERMISSION_REGISTRY,
 } = require("../constants/permission");
 
 const DEFAULT_SYSTEM_ROLES = [
   {
     name: "Space Admin",
     code: ROLE_CODES.SPACE_ADMIN,
-    permissions: Object.values(PERMISSIONS),
+    permissions: Object.values(PERMISSION_REGISTRY),
   },
   {
-    name: "Inventory Manager",
-    code: ROLE_CODES.INVENTORY_MANAGER,
-    permissions: [
-      PERMISSIONS.CREATE_INVENTORY,
-      PERMISSIONS.UPDATE_INVENTORY,
-      PERMISSIONS.VIEW_INVENTORY,
-      PERMISSIONS.VIEW_SPACE,
-      PERMISSIONS.VIEW_ROLE,
-      PERMISSIONS.ASSIGN_INVENTORY,
-      PERMISSIONS.APPROVE_ASSET_REQUEST,
-      PERMISSIONS.REJECT_ASSET_REQUEST,
-      PERMISSIONS.FULFILL_ASSET_REQUEST,
-    ],
-  },
-  {
-    name: "Viewer",
-    code: ROLE_CODES.VIEWER,
+    name: "Member",
+    code: ROLE_CODES.MEMBER,
     permissions: [
       PERMISSIONS.CREATE_ASSET_REQUEST,
       PERMISSIONS.VIEW_SPACE,
-      PERMISSIONS.VIEW_ROLE,
-      PERMISSIONS.VIEW_INVENTORY,
-      PERMISSIONS.VIEW_INVENTORY_TRANSACTION,
+      PERMISSIONS.VIEW_ASSET_REQUEST,
+      PERMISSIONS.VIEW_PRODUCT,
+      PERMISSIONS.VIEW_NOTIFICATION,
     ],
   },
 ];
+
+const syncRolePolicies = async (role, spaceId) => {
+  const enforcer = await getEnforcer();
+  const roleSubject = `${String(role.code)}:${String(spaceId)}`;
+
+  for (const permissionString of role.permissions || []) {
+    const [resource, action] = permissionString.split(":");
+    if (resource && action) {
+      await enforcer.addPolicy(roleSubject, resource, action);
+    }
+  }
+
+  await enforcer.savePolicy();
+};
+
+const syncUserRoleGrouping = async (userId, role, spaceId) => {
+  const enforcer = await getEnforcer();
+  await enforcer.addGroupingPolicy(
+    `${String(userId)}:${String(spaceId)}`,
+    `${String(role.code)}:${String(spaceId)}`
+  );
+  await enforcer.savePolicy();
+};
 
 const normalizeSpacePayload = (payload) => {
   const normalized = { ...payload };
@@ -67,6 +76,9 @@ const normalizeSpacePayload = (payload) => {
 
   return normalized;
 };
+
+const isUserTypeSpaceScoped = (userType) =>
+  Object.values(SPACE_TYPES).includes(userType);
 
 // Handles assert unique space fields.
 const assertUniqueSpaceFields = async (
@@ -136,12 +148,11 @@ const createSpace = async (payload, userId, userType, context = {}) => {
       updatedBy: userId,
     });
 
+    await syncRolePolicies(role, space._id);
     roles.push(role);
   }
 
-  const spaceAdminRole = roles.find(
-    (role) => role.code === ROLE_CODES.SPACE_ADMIN
-  );
+  const spaceAdminRole = roles[0];
 
   const assignment = await userRoleRepository.create({
     spaceId: space._id,
@@ -151,6 +162,8 @@ const createSpace = async (payload, userId, userType, context = {}) => {
     createdBy: userId,
     updatedBy: userId,
   });
+
+  await syncUserRoleGrouping(userId, spaceAdminRole, space._id);
 
   await auditLogService.recordAuditLog({
     spaceId: space._id,
@@ -210,7 +223,7 @@ const createSpace = async (payload, userId, userType, context = {}) => {
 const getSpaces = async (filters, userType) => {
   const query = { ...filters };
 
-  if (userType && userType !== USER_TYPES.ADMIN) {
+  if (isUserTypeSpaceScoped(userType)) {
     query.type = userType;
   }
 
@@ -236,11 +249,12 @@ const updateSpace = async (
   userType,
   context = {}
 ) => {
+  console.log("Updating space", id, payload);
   const space = await getSpaceById(id);
 
   const normalizedPayload = normalizeSpacePayload(payload);
 
-  if (userType !== USER_TYPES.ADMIN && normalizedPayload.type && normalizedPayload.type !== userType) {
+  if (isUserTypeSpaceScoped(userType) && normalizedPayload.type && normalizedPayload.type !== userType) {
     throw new AppError("Space type must match your user type", 403);
   }
 

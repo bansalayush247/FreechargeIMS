@@ -1,5 +1,6 @@
+const logger = require("../config/logger");
+const AppError = require("../utils/appError");
 const spaceService = require("../services/space");
-
 const asyncHandler = require("../utils/asyncHandler");
 
 const {
@@ -116,9 +117,12 @@ const getSpaceById = asyncHandler(async (req, res) => {
 
 // Handles update space.
 const updateSpace = asyncHandler(async (req, res) => {
+
+  logger.info("req param",req.params);
   const { error, value } = updateSpaceSchema.validate(
     req.body
   );
+
 
   if (error) {
     return res.status(400).json({
@@ -126,7 +130,6 @@ const updateSpace = asyncHandler(async (req, res) => {
       message: error.details[0].message,
     });
   }
-
   const space = await spaceService.updateSpace(
     req.params.id,
     value,

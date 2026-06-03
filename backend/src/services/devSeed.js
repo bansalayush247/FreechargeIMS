@@ -18,10 +18,11 @@ const {
   getRefreshExpiryDate,
 } = require("./auth.tokens");
 const { createRefreshToken } = require("../repositories/refreshToken");
+const { getEnforcer } = require("../config/casbin");
 
 const { USER_TYPES } = require("../constants/user");
 const { ROLE_CODES } = require("../constants/role");
-const { PERMISSIONS } = require("../constants/permission");
+const { PERMISSIONS, PERMISSION_REGISTRY } = require("../constants/permission");
 const { PRODUCT_ASSET_TYPES } = require("../constants/product");
 const { INVENTORY_STATUS } = require("../constants/inventory");
 const {
@@ -30,6 +31,15 @@ const {
 } = require("../constants/assetRequest");
 
 const TEST_PASSWORD = "Password@123";
+
+const DEV_CUSTOM_ROLE_CODES = {
+  MANAGER: "MANAGER",
+  IT_APPROVER: "IT_APPROVER",
+  FULFILLMENT_TEAM: "FULFILLMENT_TEAM",
+  ZONAL_APPROVER: "ZONAL_APPROVER",
+  FIELD_MEMBER: "FIELD_MEMBER",
+  EMPLOYEE_REQUESTER: "EMPLOYEE_REQUESTER",
+};
 
 const SPACE_FIXTURES = {
   corporate: {
@@ -48,29 +58,29 @@ const ROLE_FIXTURES = {
   SUPER_ADMIN: {
     name: "Super Admin",
     code: ROLE_CODES.SUPER_ADMIN,
-    permissions: Object.values(PERMISSIONS),
+    permissions: Object.values(PERMISSION_REGISTRY),
     spaceKey: "corporate",
   },
   SPACE_ADMIN: {
     name: "Space Admin",
     code: ROLE_CODES.SPACE_ADMIN,
-    permissions: Object.values(PERMISSIONS),
+    permissions: Object.values(PERMISSION_REGISTRY),
     spaceKey: "corporate",
   },
   MANAGER: {
     name: "Manager",
-    code: ROLE_CODES.MANAGER,
+    code: DEV_CUSTOM_ROLE_CODES.MANAGER,
     permissions: [
       PERMISSIONS.VIEW_ASSET_REQUEST,
       PERMISSIONS.APPROVE_ASSET_REQUEST,
       PERMISSIONS.MANAGER_APPROVE_ASSET_REQUEST,
       PERMISSIONS.REJECT_ASSET_REQUEST,
     ],
-    spaceKey: "corporate",
+    spaceKey: "merchantOperations",
   },
-  IT_ADMIN: {
-    name: "IT Admin",
-    code: ROLE_CODES.IT_ADMIN,
+  IT_APPROVER: {
+    name: "IT Approver",
+    code: DEV_CUSTOM_ROLE_CODES.IT_APPROVER,
     permissions: [
       PERMISSIONS.VIEW_ASSET_REQUEST,
       PERMISSIONS.APPROVE_ASSET_REQUEST,
@@ -80,9 +90,9 @@ const ROLE_FIXTURES = {
     ],
     spaceKey: "corporate",
   },
-  WAREHOUSE_ADMIN: {
-    name: "Warehouse Admin",
-    code: ROLE_CODES.WAREHOUSE_ADMIN,
+  FULFILLMENT_TEAM: {
+    name: "Fulfillment Team",
+    code: DEV_CUSTOM_ROLE_CODES.FULFILLMENT_TEAM,
     permissions: [
       PERMISSIONS.VIEW_ASSET_REQUEST,
       PERMISSIONS.FULFILL_ASSET_REQUEST,
@@ -95,8 +105,8 @@ const ROLE_FIXTURES = {
     spaceKey: "merchantOperations",
   },
   ZONAL_MANAGER: {
-    name: "Zonal Manager",
-    code: ROLE_CODES.ZONAL_MANAGER,
+    name: "Zonal Approver",
+    code: DEV_CUSTOM_ROLE_CODES.ZONAL_APPROVER,
     permissions: [
       PERMISSIONS.VIEW_ASSET_REQUEST,
       PERMISSIONS.APPROVE_ASSET_REQUEST,
@@ -107,34 +117,36 @@ const ROLE_FIXTURES = {
   },
   FOS: {
     name: "FOS",
-    code: ROLE_CODES.FOS,
+    code: DEV_CUSTOM_ROLE_CODES.FIELD_MEMBER,
     permissions: [
       PERMISSIONS.CREATE_ASSET_REQUEST,
       PERMISSIONS.VIEW_ASSET_REQUEST,
       PERMISSIONS.VIEW_MERCHANT,
+      PERMISSIONS.VIEW_PRODUCT,
     ],
     spaceKey: "merchantOperations",
   },
   EMPLOYEE: {
     name: "Employee",
-    code: ROLE_CODES.EMPLOYEE,
+    code: DEV_CUSTOM_ROLE_CODES.EMPLOYEE_REQUESTER,
     permissions: [
       PERMISSIONS.CREATE_ASSET_REQUEST,
       PERMISSIONS.VIEW_ASSET_REQUEST,
       PERMISSIONS.CANCEL_ASSET_REQUEST,
+      PERMISSIONS.VIEW_PRODUCT,
     ],
     spaceKey: "corporate",
   },
 };
 
 const USER_FIXTURES = {
-  SUPER_ADMIN: { endpoint: "super-admin", email: "super-admin@freecharge.test", employeeId: "DEV-SA-001", firstName: "Super", lastName: "Admin", userType: USER_TYPES.ADMIN },
-  SPACE_ADMIN: { endpoint: "space-admin", email: "space-admin@freecharge.test", employeeId: "DEV-SPA-001", firstName: "Space", lastName: "Admin", userType: USER_TYPES.ADMIN },
-  MANAGER: { endpoint: "manager", email: "manager@freecharge.test", employeeId: "DEV-MGR-001", firstName: "Maya", lastName: "Manager", userType: USER_TYPES.EMPLOYEE },
-  IT_ADMIN: { endpoint: "it-admin", email: "it-admin@freecharge.test", employeeId: "DEV-IT-001", firstName: "Ishan", lastName: "IT", userType: USER_TYPES.EMPLOYEE },
-  WAREHOUSE_ADMIN: { endpoint: "warehouse-admin", email: "warehouse-admin@freecharge.test", employeeId: "DEV-WH-001", firstName: "Wahid", lastName: "Warehouse", userType: USER_TYPES.EMPLOYEE },
-  ZONAL_MANAGER: { endpoint: "zonal-manager", email: "zonal-manager@freecharge.test", employeeId: "DEV-ZM-001", firstName: "Zara", lastName: "Zonal", userType: USER_TYPES.EMPLOYEE },
-  FOS: { endpoint: "fos", email: "fos@freecharge.test", employeeId: "DEV-FOS-001", firstName: "Farhan", lastName: "FOS", userType: USER_TYPES.EMPLOYEE },
+  SUPER_ADMIN: { endpoint: "super-admin", email: "super-admin@freecharge.test", employeeId: "DEV-SA-001", firstName: "Super", lastName: "Admin", userType: USER_TYPES.EMPLOYEE },
+  SPACE_ADMIN: { endpoint: "space-admin", email: "space-admin@freecharge.test", employeeId: "DEV-SPA-001", firstName: "Space", lastName: "Admin", userType: USER_TYPES.EMPLOYEE },
+  MANAGER: { endpoint: "manager", email: "manager@freecharge.test", employeeId: "DEV-MGR-001", firstName: "Maya", lastName: "Manager", userType: USER_TYPES.MERCHANT },
+  IT_APPROVER: { endpoint: "it-approver", email: "it-approver@freecharge.test", employeeId: "DEV-IT-001", firstName: "Ishan", lastName: "IT", userType: USER_TYPES.EMPLOYEE },
+  FULFILLMENT_TEAM: { endpoint: "fulfillment-team", email: "fulfillment@freecharge.test", employeeId: "DEV-FUL-001", firstName: "Farah", lastName: "Fulfillment", userType: USER_TYPES.EMPLOYEE },
+  ZONAL_MANAGER: { endpoint: "zonal-manager", email: "zonal-manager@freecharge.test", employeeId: "DEV-ZM-001", firstName: "Zara", lastName: "Zonal", userType: USER_TYPES.MERCHANT },
+  FOS: { endpoint: "fos", email: "fos@freecharge.test", employeeId: "DEV-FOS-001", firstName: "Farhan", lastName: "FOS", userType: USER_TYPES.MERCHANT },
   EMPLOYEE: { endpoint: "employee", email: "employee@freecharge.test", employeeId: "DEV-EMP-001", firstName: "Esha", lastName: "Employee", userType: USER_TYPES.EMPLOYEE },
 };
 
@@ -166,6 +178,31 @@ const upsertRole = async (spaceId, roleKey, actorId = null) => {
     },
     { upsert: true, returnDocument: "after" }
   );
+};
+
+const getRoleScope = (role, spaceId) =>
+  role.code === ROLE_CODES.SUPER_ADMIN ? "SYSTEM" : String(spaceId);
+
+const syncRolePolicies = async (role, spaceId) => {
+  const enforcer = await getEnforcer();
+  const roleSubject = `${String(role.code)}:${getRoleScope(role, spaceId)}`;
+
+  for (const permissionString of role.permissions || []) {
+    const [resource, action] = permissionString.split(":");
+    if (resource && action) {
+      await enforcer.addPolicy(roleSubject, resource, action);
+    }
+  }
+};
+
+const syncUserRoleGrouping = async (userId, role, spaceId) => {
+  const enforcer = await getEnforcer();
+  const scope = getRoleScope(role, spaceId);
+  await enforcer.addGroupingPolicy(
+    `${String(userId)}:${scope}`,
+    `${String(role.code)}:${scope}`
+  );
+  await enforcer.savePolicy();
 };
 
 const upsertUser = async (roleKey) => {
@@ -210,6 +247,9 @@ const ensureMembershipAndRole = async ({ user, spaceId, role }) => {
     },
     { upsert: true, returnDocument: "after" }
   );
+
+  await syncRolePolicies(role, spaceId);
+  await syncUserRoleGrouping(user._id, role, spaceId);
 };
 
 const issueTokens = async (user) => {
@@ -238,10 +278,10 @@ const seedRoleUser = async (roleKey, spaces = null, roles = null) => {
 
   await ensureMembershipAndRole({ user, spaceId: space._id, role });
 
-  if (roleKey === "WAREHOUSE_ADMIN") {
+  if (roleKey === "FULFILLMENT_TEAM") {
     const corporateWarehouseRole = await upsertRole(
       seededSpaces.corporate._id,
-      "WAREHOUSE_ADMIN",
+      "FULFILLMENT_TEAM",
       user._id
     );
     await ensureMembershipAndRole({

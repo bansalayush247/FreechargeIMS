@@ -81,9 +81,33 @@ const getInventoryItemsSchema = Joi.object({
   search: Joi.string().trim().optional(),
 });
 
+const getInventoryStocksSchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+
+  limit: Joi.number().integer().min(1).max(100).default(10),
+
+  productId: Joi.string().hex().length(24).optional(),
+
+  search: Joi.string().trim().optional(),
+});
+
+const adjustInventoryStockSchema = Joi.object({
+  productId: Joi.string().hex().length(24).required(),
+
+  quantityDelta: Joi.number().integer().required(),
+
+  transactionType: Joi.string()
+    .valid("ADJUSTMENT", "PROCUREMENT", "RETURN")
+    .optional(),
+
+  remarks: Joi.string().trim().allow("").optional(),
+});
+
 module.exports = {
   createInventoryItemSchema,
   updateInventoryItemSchema,
   getInventoryItemsSchema,
+  getInventoryStocksSchema,
+  adjustInventoryStockSchema,
 };
 

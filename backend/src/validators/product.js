@@ -1,6 +1,10 @@
 const Joi = require("joi");
 
-const { PRODUCT_ASSET_TYPES, PRODUCT_CATEGORIES } = require("../constants/product");
+const {
+  PRODUCT_ASSET_TYPES,
+  PRODUCT_CATEGORIES,
+  PRODUCT_TRACKING_TYPES,
+} = require("../constants/product");
 
 const PRODUCT_CATEGORY_VALUES = Object.values(PRODUCT_CATEGORIES);
 
@@ -21,6 +25,8 @@ const createProductSchema = Joi.object({
 
   assetType: Joi.string().valid(...Object.values(PRODUCT_ASSET_TYPES)).required(),
 
+  trackingType: Joi.string().valid(...Object.values(PRODUCT_TRACKING_TYPES)).optional(),
+
   minimumStock: Joi.number().min(0).optional(),
 
   isTrackable: Joi.boolean().optional(),
@@ -38,6 +44,8 @@ const updateProductSchema = Joi.object({
   specifications: Joi.object(),
 
   imageUrl: Joi.string().trim().allow("", null),
+
+  trackingType: Joi.string().valid(...Object.values(PRODUCT_TRACKING_TYPES)),
 
   minimumStock: Joi.number().min(0),
 

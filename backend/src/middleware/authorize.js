@@ -1,16 +1,37 @@
-const logger = require("../config/logger");
 const AppError = require("../utils/appError");
 const { ERRORS } = require("../constants/error");
-const { normalizePermission } = require("../constants/permission");
 const { authorizePermission } = require("../services/permissionResolver");
+const { getEnforcer } = require("../config/casbin");
 
 const authorize = (...requiredPermissions) => {
   return async (req, _res, next) => {
     try {
       const userId = req.user?._id || req.user?.id;
-      const spaceId = req.spaceId || req.headers["x-space-id"];
+      
+      // FIX: Never use req.params.id here because it holds resource IDs (like roleId or productId)
+      const spaceId = req.spaceId || req.headers["x-space-id"] || req.params.id;
 
-      if (!userId || !spaceId) {
+      if (!userId) {
+        throw new AppError(
+          ERRORS.UNAUTHORIZED.message,
+          ERRORS.UNAUTHORIZED.statusCode,
+          ERRORS.UNAUTHORIZED.errorCode
+        );
+      }
+
+      const enforcer = await getEnforcer();
+      
+      // 1. Evaluate Global System Override via Casbin
+      const globalRoles = await enforcer.getRolesForUser(`${String(userId)}:SYSTEM`);
+      const isGlobalSuperAdmin = globalRoles.includes("SUPER_ADMIN:SYSTEM");
+
+      if (isGlobalSuperAdmin) {
+        req.spaceId = spaceId || "SYSTEM"; 
+        return next(); // Total system clearance granted
+      }
+
+      // 2. Tenant Validation Constraints
+      if (!spaceId) {
         throw new AppError(
           ERRORS.SPACE_ID_REQUIRED.message,
           ERRORS.SPACE_ID_REQUIRED.statusCode,
@@ -18,30 +39,23 @@ const authorize = (...requiredPermissions) => {
         );
       }
 
-      const permissions = requiredPermissions.map(normalizePermission);
-      const checks = await Promise.all(
-        permissions.map((permission) => authorizePermission({ userId, spaceId, permission }))
-      );
+      req.spaceId = spaceId;
 
-      if (!checks.every(Boolean)) {
-        throw new AppError(
-          ERRORS.INSUFFICIENT_PERMISSIONS.message,
-          ERRORS.INSUFFICIENT_PERMISSIONS.statusCode,
-          ERRORS.INSUFFICIENT_PERMISSIONS.errorCode
-        );
+      // 3. Loop through and evaluate all permissions requested by the route
+      for (const permission of requiredPermissions) {
+        const hasAccess = await authorizePermission({ userId, spaceId, permission });
+        if (!hasAccess) {
+          throw new AppError(
+            ERRORS.INSUFFICIENT_PERMISSIONS.message,
+            ERRORS.INSUFFICIENT_PERMISSIONS.statusCode,
+            ERRORS.INSUFFICIENT_PERMISSIONS.errorCode
+          );
+        }
       }
 
-      req.authz = {
-        permissionChecks: permissions,
-        subject: `${String(userId)}:${String(spaceId)}`,
-      };
       return next();
     } catch (error) {
-      logger.error("Authorization failed", {
-        error: error.message,
-        stack: error.stack,
-      });
-      return next(error);
+      next(error);
     }
   };
 };

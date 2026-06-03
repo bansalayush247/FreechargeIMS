@@ -16,7 +16,14 @@ const inventoryTransactionSchema = new mongoose.Schema(
     inventoryItemId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "InventoryItem",
-      required: true,
+      default: null,
+      index: true,
+    },
+
+    inventoryStockId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "InventoryStock",
+      default: null,
       index: true,
     },
 
@@ -67,6 +74,19 @@ const inventoryTransactionSchema = new mongoose.Schema(
       type: String,
       enum: INVENTORY_TRANSACTION_TYPE_VALUES,
       required: true,
+      index: true,
+    },
+
+    quantity: {
+      type: Number,
+      default: 1,
+      min: 0,
+    },
+
+    requestId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AssetRequest",
+      default: null,
       index: true,
     },
 

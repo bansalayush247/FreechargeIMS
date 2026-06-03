@@ -531,6 +531,19 @@ const getInventoryItemById = async (id, context = {}) => {
   return inventoryItem;
 };
 
+const getInventoryAssetById = async (id, context = {}) => {
+  logger.info("Fetching inventory asset by id", { id });
+
+  const inventoryItem = await inventoryRepository.findById(id, context.spaceId);
+
+  if (!inventoryItem) {
+    logger.warn("Inventory asset not found", { id });
+    throw new AppError("Inventory asset not found", 404);
+  }
+
+  return inventoryItem;
+};
+
 // Handles update inventory item.
 const updateInventoryItem = async (
   id,
@@ -725,6 +738,7 @@ module.exports = {
   createInventoryItem,
   getInventoryItems,
   getInventoryItemById,
+  getInventoryAssetById,
   getInventoryItemQrCode,
   updateInventoryItem,
   deleteInventoryItem,

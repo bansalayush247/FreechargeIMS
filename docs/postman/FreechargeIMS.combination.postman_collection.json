@@ -1,0 +1,464 @@
+{
+  "info": {
+    "_postman_id": "f6d1a30e-0db2-42b4-a8fd-cd4d40db86ec",
+    "name": "FreechargeIMS API (Combination Matrix)",
+    "description": "Data-driven Postman collection for seeded FreechargeIMS users, spaces, roles, and core API modules. Run `00 - Bootstrap`, choose `activeUserKey` and `activeSpaceKey`, then run `20 - Matrix Runner` for permission and smoke coverage.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const matrix = {",
+          "  users: {",
+          "    super_admin: { email: 'super-admin@freecharge.test', userType: 'EMPLOYEE', systemRole: 'SUPER_ADMIN', spaceRole: 'SUPER_ADMIN', tokenVar: 'token_super_admin', defaultSpaceKey: 'corporate' },",
+          "    space_admin: { email: 'space-admin@freecharge.test', userType: 'EMPLOYEE', systemRole: 'MEMBER', spaceRole: 'SPACE_ADMIN', tokenVar: 'token_space_admin', defaultSpaceKey: 'corporate' },",
+          "    manager: { email: 'manager@freecharge.test', userType: 'MERCHANT', systemRole: 'MEMBER', spaceRole: 'MANAGER', tokenVar: 'token_manager', defaultSpaceKey: 'merchant' },",
+          "    it_approver: { email: 'it-approver@freecharge.test', userType: 'EMPLOYEE', systemRole: 'MEMBER', spaceRole: 'IT_APPROVER', tokenVar: 'token_it_approver', defaultSpaceKey: 'corporate' },",
+          "    fulfillment: { email: 'fulfillment@freecharge.test', userType: 'EMPLOYEE', systemRole: 'MEMBER', spaceRole: 'FULFILLMENT_TEAM', tokenVar: 'token_fulfillment', defaultSpaceKey: 'corporate' },",
+          "    zonal_manager: { email: 'zonal-manager@freecharge.test', userType: 'MERCHANT', systemRole: 'MEMBER', spaceRole: 'ZONAL_MANAGER', tokenVar: 'token_zonal_manager', defaultSpaceKey: 'merchant' },",
+          "    fos: { email: 'fos@freecharge.test', userType: 'MERCHANT', systemRole: 'MEMBER', spaceRole: 'FOS', tokenVar: 'token_fos', defaultSpaceKey: 'merchant' },",
+          "    employee: { email: 'employee@freecharge.test', userType: 'EMPLOYEE', systemRole: 'MEMBER', spaceRole: 'EMPLOYEE_REQUESTER', tokenVar: 'token_employee', defaultSpaceKey: 'corporate' }",
+          "  },",
+          "  spaces: {",
+          "    corporate: { envVar: 'spaceId_corporate', type: 'EMPLOYEE', code: 'CORPORATE' },",
+          "    merchant: { envVar: 'spaceId_merchant', type: 'MERCHANT', code: 'MERCHANT_OPERATIONS' }",
+          "  },",
+          "  allow: {",
+          "    super_admin: ['*'],",
+          "    space_admin: ['*'],",
+          "    manager: ['asset-request:list','asset-request:get','asset-request:approve','asset-request:manager-approve','asset-request:reject'],",
+          "    it_approver: ['asset-request:list','asset-request:get','asset-request:approve','asset-request:it-approve','asset-request:reject','inventory:list','inventory:get','inventory:stocks'],",
+          "    fulfillment: ['asset-request:list','asset-request:get','asset-request:fulfillment-queue','asset-request:fulfill','inventory:list','inventory:get','inventory:update','inventory:stocks','inventory-transaction:create','inventory-transaction:list','inventory-transaction:get','inventory-transaction:audit'],",
+          "    zonal_manager: ['asset-request:list','asset-request:get','asset-request:approve','asset-request:zonal-approve','asset-request:reject'],",
+          "    fos: ['asset-request:create','asset-request:list','asset-request:get','merchant:list','merchant:get'],",
+          "    employee: ['asset-request:create','asset-request:list','asset-request:get','asset-request:cancel']",
+          "  }",
+          "};",
+          "pm.collectionVariables.set('matrixJson', JSON.stringify(matrix));",
+          "const userKey = pm.iterationData.get('activeUserKey') || pm.environment.get('activeUserKey') || 'super_admin';",
+          "const user = matrix.users[userKey] || matrix.users.super_admin;",
+          "const spaceKey = pm.iterationData.get('activeSpaceKey') || pm.environment.get('activeSpaceKey') || user.defaultSpaceKey;",
+          "const space = matrix.spaces[spaceKey] || matrix.spaces[user.defaultSpaceKey];",
+          "pm.variables.set('activeUserKey', userKey);",
+          "pm.variables.set('activeUserType', user.userType);",
+          "pm.variables.set('activeSystemRole', user.systemRole);",
+          "pm.variables.set('activeSpaceRole', user.spaceRole);",
+          "pm.variables.set('activeSpaceKey', spaceKey);",
+          "pm.variables.set('activeSpaceType', space.type);",
+          "pm.variables.set('activeSpaceId', pm.environment.get(space.envVar) || '');",
+          "pm.variables.set('activeWarehouseId', pm.environment.get(spaceKey === 'merchant' ? 'warehouseId_merchant' : 'warehouseId_corporate') || '');",
+          "pm.variables.set('activeProductId', pm.environment.get(spaceKey === 'merchant' ? 'productId_seed_pos' : 'productId_seed_laptop') || '');",
+          "pm.variables.set('activeInventoryItemId', pm.environment.get(spaceKey === 'merchant' ? 'inventoryItemId_seed_pos1' : 'inventoryItemId_seed_laptop1') || '');",
+          "pm.variables.set('activeSeedRequestId', pm.environment.get(spaceKey === 'merchant' ? 'assetRequestId_seed_merchant' : 'assetRequestId_seed_employee') || '');",
+          "pm.variables.set('activeToken', pm.environment.get(user.tokenVar) || '');",
+          "pm.variables.set('runId', pm.environment.get('runId') || Date.now().toString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function responseJson() { try { return pm.response.json(); } catch (e) { return {}; } }",
+          "function idFrom(obj) {",
+          "  if (!obj) return undefined;",
+          "  return obj._id || obj.id || obj.uuid || (obj.data && idFrom(obj.data)) || (obj.item && idFrom(obj.item)) || (obj.product && idFrom(obj.product)) || (obj.role && idFrom(obj.role)) || (obj.merchant && idFrom(obj.merchant)) || (obj.request && idFrom(obj.request));",
+          "}",
+          "function storeFirst(path, envKey) {",
+          "  const parts = path.split('.');",
+          "  let value = responseJson();",
+          "  for (const part of parts) value = value && value[part];",
+          "  if (Array.isArray(value) && value.length) value = value[0];",
+          "  const id = idFrom(value);",
+          "  if (id) pm.environment.set(envKey, id);",
+          "}",
+          "const capability = pm.request.headers.get('x-capability');",
+          "const userKey = pm.variables.get('activeUserKey');",
+          "const spaceKey = pm.variables.get('activeSpaceKey');",
+          "const matrix = JSON.parse(pm.collectionVariables.get('matrixJson') || '{}');",
+          "if (capability && matrix.allow) {",
+          "  const user = (matrix.users || {})[userKey] || {};",
+          "  const spaceScoped = !!pm.request.headers.get('x-space-id');",
+          "  const hasSpaceAccess = !spaceScoped || userKey === 'super_admin' || user.defaultSpaceKey === spaceKey || (userKey === 'fulfillment' && ['corporate', 'merchant'].includes(spaceKey));",
+          "  const allowedByRole = (matrix.allow[userKey] || []).includes('*') || (matrix.allow[userKey] || []).includes(capability);",
+          "  const allowed = hasSpaceAccess && allowedByRole;",
+          "  const accepted = pm.response.code >= 200 && pm.response.code < 300;",
+          "  const blocked = [401, 403].includes(pm.response.code);",
+          "  pm.test(`${userKey} ${allowed ? 'can' : 'cannot'} ${capability}`, function () {",
+          "    allowed ? pm.expect(accepted, pm.response.text()).to.eql(true) : pm.expect(blocked, pm.response.text()).to.eql(true);",
+          "  });",
+          "}",
+          "const saveAs = pm.request.headers.get('x-save-id-as');",
+          "if (saveAs && pm.response.code >= 200 && pm.response.code < 300) {",
+          "  const id = idFrom(responseJson());",
+          "  if (id) pm.environment.set(saveAs, id);",
+          "}",
+          "const saveFirst = pm.request.headers.get('x-save-first-id');",
+          "if (saveFirst && pm.response.code >= 200 && pm.response.code < 300) {",
+          "  const [path, envKey] = saveFirst.split(':');",
+          "  storeFirst(path || 'data.items', envKey || 'lastListId');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Bootstrap",
+      "item": [
+        {
+          "name": "Seed All Dev Fixtures",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('seed succeeds', function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "const data = pm.response.json().data || {};",
+                  "const set = (k, v) => { if (v) pm.environment.set(k, v); };",
+                  "set('spaceId_corporate', data.spaces && data.spaces.corporate && data.spaces.corporate._id);",
+                  "set('spaceId_merchant', data.spaces && data.spaces.merchantOperations && data.spaces.merchantOperations._id);",
+                  "set('merchantId_sample1', data.merchants && data.merchants.sampleMerchant1 && data.merchants.sampleMerchant1._id);",
+                  "set('merchantId_sample2', data.merchants && data.merchants.sampleMerchant2 && data.merchants.sampleMerchant2._id);",
+                  "set('warehouseId_corporate', data.warehouses && data.warehouses.centralWarehouse && data.warehouses.centralWarehouse._id);",
+                  "set('warehouseId_merchant', data.warehouses && data.warehouses.delhiWarehouse && data.warehouses.delhiWarehouse._id);",
+                  "set('productId_seed_laptop', data.products && data.products.laptop && data.products.laptop._id);",
+                  "set('productId_seed_pos', data.products && data.products.posDevice && data.products.posDevice._id);",
+                  "set('inventoryItemId_seed_laptop1', data.inventory && data.inventory.laptop1 && data.inventory.laptop1._id);",
+                  "set('inventoryItemId_seed_pos1', data.inventory && data.inventory.pos1 && data.inventory.pos1._id);",
+                  "set('assetRequestId_seed_employee', data.sampleRequests && data.sampleRequests.employeeAssetRequest && data.sampleRequests.employeeAssetRequest._id);",
+                  "set('assetRequestId_seed_merchant', data.sampleRequests && data.sampleRequests.merchantAssetRequest && data.sampleRequests.merchantAssetRequest._id);",
+                  "const users = data.credentials || {};",
+                  "Object.keys(users).forEach(function (k) {",
+                  "  const key = k.toLowerCase().replace('fulfillment_team', 'fulfillment');",
+                  "  set('userId_' + key, users[k].userId);",
+                  "  set('token_' + key, users[k].accessToken);",
+                  "  set('refresh_' + key, users[k].refreshToken);",
+                  "});",
+                  "pm.environment.set('runId', Date.now().toString());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dev/seed/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["dev", "seed", "all"]
+            }
+          }
+        },
+        {
+          "name": "Matrix Options",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1"]
+            },
+            "description": "Set environment variables before running Matrix Runner: activeUserKey = super_admin, space_admin, manager, it_approver, fulfillment, zonal_manager, fos, employee. activeSpaceKey = corporate or merchant."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Users:', Object.keys(JSON.parse(pm.collectionVariables.get('matrixJson')).users).join(', '));",
+                  "console.log('Spaces:', Object.keys(JSON.parse(pm.collectionVariables.get('matrixJson')).spaces).join(', '));",
+                  "console.log('Current:', pm.variables.get('activeUserKey'), pm.variables.get('activeUserType'), pm.variables.get('activeSystemRole'), pm.variables.get('activeSpaceRole'), pm.variables.get('activeSpaceKey'), pm.variables.get('activeSpaceType'));",
+                  "pm.test('api reachable', function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 - Auth",
+      "item": [
+        {
+          "name": "Login Active User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const matrix = JSON.parse(pm.collectionVariables.get('matrixJson'));",
+                  "const user = matrix.users[pm.iterationData.get('activeUserKey') || pm.environment.get('activeUserKey') || 'super_admin'];",
+                  "pm.variables.set('activeEmail', user.email);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login succeeds', function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "const data = pm.response.json().data || {};",
+                  "const matrix = JSON.parse(pm.collectionVariables.get('matrixJson'));",
+                  "const userKey = pm.iterationData.get('activeUserKey') || pm.environment.get('activeUserKey') || 'super_admin';",
+                  "const user = matrix.users[userKey];",
+                  "if (data.accessToken) pm.environment.set(user.tokenVar, data.accessToken);",
+                  "if (data.refreshToken) pm.environment.set('refresh_' + userKey, data.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{activeEmail}}\",\n  \"password\": \"{{password_default}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Me Active User",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": ["pm.test('me succeeds', function () { pm.expect(pm.response.code).to.eql(200); });"] }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "20 - Matrix Runner",
+      "item": [
+        {
+          "name": "Spaces - List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/spaces?page=1&limit=20&type={{activeSpaceType}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "spaces"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }, { "key": "type", "value": "{{activeSpaceType}}" }] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('spaces list is authenticated', function () { pm.expect(pm.response.code).to.eql(200); });"] } }]
+        },
+        {
+          "name": "Spaces - Mine",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/spaces/mine", "host": ["{{baseUrl}}"], "path": ["api", "v1", "spaces", "mine"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('my spaces succeeds', function () { pm.expect(pm.response.code).to.eql(200); });"] } }]
+        },
+        {
+          "name": "Roles - List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "role:list" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/roles?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "roles"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Space Members - List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "member:list" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/space-members?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "space-members"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Products - List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "product:list" }, { "key": "x-save-first-id", "value": "data.items:productId_first_list" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/product?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "product"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Products - Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "product:create" }, { "key": "x-save-id-as", "value": "productId_created_matrix" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"sku\": \"PM-{{runId}}-{{activeUserKey}}\",\n  \"name\": \"Postman Matrix Product {{activeUserKey}}\",\n  \"category\": \"ACCESSORIES\",\n  \"brand\": \"Postman\",\n  \"model\": \"Matrix\",\n  \"assetType\": \"NON_CONSUMABLE\",\n  \"trackingType\": \"SERIALIZED\",\n  \"minimumStock\": 1,\n  \"isTrackable\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/product", "host": ["{{baseUrl}}"], "path": ["api", "v1", "product"] }
+          }
+        },
+        {
+          "name": "Inventory - Assets List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "inventory:list" }, { "key": "x-save-first-id", "value": "data.items:inventoryItemId_first_list" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/inventory/assets?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "inventory", "assets"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Inventory - Stocks List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "inventory:stocks" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/inventory/stocks?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "inventory", "stocks"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Inventory - Create Asset",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "inventory:create" }, { "key": "x-save-id-as", "value": "inventoryItemId_created_matrix" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": \"{{activeProductId}}\",\n  \"warehouseId\": \"{{activeWarehouseId}}\",\n  \"serialNumber\": \"PM-INV-{{runId}}-{{activeUserKey}}\",\n  \"status\": \"AVAILABLE\",\n  \"quantity\": 1\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/inventory", "host": ["{{baseUrl}}"], "path": ["api", "v1", "inventory"] }
+          }
+        },
+        {
+          "name": "Inventory Transactions - List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "inventory-transaction:list" }, { "key": "x-save-first-id", "value": "data.items:inventoryTransactionId_first_list" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/inventoryTransactions?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "inventoryTransactions"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Inventory Transactions - Create Status Change",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "inventory-transaction:create" }, { "key": "x-save-id-as", "value": "inventoryTransactionId_created_matrix" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"inventoryItemId\": \"{{activeInventoryItemId}}\",\n  \"transactionType\": \"STATUS_CHANGE\",\n  \"newStatus\": \"AVAILABLE\",\n  \"remarks\": \"Postman matrix status probe\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/inventoryTransactions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "inventoryTransactions"] }
+          }
+        },
+        {
+          "name": "Merchants - List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "merchant:list" }, { "key": "x-save-first-id", "value": "data.items:merchantId_first_list" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/merchants?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "merchants"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Merchants - Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "merchant:create" }, { "key": "x-save-id-as", "value": "merchantId_created_matrix" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"merchantCode\": \"PMM{{runId}}\",\n  \"name\": \"Postman Matrix Merchant\",\n  \"contactName\": \"Matrix User\",\n  \"contactPhone\": \"9999999999\",\n  \"contactEmail\": \"matrix-{{runId}}@freecharge.test\",\n  \"address\": \"Postman\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/merchants", "host": ["{{baseUrl}}"], "path": ["api", "v1", "merchants"] }
+          }
+        },
+        {
+          "name": "Asset Requests - List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "asset-request:list" }, { "key": "x-save-first-id", "value": "data.items:assetRequestId_first_list" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/asset-requests?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "asset-requests"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Asset Requests - Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "asset-request:create" }, { "key": "x-save-id-as", "value": "assetRequestId_created_matrix" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"requestType\": \"EMPLOYEE_ASSET\",\n  \"productId\": \"{{activeProductId}}\",\n  \"requestedQuantity\": 1,\n  \"businessJustification\": \"Postman matrix request\",\n  \"priority\": \"MEDIUM\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/asset-requests", "host": ["{{baseUrl}}"], "path": ["api", "v1", "asset-requests"] }
+          }
+        },
+        {
+          "name": "Asset Requests - Fulfillment Queue",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "asset-request:fulfillment-queue" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/asset-requests/fulfillment-queue?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "asset-requests", "fulfillment-queue"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Notifications - List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "notification:list" }, { "key": "x-save-first-id", "value": "data.items:notificationId_first_list" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/notifications?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Notifications - Send Email",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "notification:send" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"to\": \"postman@freecharge.test\",\n  \"subject\": \"Postman Matrix {{runId}}\",\n  \"text\": \"Matrix notification probe\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/notifications/email", "host": ["{{baseUrl}}"], "path": ["api", "v1", "notifications", "email"] }
+          }
+        },
+        {
+          "name": "Asset Registry - Mine",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-space-id", "value": "{{activeSpaceId}}" }, { "key": "x-capability", "value": "asset-registry:list" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/asset-registry/me?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "asset-registry", "me"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Workflows - Definitions List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-capability", "value": "workflow:list" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/workflows/definitions?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "workflows", "definitions"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Audit Logs - List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-capability", "value": "audit-log:list" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/audit-logs?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["api", "v1", "audit-logs"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Logs - Status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{activeToken}}" }, { "key": "x-capability", "value": "logs:status" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/logs/status", "host": ["{{baseUrl}}"], "path": ["api", "v1", "logs", "status"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "30 - Direct Role Smoke Runs",
+      "item": [
+        {
+          "name": "Super Admin On Corporate",
+          "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.environment.set('activeUserKey', 'super_admin');", "pm.environment.set('activeSpaceKey', 'corporate');"] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token_super_admin}}" }, { "key": "x-space-id", "value": "{{spaceId_corporate}}" }, { "key": "x-capability", "value": "product:list" }], "url": { "raw": "{{baseUrl}}/api/v1/product", "host": ["{{baseUrl}}"], "path": ["api", "v1", "product"] } }
+        },
+        {
+          "name": "FOS On Merchant",
+          "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.environment.set('activeUserKey', 'fos');", "pm.environment.set('activeSpaceKey', 'merchant');"] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token_fos}}" }, { "key": "x-space-id", "value": "{{spaceId_merchant}}" }, { "key": "x-capability", "value": "merchant:list" }], "url": { "raw": "{{baseUrl}}/api/v1/merchants", "host": ["{{baseUrl}}"], "path": ["api", "v1", "merchants"] } }
+        },
+        {
+          "name": "Employee On Corporate",
+          "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.environment.set('activeUserKey', 'employee');", "pm.environment.set('activeSpaceKey', 'corporate');"] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token_employee}}" }, { "key": "x-space-id", "value": "{{spaceId_corporate}}" }, { "key": "x-capability", "value": "asset-request:list" }], "url": { "raw": "{{baseUrl}}/api/v1/asset-requests", "host": ["{{baseUrl}}"], "path": ["api", "v1", "asset-requests"] } }
+        }
+      ]
+    }
+  ]
+}

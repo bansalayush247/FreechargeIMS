@@ -2,6 +2,7 @@ const Joi = require("joi");
 
 const {
   PERMISSIONS,
+  PERMISSION_REGISTRY,
 } = require("../constants/permission");
 
 const createRoleSchema = Joi.object({
@@ -13,7 +14,7 @@ const createRoleSchema = Joi.object({
 
   permissions: Joi.array()
     .items(
-      Joi.string().valid(...Object.values(PERMISSIONS))
+      Joi.string().valid(...Object.values(PERMISSION_REGISTRY))
     )
     .default([]),
 
@@ -27,7 +28,7 @@ const updateRoleSchema = Joi.object({
 
   permissions: Joi.array()
     .items(
-      Joi.string().valid(...Object.values(PERMISSIONS))
+      Joi.string().valid(...Object.values(PERMISSION_REGISTRY))
     )
     .optional(),
 

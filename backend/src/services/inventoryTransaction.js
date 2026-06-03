@@ -2,9 +2,9 @@ const mongoose = require("mongoose");
 
 const AssetRequest = require("../models/assetRequest");
 const inventoryTransactionRepository = require("../repositories/inventoryTransaction");
+const assetRegistryRepository = require("../repositories/assetRegistry");
 const auditLogService = require("./auditLog");
-const userRoleRepository = require("../repositories/userRole");
-const roleRepository = require("../repositories/role");
+const { authorizePermission } = require("./permissionResolver");
 
 const InventoryItem = require("../models/inventory");
 const Warehouse = require("../models/warehouse");
@@ -27,8 +27,6 @@ const {
 
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
-const { ROLE_CODES } = require("../constants/role");
-const { SYSTEM_SPACES } = require("../constants/space");
 const { USER_TYPES } = require("../constants/user");
 
 const TRANSACTION_UNSUPPORTED_ERROR_MESSAGE =
@@ -48,23 +46,6 @@ const readId = (value) => {
   if (typeof value === "string") return value;
   if (typeof value === "object") return String(value._id || value.id || "");
   return String(value);
-};
-
-const userHasRoleInSpace = async (userId, spaceId, roleCode) => {
-  if (!spaceId) {
-    return false;
-  }
-
-  const userRoles = await userRoleRepository.findUserRolesByUserAndSpace(userId, spaceId);
-
-  if (!userRoles.length) {
-    return false;
-  }
-
-  const roleIds = userRoles.map((item) => item.roleId);
-  const roles = await roleRepository.findActiveRolesByIds(roleIds);
-
-  return roles.some((role) => String(role.code) === String(roleCode));
 };
 
 const resolveAuditTrailAccessSpaceId = async (inventoryItemId) => {
@@ -108,28 +89,25 @@ const canViewItemAuditTrail = async ({ inventoryItemId, userId, userType }) => {
     return false;
   }
 
-  if (userType === USER_TYPES.ADMIN) {
-    return true;
-  }
-
   const { ownerUserId, spaceId } = await resolveAuditTrailAccessSpaceId(inventoryItemId);
 
   if (ownerUserId && String(ownerUserId) === String(userId)) {
     return true;
   }
 
-  const superSpace = await Space.findOne({
-    code: SYSTEM_SPACES.SUPER_ADMIN.code,
-    isDeleted: false,
-  })
-    .select("_id")
-    .lean();
-
-  if (superSpace && await userHasRoleInSpace(userId, superSpace._id, ROLE_CODES.SUPER_ADMIN)) {
-    return true;
+  if (!spaceId) {
+    return false;
   }
 
-  return userHasRoleInSpace(userId, spaceId, ROLE_CODES.INVENTORY_MANAGER);
+  try {
+    return await authorizePermission({
+      userId,
+      spaceId,
+      permission: "inventory-transaction:view",
+    });
+  } catch (_error) {
+    return false;
+  }
 };
 
 // Handles the core inventory transaction flow.
@@ -168,75 +146,100 @@ const runCreateTransaction = async (
   }
 
   if (payload.toUserId) {
-    const user = await User.findById(payload.toUserId).lean();
+    const userQuery = User.findById(payload.toUserId);
+    const user = typeof userQuery?.lean === "function" ? await userQuery.lean() : await userQuery;
 
     if (!user) {
       throw new AppError("Assigned user not found", 404);
     }
   }
 
-  const transactionType = normalizeInventoryTransactionType(
-    payload.transactionType
-  );
+  const transactionType = normalizeInventoryTransactionType(payload.transactionType);
 
   const previousStatus = normalizeInventoryStatus(
     inventoryItem.status
   );
   const beforeInventoryItem = inventoryItem.toObject();
   let newStatus = previousStatus;
+  let fromUserId = payload.fromUserId || null;
+  let fromMerchantId = payload.fromMerchantId || null;
 
   switch (transactionType) {
-    case INVENTORY_TRANSACTION_TYPES.CREATE:
+    case INVENTORY_TRANSACTION_TYPES.STOCK_IN:
+    case INVENTORY_TRANSACTION_TYPES.PURCHASE:
+    case INVENTORY_TRANSACTION_TYPES.PROCUREMENT:
       inventoryItem.status = INVENTORY_STATUS.AVAILABLE;
       newStatus = INVENTORY_STATUS.AVAILABLE;
       break;
 
-    case INVENTORY_TRANSACTION_TYPES.ASSIGN_EMPLOYEE:
-      // If consumable stock has quantity > 1, decrement and create an assigned item
-      // so assigned items remain single-quantity records.
-      if ((inventoryItem.quantity || 0) > 1) {
-        // reduce available quantity
-        inventoryItem.quantity = (inventoryItem.quantity || 0) - 1;
-        // save will happen below; create the assigned item
-        const assignedPayload = {
-          productId: inventoryItem.productId,
-          spaceId: inventoryItem.spaceId,
-          warehouseId: inventoryItem.warehouseId,
-          assignedUserId: payload.toUserId,
-          quantity: 1,
-          status: INVENTORY_STATUS.ASSIGNED_EMPLOYEE,
-          createdBy: userId,
-          updatedBy: userId,
-        };
-
-        const [assignedItem] = await InventoryItem.create([
-          assignedPayload,
-        ], session ? { session } : {});
-
-        // Use the newly created assigned item for the transaction
-        // and return it later via transaction record.
-        payload._assignedInventoryItemId = assignedItem._id;
-
-        newStatus = INVENTORY_STATUS.ASSIGNED_EMPLOYEE;
-      } else {
-        inventoryItem.status = INVENTORY_STATUS.ASSIGNED_EMPLOYEE;
-        inventoryItem.assignedUserId = payload.toUserId;
-        inventoryItem.assignedMerchantId = null;
-        newStatus = INVENTORY_STATUS.ASSIGNED_EMPLOYEE;
+    case INVENTORY_TRANSACTION_TYPES.ASSIGNMENT:
+    case INVENTORY_TRANSACTION_TYPES.ALLOCATION:
+      if (!payload.toUserId && !payload.toMerchantId) {
+        throw new AppError("toUserId or toMerchantId is required for assignment", 400);
       }
-      break;
-
-    case INVENTORY_TRANSACTION_TYPES.ASSIGN_MERCHANT:
-      inventoryItem.status = INVENTORY_STATUS.ASSIGNED_MERCHANT;
-      inventoryItem.assignedMerchantId = payload.toMerchantId;
-      inventoryItem.assignedUserId = null;
-      newStatus = INVENTORY_STATUS.ASSIGNED_MERCHANT;
+      if ((inventoryItem.quantity || 0) <= 0) {
+        throw new AppError("Insufficient inventory quantity for allocation", 400);
+      }
+      if (inventoryItem.assetTag || inventoryItem.serialNumber || Number(inventoryItem.quantity || 0) <= 1) {
+        inventoryItem.status = payload.toMerchantId ? INVENTORY_STATUS.ASSIGNED_MERCHANT : INVENTORY_STATUS.ASSIGNED_EMPLOYEE;
+        inventoryItem.assignedUserId = payload.toUserId || null;
+        inventoryItem.assignedMerchantId = payload.toMerchantId || null;
+        inventoryItem.assignedAt = new Date();
+      } else {
+        inventoryItem.quantity = Math.max(0, (inventoryItem.quantity || 0) - 1);
+      }
+      await assetRegistryRepository.create(
+        {
+          productId: inventoryItem.productId,
+          assignedToUserId: payload.toUserId || null,
+          assignedToMerchantId: payload.toMerchantId || null,
+          assignedSpaceId: context.spaceId || payload.spaceId || inventoryItem.spaceId,
+          assignedByUserId: userId,
+          requestId: payload.requestId || null,
+          sourceInventoryItemId: inventoryItem._id,
+          status: assetRegistryRepository.ASSET_REGISTRY_STATUS.ASSIGNED,
+        },
+        session
+      );
+      newStatus = payload.toMerchantId ? INVENTORY_STATUS.ASSIGNED_MERCHANT : INVENTORY_STATUS.ASSIGNED_EMPLOYEE;
       break;
 
     case INVENTORY_TRANSACTION_TYPES.RETURN:
+      {
+        const activeAssignment = await assetRegistryRepository.findActiveByInventoryItemAndAssignee(
+          {
+            sourceInventoryItemId: inventoryItem._id,
+            assignedToUserId: payload.fromUserId || null,
+            assignedToMerchantId: payload.fromMerchantId || null,
+          },
+          session
+        );
+        if (!activeAssignment) {
+          throw new AppError("No active asset registry allocation found for return", 400);
+        }
+        await assetRegistryRepository.create(
+          {
+            productId: inventoryItem.productId,
+            assignedToUserId: activeAssignment.assignedToUserId || null,
+            assignedToMerchantId: activeAssignment.assignedToMerchantId || null,
+            assignedSpaceId: activeAssignment.assignedSpaceId,
+            assignedByUserId: activeAssignment.assignedByUserId,
+            returnedByUserId: userId,
+            requestId: activeAssignment.requestId || null,
+            quantity: activeAssignment.quantity || 1,
+            sourceInventoryItemId: inventoryItem._id,
+            status: assetRegistryRepository.ASSET_REGISTRY_STATUS.RETURNED,
+          },
+          session
+        );
+      }
+      if (inventoryItem.assetTag || inventoryItem.serialNumber) {
+        inventoryItem.assignedUserId = null;
+        inventoryItem.assignedMerchantId = null;
+      } else {
+        inventoryItem.quantity = (inventoryItem.quantity || 0) + 1;
+      }
       inventoryItem.status = INVENTORY_STATUS.AVAILABLE;
-      inventoryItem.assignedUserId = null;
-      inventoryItem.assignedMerchantId = null;
       newStatus = INVENTORY_STATUS.AVAILABLE;
       break;
 
@@ -251,17 +254,17 @@ const runCreateTransaction = async (
       newStatus = normalizeInventoryStatus(inventoryItem.status);
       break;
 
-    case "LOST":
+    case INVENTORY_TRANSACTION_TYPES.LOSS:
       inventoryItem.status = INVENTORY_STATUS.LOST;
       newStatus = INVENTORY_STATUS.LOST;
       break;
 
-    case "DAMAGED":
+    case INVENTORY_TRANSACTION_TYPES.DAMAGE:
       inventoryItem.status = INVENTORY_STATUS.DAMAGED;
       newStatus = INVENTORY_STATUS.DAMAGED;
       break;
 
-    case INVENTORY_TRANSACTION_TYPES.RETIRE:
+    case INVENTORY_TRANSACTION_TYPES.RETIREMENT:
       inventoryItem.status = INVENTORY_STATUS.RETIRED;
       newStatus = INVENTORY_STATUS.RETIRED;
       break;
@@ -280,22 +283,18 @@ const runCreateTransaction = async (
   const saveOptions = session ? { session } : {};
   await inventoryItem.save(saveOptions);
 
-    const inventoryIdForTransaction =
-      payload._assignedInventoryItemId || inventoryItem._id;
+    const inventoryIdForTransaction = inventoryItem._id;
 
-    const transaction =
-      await inventoryTransactionRepository.create(
-        {
-          spaceId: context.spaceId || payload.spaceId || inventoryItem.spaceId,
-          inventoryItemId: inventoryIdForTransaction,
+    const transaction = await inventoryTransactionRepository.create(
+      {
+        spaceId: context.spaceId || payload.spaceId || inventoryItem.spaceId,
+        inventoryItemId: inventoryIdForTransaction,
         productId: inventoryItem.productId,
-        fromWarehouseId:
-          payload.fromWarehouseId || inventoryItem.warehouseId,
+        fromWarehouseId: payload.fromWarehouseId || inventoryItem.warehouseId,
         toWarehouseId: payload.toWarehouseId || null,
-        fromUserId:
-          payload.fromUserId || inventoryItem.assignedUserId,
+        fromUserId,
         toUserId: payload.toUserId || null,
-        fromMerchantId: payload.fromMerchantId || inventoryItem.assignedMerchantId || null,
+        fromMerchantId,
         toMerchantId: payload.toMerchantId || null,
         transactionType,
         remarks: payload.remarks,

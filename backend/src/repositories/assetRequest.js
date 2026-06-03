@@ -53,4 +53,32 @@ const paginate = async (filters) => {
   };
 };
 
-module.exports = { create, findById, updateById, paginate };
+const fulfillmentQueue = async ({ page, limit, spaceId }) => {
+  const skip = (page - 1) * limit;
+  const query = {
+    isDeleted: false,
+    spaceId,
+    status: { $in: ["PENDING_FULFILLMENT", "FULFILLMENT_PENDING", "FULFILLMENT_DELAYED", "PARTIALLY_FULFILLED", "OUT_OF_STOCK", "PROCUREMENT_REQUIRED"] },
+  };
+
+  const [items, total] = await Promise.all([
+    AssetRequest.find(query)
+      .populate("spaceId", "name code")
+      .populate("employeeId", "firstName lastName")
+      .populate("merchantId", "name merchantCode")
+      .populate("productId", "name sku trackingType")
+      .populate("inventoryItemId", "_id")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    AssetRequest.countDocuments(query),
+  ]);
+
+  return {
+    items,
+    pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+  };
+};
+
+module.exports = { create, findById, updateById, paginate, fulfillmentQueue };

@@ -17,6 +17,7 @@ const { ROLE_CODES } = require("../constants/role");
 const { SYSTEM_SPACES } = require("../constants/space");
 const {
   PERMISSIONS,
+  PERMISSION_REGISTRY,
 } = require("../constants/permission");
 
 const logger = require("../config/logger");
@@ -42,44 +43,22 @@ const SYSTEM_ROLES = [
   {
     name: "Space Admin",
     code: ROLE_CODES.SPACE_ADMIN,
-      permissions: Object.values(PERMISSIONS).filter((p) => !String(p).startsWith("DELETE_")),
+    permissions: Object.values(PERMISSION_REGISTRY).filter((permission) => {
+      const action = String(permission).split(":")[1];
+      return action !== "delete";
+    }),
   },
   {
     name: "Super Admin",
     code: ROLE_CODES.SUPER_ADMIN,
-      permissions: Object.values(PERMISSIONS),
+    permissions: Object.values(PERMISSION_REGISTRY),
   },
   {
-    name: "Inventory Manager",
-    code: ROLE_CODES.INVENTORY_MANAGER,
-    permissions: [
-      PERMISSIONS.CREATE_INVENTORY,
-      PERMISSIONS.UPDATE_INVENTORY,
-      PERMISSIONS.VIEW_INVENTORY,
-      PERMISSIONS.VIEW_SPACE,
-      PERMISSIONS.VIEW_ROLE,
-      PERMISSIONS.ASSIGN_INVENTORY,
-      PERMISSIONS.APPROVE_ASSET_REQUEST,
-      PERMISSIONS.REJECT_ASSET_REQUEST,
-      PERMISSIONS.FULFILL_ASSET_REQUEST,
-      PERMISSIONS.VIEW_NOTIFICATION,
-      PERMISSIONS.CREATE_WORKFLOW,
-      PERMISSIONS.VIEW_WORKFLOW,
-      PERMISSIONS.UPDATE_WORKFLOW,
-      PERMISSIONS.DELETE_WORKFLOW,
-      PERMISSIONS.EXECUTE_WORKFLOW,
-      PERMISSIONS.SEND_NOTIFICATION,
-      PERMISSIONS.VIEW_NOTIFICATION,
-    ],
-  },
-  {
-    name: "Viewer",
-    code: ROLE_CODES.VIEWER,
+    name: "Member",
+    code: ROLE_CODES.MEMBER,
     permissions: [
       PERMISSIONS.VIEW_SPACE,
-      PERMISSIONS.VIEW_ROLE,
-      PERMISSIONS.VIEW_INVENTORY,
-      PERMISSIONS.VIEW_INVENTORY_TRANSACTION,
+      PERMISSIONS.VIEW_ASSET_REQUEST,
       PERMISSIONS.VIEW_NOTIFICATION,
     ],
   },
@@ -276,14 +255,14 @@ const seedAdmin = async () => {
     const space = await upsertSuperAdminSpace(admin._id);
     const roles = await upsertSystemRoles(space._id, admin._id);
 
-    const spaceAdminRole = roles.find(
-      (role) => role.code === ROLE_CODES.SPACE_ADMIN
+    const superAdminRole = roles.find(
+      (role) => role.code === ROLE_CODES.SUPER_ADMIN
     );
 
     await upsertAdminMembership(
       space._id,
       admin._id,
-      spaceAdminRole
+      superAdminRole
     );
 
     // Also ensure IT team and warehouse system spaces and roles exist

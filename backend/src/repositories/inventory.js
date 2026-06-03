@@ -16,11 +16,16 @@ const create = async (payload, options = {}) => {
 
 // Handles find by id.
 const findById = async (id, spaceId) => {
-  return InventoryItem.findOne({
+  const query = {
     _id: id,
-    spaceId,
     isDeleted: false,
-  }).lean();
+  };
+
+  if (spaceId) {
+    query.spaceId = spaceId;
+  }
+
+  return InventoryItem.findOne(query).lean();
 };
 
 // Handles find one.

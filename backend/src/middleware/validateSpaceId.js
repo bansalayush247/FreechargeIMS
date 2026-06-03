@@ -23,8 +23,8 @@ const validateSpaceId = (req, res, next) => {
     );
   }
 
-  // Convert to ObjectId
-  req.spaceId = new mongoose.Types.ObjectId(spaceId);
+  req.spaceId = spaceId;
+  
   next();
 };
 

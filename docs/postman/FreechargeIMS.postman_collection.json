@@ -1,0 +1,422 @@
+{
+  "info": {
+    "_postman_id": "e60a81c6-9f5c-4c92-9f44-cc8d2a1e1d7f",
+    "name": "FreechargeIMS API (RBAC Tests)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 - Setup",
+      "item": [
+        {
+          "name": "Seed All (dev only)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dev/seed/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["dev", "seed", "all"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('seed ok', function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test('seed has data', function () { pm.expect(json && json.data).to.be.ok; });",
+                  "const data = json.data || {};",
+                  "const spaces = data.spaces || {};",
+                  "const merchants = data.merchants || {};",
+                  "const warehouses = data.warehouses || {};",
+                  "const products = data.products || {};",
+                  "const inventory = data.inventory || {};",
+                  "const sampleRequests = data.sampleRequests || {};",
+                  "",
+                  "if (spaces.corporate && spaces.corporate._id) pm.environment.set('spaceId_corporate', spaces.corporate._id);",
+                  "if (spaces.merchantOperations && spaces.merchantOperations._id) pm.environment.set('spaceId_merchant', spaces.merchantOperations._id);",
+                  "if (merchants.sampleMerchant1 && merchants.sampleMerchant1._id) pm.environment.set('merchantId_sample1', merchants.sampleMerchant1._id);",
+                  "if (warehouses.centralWarehouse && warehouses.centralWarehouse._id) pm.environment.set('warehouseId_corporate', warehouses.centralWarehouse._id);",
+                  "if (warehouses.delhiWarehouse && warehouses.delhiWarehouse._id) pm.environment.set('warehouseId_merchant', warehouses.delhiWarehouse._id);",
+                  "if (products.laptop && products.laptop._id) pm.environment.set('productId_seed_laptop', products.laptop._id);",
+                  "if (inventory.laptop1 && inventory.laptop1._id) pm.environment.set('inventoryItemId_seed_laptop1', inventory.laptop1._id);",
+                  "if (sampleRequests.employeeAssetRequest && sampleRequests.employeeAssetRequest._id) pm.environment.set('assetRequestId_seed_employee', sampleRequests.employeeAssetRequest._id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Super Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"super-admin@freecharge.test\",\n  \"password\": \"{{password_default}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('login ok', function(){ pm.expect(pm.response.code).to.eql(200); });",
+            "const t = pm.response.json()?.data?.accessToken;",
+            "pm.test('has token', function(){ pm.expect(t).to.be.a('string'); });",
+            "pm.environment.set('token_super_admin', t);"
+          ]}}]
+        },
+        {
+          "name": "Login - Space Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"space-admin@freecharge.test\",\n  \"password\": \"{{password_default}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('login ok', function(){ pm.expect(pm.response.code).to.eql(200); });",
+            "pm.environment.set('token_space_admin', pm.response.json()?.data?.accessToken);"
+          ]}}]
+        },
+        {
+          "name": "Login - Manager",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"manager@freecharge.test\",\n  \"password\": \"{{password_default}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('login ok', function(){ pm.expect(pm.response.code).to.eql(200); });",
+            "pm.environment.set('token_manager', pm.response.json()?.data?.accessToken);"
+          ]}}]
+        },
+        {
+          "name": "Login - IT Approver",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"it-approver@freecharge.test\",\n  \"password\": \"{{password_default}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('login ok', function(){ pm.expect(pm.response.code).to.eql(200); });",
+            "pm.environment.set('token_it_approver', pm.response.json()?.data?.accessToken);"
+          ]}}]
+        },
+        {
+          "name": "Login - Fulfillment Team",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"fulfillment@freecharge.test\",\n  \"password\": \"{{password_default}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('login ok', function(){ pm.expect(pm.response.code).to.eql(200); });",
+            "pm.environment.set('token_fulfillment', pm.response.json()?.data?.accessToken);"
+          ]}}]
+        },
+        {
+          "name": "Login - Zonal Manager",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"zonal-manager@freecharge.test\",\n  \"password\": \"{{password_default}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('login ok', function(){ pm.expect(pm.response.code).to.eql(200); });",
+            "pm.environment.set('token_zonal_manager', pm.response.json()?.data?.accessToken);"
+          ]}}]
+        },
+        {
+          "name": "Login - FOS",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"fos@freecharge.test\",\n  \"password\": \"{{password_default}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('login ok', function(){ pm.expect(pm.response.code).to.eql(200); });",
+            "pm.environment.set('token_fos', pm.response.json()?.data?.accessToken);"
+          ]}}]
+        },
+        {
+          "name": "Login - Employee",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"employee@freecharge.test\",\n  \"password\": \"{{password_default}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('login ok', function(){ pm.expect(pm.response.code).to.eql(200); });",
+            "pm.environment.set('token_employee', pm.response.json()?.data?.accessToken);"
+          ]}}]
+        }
+      ]
+    },
+
+    {
+      "name": "10 - Super Admin (positive)",
+      "item": [
+        {
+          "name": "Products - Create",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_super_admin}}" },
+              { "key": "x-space-id", "value": "{{spaceId_corporate}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"POSTMAN-PRD-001\",\n  \"name\": \"Postman Product\",\n  \"category\": \"LAPTOPS\",\n  \"brand\": \"Postman\",\n  \"model\": \"v1\",\n  \"assetType\": \"NON_CONSUMABLE\",\n  \"trackingType\": \"SERIALIZED\",\n  \"minimumStock\": 0,\n  \"isTrackable\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/product", "host": ["{{baseUrl}}"], "path": ["api", "v1", "product"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('create product ok', function(){ pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+            "const id = pm.response.json()?.data?._id || pm.response.json()?.data?.product?._id || pm.response.json()?.data?.id;",
+            "if (id) pm.environment.set('productId_created', id);"
+          ]}}]
+        },
+        {
+          "name": "Products - List",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_super_admin}}" },
+              { "key": "x-space-id", "value": "{{spaceId_corporate}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/product", "host": ["{{baseUrl}}"], "path": ["api", "v1", "product"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('list products ok', function(){ pm.expect(pm.response.code).to.eql(200); });"
+          ]}}]
+        },
+        {
+          "name": "Roles - Create (custom role)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_super_admin}}" },
+              { "key": "x-space-id", "value": "{{spaceId_corporate}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman ReadOnly\",\n  \"code\": \"POSTMAN_READONLY\",\n  \"description\": \"Created by Postman\",\n  \"permissions\": [\"space:view\", \"asset-request:view\"],\n  \"isActive\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/roles", "host": ["{{baseUrl}}"], "path": ["api", "v1", "roles"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('create role ok', function(){ pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+            "const id = pm.response.json()?.data?._id || pm.response.json()?.data?.role?._id || pm.response.json()?.data?.id;",
+            "if (id) pm.environment.set('roleId_created', id);"
+          ]}}]
+        }
+      ]
+    },
+
+    {
+      "name": "20 - Space Admin (positive)",
+      "item": [
+        {
+          "name": "Inventory - List Assets",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_space_admin}}" },
+              { "key": "x-space-id", "value": "{{spaceId_corporate}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/inventory/assets?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["api", "v1", "inventory", "assets"], "query": [
+              { "key": "page", "value": "1" },
+              { "key": "limit", "value": "10" }
+            ]}
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('inventory list ok', function(){ pm.expect(pm.response.code).to.eql(200); });"
+          ]}}]
+        }
+      ]
+    },
+
+    {
+      "name": "30 - Manager (mixed)",
+      "item": [
+        {
+          "name": "Asset Requests - List (positive)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_manager}}" },
+              { "key": "x-space-id", "value": "{{spaceId_corporate}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/asset-requests?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["api", "v1", "asset-requests"], "query": [
+              { "key": "page", "value": "1" },
+              { "key": "limit", "value": "10" }
+            ]}
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('manager can view asset requests', function(){ pm.expect(pm.response.code).to.eql(200); });"
+          ]}}]
+        },
+        {
+          "name": "Products - Create (negative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_manager}}" },
+              { "key": "x-space-id", "value": "{{spaceId_corporate}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"sku\": \"POSTMAN-PRD-MGR-001\",\n  \"name\": \"Should Fail\",\n  \"category\": \"LAPTOPS\",\n  \"assetType\": \"NON_CONSUMABLE\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/product", "host": ["{{baseUrl}}"], "path": ["api", "v1", "product"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('manager cannot create product', function(){ pm.expect(pm.response.code).to.eql(403); });"
+          ]}}]
+        }
+      ]
+    },
+
+    {
+      "name": "40 - IT Approver (mixed)",
+      "item": [
+        {
+          "name": "Inventory - List Stocks (positive)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_it_approver}}" },
+              { "key": "x-space-id", "value": "{{spaceId_corporate}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/inventory/stocks?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["api", "v1", "inventory", "stocks"], "query": [
+              { "key": "page", "value": "1" },
+              { "key": "limit", "value": "10" }
+            ]}
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('it approver can view inventory', function(){ pm.expect(pm.response.code).to.eql(200); });"
+          ]}}]
+        }
+      ]
+    },
+
+    {
+      "name": "50 - Fulfillment Team (mixed)",
+      "item": [
+        {
+          "name": "Inventory Transactions - Create (positive)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_fulfillment}}" },
+              { "key": "x-space-id", "value": "{{spaceId_corporate}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inventoryItemId\": \"{{inventoryItemId_seed_laptop1}}\",\n  \"transactionType\": \"STATUS_CHANGE\",\n  \"newStatus\": \"AVAILABLE\",\n  \"remarks\": \"postman status change\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/inventoryTransactions", "host": ["{{baseUrl}}"], "path": ["api", "v1", "inventoryTransactions"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('fulfillment can create inventory transaction', function(){ pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
+          ]}}]
+        }
+      ]
+    },
+
+    {
+      "name": "60 - FOS (mixed)",
+      "item": [
+        {
+          "name": "Merchants - List (positive)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_fos}}" },
+              { "key": "x-space-id", "value": "{{spaceId_merchant}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/v1/merchants?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["api", "v1", "merchants"], "query": [
+              { "key": "page", "value": "1" },
+              { "key": "limit", "value": "10" }
+            ]}
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('fos can view merchants', function(){ pm.expect(pm.response.code).to.eql(200); });"
+          ]}}]
+        },
+        {
+          "name": "Merchants - Create (negative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_fos}}" },
+              { "key": "x-space-id", "value": "{{spaceId_merchant}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"merchantCode\": \"POSTMAN_M_001\",\n  \"name\": \"Should Fail\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/merchants", "host": ["{{baseUrl}}"], "path": ["api", "v1", "merchants"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('fos cannot create merchant', function(){ pm.expect(pm.response.code).to.eql(403); });"
+          ]}}]
+        }
+      ]
+    },
+
+    {
+      "name": "70 - Employee (mixed)",
+      "item": [
+        {
+          "name": "Asset Requests - Create (positive)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_employee}}" },
+              { "key": "x-space-id", "value": "{{spaceId_corporate}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requestType\": \"EMPLOYEE_ASSET\",\n  \"productId\": \"{{productId_seed_laptop}}\",\n  \"requestedQuantity\": 1,\n  \"businessJustification\": \"postman test\",\n  \"priority\": \"MEDIUM\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/asset-requests", "host": ["{{baseUrl}}"], "path": ["api", "v1", "asset-requests"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('employee can create asset request', function(){ pm.expect(pm.response.code).to.be.oneOf([200,201]); });",
+            "const id = pm.response.json()?.data?._id || pm.response.json()?.data?.request?._id || pm.response.json()?.data?.id;",
+            "if (id) pm.environment.set('assetRequestId_created', id);"
+          ]}}]
+        },
+        {
+          "name": "Inventory - Create (negative)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token_employee}}" },
+              { "key": "x-space-id", "value": "{{spaceId_corporate}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId_seed_laptop}}\",\n  \"warehouseId\": \"{{warehouseId_corporate}}\",\n  \"quantity\": 1,\n  \"serialNumber\": \"POSTMAN-INV-001\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/v1/inventory", "host": ["{{baseUrl}}"], "path": ["api", "v1", "inventory"] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('employee cannot create inventory', function(){ pm.expect(pm.response.code).to.eql(403); });"
+          ]}}]
+        }
+      ]
+    }
+  ]
+}
+

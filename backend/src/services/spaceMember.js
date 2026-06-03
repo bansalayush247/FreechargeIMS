@@ -7,15 +7,52 @@ const auditLogService = require("./auditLog");
 
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
-const {
-  invalidateByUser,
-} = require("./rbacCache");
+const { getEnforcer } = require("../config/casbin"); //  Added Casbin connection helper
+const { invalidateByUser } = require("./rbacCache");
 
 const {
   AUDIT_ACTIONS,
   AUDIT_ENTITY_TYPES,
 } = require("../constants/auditLog");
 const { ROLE_CODES } = require("../constants/role");
+
+//  Reusable Helper: Sync individual user-role links into Casbin grouping rules
+const syncGroupingPolicy = async (userId, spaceId, roleCode, action) => {
+  try {
+    const enforcer = await getEnforcer();
+    // Super Admins operate globally under SYSTEM context, everyone else is bound to their Space
+    const scope = roleCode === "SUPER_ADMIN" ? "SYSTEM" : String(spaceId);
+    const userSubject = `${String(userId)}:${scope}`;
+    const roleSubject = `${String(roleCode)}:${scope}`;
+
+    if (action === "ADD") {
+      await enforcer.addGroupingPolicy(userSubject, roleSubject);
+    } else if (action === "REMOVE") {
+      await enforcer.removeGroupingPolicy(userSubject, roleSubject);
+    }
+    await enforcer.savePolicy();
+  } catch (error) {
+    logger.error("Failed to sync Casbin grouping policy", { 
+      userId, spaceId, roleCode, action, error: error.message 
+    });
+  }
+};
+
+//  Reusable Helper: Flush all space-specific grouping policies for a user
+const clearUserSpacePolicies = async (userId, spaceId) => {
+  try {
+    const enforcer = await getEnforcer();
+    const userSubject = `${String(userId)}:${String(spaceId)}`;
+    
+    // Deletes any policy line matching the user's space scope identifier from v0
+    await enforcer.removeFilteredPolicy("g", "g", 0, userSubject);
+    await enforcer.savePolicy();
+  } catch (error) {
+    logger.error("Failed to clear Casbin space policies", { 
+      userId, spaceId, error: error.message 
+    });
+  }
+};
 
 // Handles assert space exists.
 const assertSpaceExists = async (spaceId) => {
@@ -72,7 +109,7 @@ const addMember = async (
         }
       );
 
-    // Check if user has any role, if not assign VIEWER
+    // Check if user has any role, if not assign MEMBER
     const userRoles = await userRoleRepository.findUserRolesByUserAndSpace(
       payload.userId,
       spaceId
@@ -80,29 +117,32 @@ const addMember = async (
 
     if (!userRoles || userRoles.length === 0) {
       try {
-        const viewerRole = await roleRepository.findBySpaceAndCode(
+        const memberRole = await roleRepository.findBySpaceAndCode(
           spaceId,
-          ROLE_CODES.VIEWER
+          ROLE_CODES.MEMBER
         );
 
-        if (viewerRole) {
+        if (memberRole) {
           await userRoleRepository.create({
             spaceId,
             userId: payload.userId,
-            roleId: viewerRole._id,
+            roleId: memberRole._id,
             assignedBy: userId,
             createdBy: userId,
             updatedBy: userId,
           });
 
-          logger.info("Default VIEWER role assigned on reactivation", {
+          //  Casbin Sync: Add tracking on role inheritance fallback
+          await syncGroupingPolicy(payload.userId, spaceId, memberRole.code, "ADD");
+
+          logger.info("Default MEMBER role assigned on reactivation", {
             memberId: existingMember._id,
-            roleId: viewerRole._id,
+            roleId: memberRole._id,
           });
           invalidateByUser(payload.userId);
         }
       } catch (error) {
-        logger.warn("Failed to auto-assign VIEWER role on reactivation", { 
+        logger.warn("Failed to auto-assign MEMBER role on reactivation", { 
           error: error.message 
         });
       }
@@ -134,26 +174,29 @@ const addMember = async (
     updatedBy: userId,
   });
 
-  // Auto-assign VIEWER role to new member (lowest access)
+  // Auto-assign MEMBER role to new member (lowest access)
   try {
-    const viewerRole = await roleRepository.findBySpaceAndCode(
+    const memberRole = await roleRepository.findBySpaceAndCode(
       spaceId,
-      ROLE_CODES.VIEWER
+      ROLE_CODES.MEMBER
     );
 
-    if (viewerRole) {
+    if (memberRole) {
       await userRoleRepository.create({
         spaceId,
         userId: payload.userId,
-        roleId: viewerRole._id,
+        roleId: memberRole._id,
         assignedBy: userId,
         createdBy: userId,
         updatedBy: userId,
       });
 
-      logger.info("Default VIEWER role assigned to new member", {
+      //  Casbin Sync: Add tracking rule mapping on initial profile build
+      await syncGroupingPolicy(payload.userId, spaceId, memberRole.code, "ADD");
+
+      logger.info("Default MEMBER role assigned to new member", {
         memberId: member._id,
-        roleId: viewerRole._id,
+        roleId: memberRole._id,
       });
       invalidateByUser(payload.userId);
     }
@@ -244,6 +287,16 @@ const removeMember = async (
     throw new AppError("Space member not found", 404);
   }
 
+  const targetUserId = member.userId._id || member.userId;
+
+  //for now assume users cannot remove themselves from space,
+  //as we have not implemented any ownership transfer flow yet.
+  //This is to prevent accidental lockout scenarios.
+  //We can revisit this logic once we have a more robust handling of ownership and admin roles in place.
+  if (String(targetUserId) === String(userId)) {
+    throw new AppError("You cannot remove yourself from this space", 400);
+  }
+
   const deletePayload = {
     isActive: false,
     isDeleted: true,
@@ -256,11 +309,14 @@ const removeMember = async (
     await spaceMemberRepository.updateById(id, deletePayload);
 
   await userRoleRepository.softDeleteByUserAndSpace(
-    member.userId._id || member.userId,
+    targetUserId,
     spaceId,
     deletePayload
   );
-  invalidateByUser(member.userId._id || member.userId);
+
+  //  Casbin Sync: Wipe all groupings for this user inside this isolated space context
+  await clearUserSpacePolicies(targetUserId, spaceId);
+  invalidateByUser(targetUserId);
 
   await auditLogService.recordAuditLog({
     spaceId,
@@ -271,7 +327,7 @@ const removeMember = async (
     before: member,
     after: removedMember,
     metadata: {
-      userId: member.userId._id || member.userId,
+      userId: targetUserId,
     },
     ipAddress: context.ipAddress || "",
     userAgent: context.userAgent || "",
@@ -288,6 +344,12 @@ const removeMember = async (
 const assertNotSelfRoleMutation = (targetUserId, actorUserId) => {
   if (String(targetUserId) === String(actorUserId)) {
     throw new AppError("You cannot change your own role", 400);
+  }
+};
+
+const assertRoleAssignable = (role) => {
+  if (role.isSystemRole || role.type === "system" || role.type === "space_builtin") {
+    throw new AppError("System roles cannot be assigned from member management", 400);
   }
 };
 
@@ -319,11 +381,11 @@ const assignRole = async (
 
   if (
     !role ||
-    !role.isActive ||
-    String(role.spaceId) !== String(spaceId)
-  ) {
+    !role.isActive ) {
     throw new AppError("Role not found or inactive", 404);
   }
+
+  assertRoleAssignable(role);
 
   const existingAssignment =
     await userRoleRepository.findByUserRoleAndSpace(
@@ -344,6 +406,9 @@ const assignRole = async (
     createdBy: userId,
     updatedBy: userId,
   });
+
+  //  Casbin Sync: Establish the newly generated role assignment inside Casbin rule tree
+  await syncGroupingPolicy(payload.userId, spaceId, role.code, "ADD");
 
   await auditLogService.recordAuditLog({
     spaceId,
@@ -396,11 +461,11 @@ const replaceRole = async (
 
   if (
     !role ||
-    !role.isActive ||
-    String(role.spaceId) !== String(spaceId)
-  ) {
+    !role.isActive  ) {
     throw new AppError("Role not found or inactive", 404);
   }
+
+  assertRoleAssignable(role);
 
   const existingAssignments =
     await userRoleRepository.findUserRolesByUserAndSpace(
@@ -434,6 +499,9 @@ const replaceRole = async (
     deletePayload
   );
 
+  //  Casbin Sync: Wipe out previous space-related bindings prior to writing the newly target structure
+  await clearUserSpacePolicies(payload.userId, spaceId);
+
   const assignment = await userRoleRepository.create({
     spaceId,
     userId: payload.userId,
@@ -442,6 +510,9 @@ const replaceRole = async (
     createdBy: userId,
     updatedBy: userId,
   });
+
+  //  Casbin Sync: Inject newly calculated replacement profile mapping entries
+  await syncGroupingPolicy(payload.userId, spaceId, role.code, "ADD");
 
   await auditLogService.recordAuditLog({
     spaceId,
@@ -501,10 +572,11 @@ const removeRole = async (
     throw new AppError("User role assignment not found", 404);
   }
 
-  assertNotSelfRoleMutation(
-    assignment.userId._id || assignment.userId,
-    userId
-  );
+  const targetUserId = assignment.userId._id || assignment.userId;
+  assertNotSelfRoleMutation(targetUserId, userId);
+
+  //  Query role details to capture role code configuration prior to deletion execution
+  const role = await roleRepository.findById(assignment.roleId._id || assignment.roleId);
 
   const removedAssignment =
     await userRoleRepository.softDeleteById(id, {
@@ -513,7 +585,12 @@ const removeRole = async (
       deletedBy: userId,
       updatedBy: userId,
     });
-  invalidateByUser(assignment.userId._id || assignment.userId);
+
+  //  Casbin Sync: Remove tracking rules matching deleted single structural components
+  if (role) {
+    await syncGroupingPolicy(targetUserId, spaceId, role.code, "REMOVE");
+  }
+  invalidateByUser(targetUserId);
 
   await auditLogService.recordAuditLog({
     spaceId,
@@ -524,7 +601,7 @@ const removeRole = async (
     before: assignment,
     after: removedAssignment,
     metadata: {
-      assignedUserId: assignment.userId._id || assignment.userId,
+      assignedUserId: targetUserId,
       roleId: assignment.roleId._id || assignment.roleId,
     },
     ipAddress: context.ipAddress || "",
@@ -548,5 +625,3 @@ module.exports = {
   getUserRoles,
   removeRole,
 };
-
-

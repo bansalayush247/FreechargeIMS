@@ -20,6 +20,7 @@ const findById = async (id, spaceId) => {
     isDeleted: false,
   })
     .populate("inventoryItemId")
+    .populate("inventoryStockId")
     .populate("productId", "name sku")
     .populate("performedBy", "firstName lastName email employeeId")
     .populate("fromWarehouseId", "name code")
@@ -86,6 +87,7 @@ const paginate = async (filters) => {
   const [items, total] = await Promise.all([
     InventoryTransaction.find(query)
       .populate("inventoryItemId")
+      .populate("inventoryStockId")
       .populate("productId", "name sku")
       .populate("performedBy", "firstName lastName email employeeId")
       .populate("fromWarehouseId", "name code")

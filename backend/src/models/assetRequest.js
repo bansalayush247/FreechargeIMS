@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const {
   ASSET_REQUEST_STATUS,
+  ASSET_REQUEST_STATUS_VALUES,
   ASSET_REQUEST_PRIORITY,
   ASSET_REQUEST_TYPE,
 } = require("../constants/assetRequest");
@@ -63,6 +64,18 @@ const assetRequestSchema = new mongoose.Schema(
       default: 1,
     },
 
+    fulfilledQuantity: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    remainingQuantity: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
     businessJustification: {
       type: String,
       required: true,
@@ -78,7 +91,7 @@ const assetRequestSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: Object.values(ASSET_REQUEST_STATUS),
+      enum: ASSET_REQUEST_STATUS_VALUES,
       default: ASSET_REQUEST_STATUS.PENDING_MANAGER,
       index: true,
     },

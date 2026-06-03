@@ -11,10 +11,7 @@ const {
   forwardSchema,
   getAssetRequestsSchema,
 } = require("../validators/assetRequest");
-const { USER_TYPES } = require("../constants/user");
-
 const getRequestPermissions = async (req, userId, spaceId) => {
-  if (req.user?.userType === USER_TYPES.ADMIN) return req.permissions || [];
   if (Array.isArray(req.permissions) && req.permissions.length) return req.permissions;
 
   const userRoles = await userRoleRepository.findUserRolesByUserAndSpace(userId, spaceId);
@@ -45,6 +42,14 @@ const getAssetRequests = asyncHandler(async (req, res) => {
   const permissions = await getRequestPermissions(req, userId, req.spaceId);
   const requests = await assetRequestService.getAssetRequests(value, { userId, userType: req.user?.userType, permissions });
   return res.status(200).json({ success: true, message: "Asset requests fetched successfully", data: requests });
+});
+
+const getFulfillmentQueue = asyncHandler(async (req, res) => {
+  const { error, value } = getAssetRequestsSchema.validate({ ...req.query, spaceId: req.spaceId });
+  if (error) return res.status(400).json({ success: false, message: error.details[0].message });
+
+  const requests = await assetRequestService.getFulfillmentQueue(value);
+  return res.status(200).json({ success: true, message: "Fulfillment queue fetched successfully", data: requests });
 });
 
 const getAssetRequestById = asyncHandler(async (req, res) => {
@@ -85,7 +90,7 @@ const managerApproveRequest = asyncHandler(async (req, res) => {
   const { error, value } = approveRequestSchema.validate({ ...req.body, stepKey: "MANAGER_APPROVAL" });
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
-  const request = await assetRequestService.managerApproveRequest(req.params.id, value, userId);
+  const request = await assetRequestService.managerApproveRequest(req.params.id, value, userId, { spaceId: req.spaceId });
   return res.status(200).json({ success: true, message: "Manager approval completed", data: request });
 });
 
@@ -94,8 +99,17 @@ const itApproveRequest = asyncHandler(async (req, res) => {
   const { error, value } = approveRequestSchema.validate({ ...req.body, stepKey: "IT_APPROVAL" });
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
-  const request = await assetRequestService.itApproveRequest(req.params.id, value, userId);
+  const request = await assetRequestService.itApproveRequest(req.params.id, value, userId, { spaceId: req.spaceId });
   return res.status(200).json({ success: true, message: "IT approval completed", data: request });
+});
+
+const zonalApproveRequest = asyncHandler(async (req, res) => {
+  const userId = req.user._id || req.user.id;
+  const { error, value } = approveRequestSchema.validate({ ...req.body, stepKey: "ZONAL_APPROVAL" });
+  if (error) return res.status(400).json({ success: false, message: error.details[0].message });
+
+  const request = await assetRequestService.zonalApproveRequest(req.params.id, value, userId, { spaceId: req.spaceId });
+  return res.status(200).json({ success: true, message: "Zonal approval completed", data: request });
 });
 
 const rejectRequest = asyncHandler(async (req, res) => {
@@ -103,13 +117,13 @@ const rejectRequest = asyncHandler(async (req, res) => {
   const { error, value } = rejectionSchema.validate(req.body);
   if (error) return res.status(400).json({ success: false, message: error.details[0].message });
 
-  const request = await assetRequestService.rejectRequest(req.params.id, value, userId);
+  const request = await assetRequestService.rejectRequest(req.params.id, value, userId, { spaceId: req.spaceId });
   return res.status(200).json({ success: true, message: "Asset request rejected", data: request });
 });
 
 const cancelRequest = asyncHandler(async (req, res) => {
   const userId = req.user._id || req.user.id;
-  const request = await assetRequestService.cancelRequest(req.params.id, userId);
+  const request = await assetRequestService.cancelRequest(req.params.id, userId, { spaceId: req.spaceId });
   return res.status(200).json({ success: true, message: "Asset request cancelled", data: request });
 });
 
@@ -125,11 +139,13 @@ const forwardRequest = asyncHandler(async (req, res) => {
 module.exports = {
   createAssetRequest,
   getAssetRequests,
+  getFulfillmentQueue,
   getAssetRequestById,
   approveRequest,
   fulfillRequest,
   managerApproveRequest,
   itApproveRequest,
+  zonalApproveRequest,
   rejectRequest,
   cancelRequest,
   forwardRequest,

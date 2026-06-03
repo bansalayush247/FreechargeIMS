@@ -10,16 +10,19 @@ const auditLogService = require("./auditLog");
 const { ROLE_CODES } = require("../constants/role");
 const { NOTIFICATION_TYPES } = require("../constants/notification");
 const { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } = require("../constants/auditLog");
-const { USER_TYPES } = require("../constants/user");
+const { SPACE_TYPES } = require("../constants/space");
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
+
+const isUserTypeSpaceScoped = (userType) =>
+  Object.values(SPACE_TYPES).includes(userType);
 
 // Create join request
 const createJoinRequest = async (spaceId, payload, userId, userType, context = {}) => {
   const space = await spaceRepository.findById(spaceId);
   if (!space) throw new AppError("Space not found", 404);
 
-  if (userType !== USER_TYPES.ADMIN && (!space.type || space.type !== userType)) {
+  if (isUserTypeSpaceScoped(userType) && (!space.type || space.type !== userType)) {
     throw new AppError("Space type does not match your user type", 403);
   }
 
@@ -107,8 +110,13 @@ const reviewJoinRequest = async (spaceId, requestId, payload, adminUserId, conte
   }
 
   if (payload.action === "APPROVE") {
-    // Add member to space
-    await spaceMemberService.addMember(spaceId, { userId: request.userId._id || request.userId }, adminUserId, context);
+    const targetUserId = request.userId._id || request.userId;
+    const existingMember = await spaceMemberRepository.findByUserAndSpace(targetUserId, spaceId);
+
+    if (!existingMember || !existingMember.isActive) {
+      // Add member to space. If the user was previously removed, addMember reactivates membership.
+      await spaceMemberService.addMember(spaceId, { userId: targetUserId }, adminUserId, context);
+    }
 
     const updated = await joinRequestRepository.updateById(requestId, {
       status: "APPROVED",
@@ -122,7 +130,7 @@ const reviewJoinRequest = async (spaceId, requestId, payload, adminUserId, conte
     await notificationService.notifyUserByEmail(
       {
         spaceId,
-        recipientUserId: request.userId._id || request.userId,
+        recipientUserId: targetUserId,
         type: NOTIFICATION_TYPES.MANUAL,
         subject: `Join request approved for ${spaceId}`,
         body: `Your request to join space has been approved`,

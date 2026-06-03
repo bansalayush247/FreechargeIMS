@@ -115,7 +115,7 @@ const logout = asyncHandler(async (req, res) => {
 // Handles me.
 const me = asyncHandler(async (req, res) => {
   const userId = req.user?._id || req.user?.id;
-  const activeSpaceId = req.spaceId || req.headers["x-space-id"] || null;
+  const activeSpaceId = req.spaceId || null;
   const snapshot = await getAuthzSnapshotByUser(userId);
   const activeSpace = activeSpaceId
     ? await spaceRepository.findById(activeSpaceId)
@@ -130,6 +130,7 @@ const me = asyncHandler(async (req, res) => {
       memberships: snapshot.memberships,
       rolesBySpace: snapshot.rolesBySpace,
       permissionsBySpace: snapshot.permissionsBySpace,
+      isGlobalSuperAdmin: snapshot.isGlobalSuperAdmin,
     },
   });
 });

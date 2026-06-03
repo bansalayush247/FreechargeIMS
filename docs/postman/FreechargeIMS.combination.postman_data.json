@@ -1,0 +1,18 @@
+[
+  { "activeUserKey": "super_admin", "activeSpaceKey": "corporate" },
+  { "activeUserKey": "super_admin", "activeSpaceKey": "merchant" },
+  { "activeUserKey": "space_admin", "activeSpaceKey": "corporate" },
+  { "activeUserKey": "space_admin", "activeSpaceKey": "merchant" },
+  { "activeUserKey": "manager", "activeSpaceKey": "corporate" },
+  { "activeUserKey": "manager", "activeSpaceKey": "merchant" },
+  { "activeUserKey": "it_approver", "activeSpaceKey": "corporate" },
+  { "activeUserKey": "it_approver", "activeSpaceKey": "merchant" },
+  { "activeUserKey": "fulfillment", "activeSpaceKey": "corporate" },
+  { "activeUserKey": "fulfillment", "activeSpaceKey": "merchant" },
+  { "activeUserKey": "zonal_manager", "activeSpaceKey": "corporate" },
+  { "activeUserKey": "zonal_manager", "activeSpaceKey": "merchant" },
+  { "activeUserKey": "fos", "activeSpaceKey": "corporate" },
+  { "activeUserKey": "fos", "activeSpaceKey": "merchant" },
+  { "activeUserKey": "employee", "activeSpaceKey": "corporate" },
+  { "activeUserKey": "employee", "activeSpaceKey": "merchant" }
+]

@@ -95,28 +95,28 @@ const signupUser = async (userData, ipAddress, userAgent) => {
   });
 
   // Auto-join user to a system space based on their userType
-  try {
-    let targetSpace = null;
-    if (user.userType === USER_TYPES.EMPLOYEE) {
-      targetSpace = await spaceRepository.findByType(SPACE_TYPES.EMPLOYEE);
-    } else if (user.userType === USER_TYPES.MERCHANT) {
-      targetSpace = await spaceRepository.findByType(SPACE_TYPES.MERCHANT);
-    }
+  // try {
+  //   let targetSpace = null;
+  //   if (user.userType === USER_TYPES.EMPLOYEE) {
+  //     targetSpace = await spaceRepository.findByType(SPACE_TYPES.EMPLOYEE);
+  //   } else if (user.userType === USER_TYPES.MERCHANT) {
+  //     targetSpace = await spaceRepository.findByType(SPACE_TYPES.MERCHANT);
+  //   }
 
-    if (targetSpace) {
-      await spaceMemberService.addMember(
-        targetSpace._id,
-        { userId: user._id },
-        user._id,
-        { ipAddress, userAgent }
-      );
-    }
-  } catch (err) {
-    // don't block signup if auto-join fails
-    // log and continue
-    // eslint-disable-next-line no-console
-    console.warn("Auto-join to system space failed", err.message || err);
-  }
+  //   if (targetSpace) {
+  //     await spaceMemberService.addMember(
+  //       targetSpace._id,
+  //       { userId: user._id },
+  //       user._id,
+  //       { ipAddress, userAgent }
+  //     );
+  //   }
+  // } catch (err) {
+  //   // don't block signup if auto-join fails
+  //   // log and continue
+  //   // eslint-disable-next-line no-console
+  //   console.warn("Auto-join to system space failed", err.message || err);
+  // }
 
   const tokens = await generateTokens(user, ipAddress, userAgent);
   const userResponse = user.toObject();

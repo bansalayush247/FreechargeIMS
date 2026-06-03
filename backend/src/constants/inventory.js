@@ -51,6 +51,32 @@ const INVENTORY_PERMISSIONS = {
   DELETE_INVENTORY: "DELETE_INVENTORY",
 };
 
+const INVENTORY_STOCK_ALERT_STATUS = {
+  LOW_STOCK: "LOW_STOCK",
+  OUT_OF_STOCK: "OUT_OF_STOCK",
+  PROCUREMENT_REQUIRED: "PROCUREMENT_REQUIRED",
+};
+
+const resolveInventoryStockAlertStatus = (stock) => {
+  const availableQuantity = Number(stock?.availableQuantity || 0);
+  const reorderLevel = Number(stock?.reorderLevel || 0);
+  const reorderQuantity = Number(stock?.reorderQuantity || 0);
+
+  if (availableQuantity <= 0) {
+    return INVENTORY_STOCK_ALERT_STATUS.OUT_OF_STOCK;
+  }
+
+  if (reorderQuantity > 0 && availableQuantity <= reorderQuantity) {
+    return INVENTORY_STOCK_ALERT_STATUS.PROCUREMENT_REQUIRED;
+  }
+
+  if (reorderLevel > 0 && availableQuantity <= reorderLevel) {
+    return INVENTORY_STOCK_ALERT_STATUS.LOW_STOCK;
+  }
+
+  return null;
+};
+
 module.exports = {
   INVENTORY_STATUS,
   LEGACY_INVENTORY_STATUS_MAP,
@@ -59,4 +85,6 @@ module.exports = {
   getInventoryStatusQueryValues,
   INVENTORY_CONDITION,
   INVENTORY_PERMISSIONS,
+  INVENTORY_STOCK_ALERT_STATUS,
+  resolveInventoryStockAlertStatus,
 };

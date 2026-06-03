@@ -43,6 +43,11 @@ const inventorySchema = new mongoose.Schema(
       index: true,
     },
 
+    assignedAt: {
+      type: Date,
+      default: null,
+    },
+
     quantity: {
       type: Number,
       default: 1,

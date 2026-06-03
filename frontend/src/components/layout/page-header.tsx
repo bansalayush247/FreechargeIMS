@@ -1,0 +1,1 @@
+export { PageHeader } from "@/src/shared/components/page-header";

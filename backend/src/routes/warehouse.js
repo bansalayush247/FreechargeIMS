@@ -2,6 +2,12 @@ const express = require("express");
 
 const router = express.Router();
 
+router.use((_req, res, next) => {
+  res.setHeader("Deprecation", "true");
+  res.setHeader("Sunset", "TBD");
+  next();
+});
+
 const warehouseController = require("../controllers/warehouse");
 const authMiddleware = require("../middleware/auth");
 const validateSpaceId = require("../middleware/validateSpaceId");
