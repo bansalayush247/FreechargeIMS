@@ -348,7 +348,7 @@ const assertNotSelfRoleMutation = (targetUserId, actorUserId) => {
 };
 
 const assertRoleAssignable = (role) => {
-  if (role.isSystemRole || role.type === "system" || role.type === "space_builtin") {
+  if (role.type === "system" || role.code === ROLE_CODES.SUPER_ADMIN) {
     throw new AppError("System roles cannot be assigned from member management", 400);
   }
 };
@@ -461,7 +461,9 @@ const replaceRole = async (
 
   if (
     !role ||
-    !role.isActive  ) {
+    !role.isActive ||
+    String(role.spaceId) !== String(spaceId)
+  ) {
     throw new AppError("Role not found or inactive", 404);
   }
 
@@ -474,7 +476,43 @@ const replaceRole = async (
     );
 
   if (!existingAssignments.length) {
-    throw new AppError("No role assignment found for user", 404);
+    const assignment = await userRoleRepository.create({
+      spaceId,
+      userId: payload.userId,
+      roleId: payload.roleId,
+      assignedBy: userId,
+      createdBy: userId,
+      updatedBy: userId,
+    });
+
+    await syncGroupingPolicy(payload.userId, spaceId, role.code, "ADD");
+
+    await auditLogService.recordAuditLog({
+      spaceId,
+      actorId: userId,
+      action: AUDIT_ACTIONS.ASSIGN,
+      entityType: AUDIT_ENTITY_TYPES.USER_ROLE,
+      entityId: assignment._id,
+      before: null,
+      after: assignment,
+      metadata: {
+        assignedUserId: payload.userId,
+        roleId: payload.roleId,
+        replacedRoleAssignmentCount: 0,
+      },
+      ipAddress: context.ipAddress || "",
+      userAgent: context.userAgent || "",
+    });
+
+    logger.info("Role assigned to user during replace flow", {
+      userRoleId: assignment._id,
+    });
+    invalidateByUser(payload.userId);
+
+    return {
+      assignment,
+      replacedRoleAssignmentCount: 0,
+    };
   }
 
   const alreadyAssigned = existingAssignments.some(

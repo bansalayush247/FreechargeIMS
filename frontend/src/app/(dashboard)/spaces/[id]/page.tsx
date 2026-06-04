@@ -103,10 +103,10 @@ export default function SpaceDetailPage() {
   const assetRequestActionMutation = useMutation({
     mutationFn: async ({ request, action, remarks }: { request: SpaceAssetRequest; action: "approve" | "reject"; remarks: string }) => {
       const requestId = request._id || request.id || "";
-      const stepKey = request.currentStepKey || (request.status === "PENDING_IT" ? "IT_APPROVAL" : request.status === "PENDING_ZONAL_MANAGER" ? "ZONAL_MANAGER_APPROVAL" : request.status === "FULFILLMENT_PENDING" ? "WAREHOUSE_FULFILLMENT" : "MANAGER_APPROVAL");
+      const stepKey = request.currentStepKey || (request.status === "PENDING_IT" ? "IT_APPROVAL" : request.status === "PENDING_ZONAL_MANAGER" || request.status === "PENDING_ZONAL" ? "ZONAL_APPROVAL" : request.status === "FULFILLMENT_PENDING" || request.status === "PENDING_FULFILLMENT" ? "FULFILLMENT" : "MANAGER_APPROVAL");
 
       if (action === "approve") {
-        if (stepKey === "WAREHOUSE_FULFILLMENT") return fulfillAssetRequest(requestId, { remarks }, spaceId);
+        if (stepKey === "WAREHOUSE_FULFILLMENT" || stepKey === "FULFILLMENT") return fulfillAssetRequest(requestId, { remarks }, spaceId);
         if (stepKey === "IT_APPROVAL") return itApproveAssetRequest(requestId, { remarks }, spaceId);
         if (stepKey === "MANAGER_APPROVAL") return managerApproveAssetRequest(requestId, { remarks }, spaceId);
         return managerApproveAssetRequest(requestId, { remarks }, spaceId);
@@ -118,13 +118,16 @@ export default function SpaceDetailPage() {
       await queryClient.invalidateQueries({ queryKey: ["space-asset-requests", spaceId] });
     },
   });
+  const pendingAssetRequestId = assetRequestActionMutation.isPending
+    ? assetRequestActionMutation.variables?.request._id || assetRequestActionMutation.variables?.request.id || ""
+    : "";
 
   const membersList = members as SpaceMember[];
   const userRoleList = userRoles as SpaceUserRole[];
   const joinRequestList = joinRequests as SpaceJoinRequest[];
   const requests = getItems(requestsData) as SpaceAssetRequest[];
   const inventory = getItems(inventoryData) as SpaceInventoryItem[];
-  const roleOptions = (getItems(roles) as SpaceRoleOption[]).filter((role) => !role.isSystemRole && role.type !== "system" );
+  const roleOptions = (getItems(roles) as SpaceRoleOption[]).filter((role) => role.type !== "system" && role.code !== "SUPER_ADMIN");
   const roleLabelByUserId = new Map<string, string[]>();
   const roleIdByUserId = new Map<string, string>();
   const currentUserId = String(user?.id || user?._id || "");
@@ -367,24 +370,24 @@ export default function SpaceDetailPage() {
                       <div className="flex flex-wrap gap-2">
                         <Button
                           size="sm"
-                          disabled={assetRequestActionMutation.isPending}
+                          disabled={pendingAssetRequestId === (request._id || request.id)}
                           onClick={() => {
                             const requestId = request._id || request.id || "";
                             assetRequestActionMutation.mutate({ request: request as SpaceAssetRequest, action: "approve", remarks: assetRemarksByRequest[requestId] || "" });
                           }}
                         >
-                          Approve
+                          {pendingAssetRequestId === (request._id || request.id) && assetRequestActionMutation.variables?.action === "approve" ? "Approving..." : "Approve"}
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={assetRequestActionMutation.isPending}
+                          disabled={pendingAssetRequestId === (request._id || request.id)}
                           onClick={() => {
                             const requestId = request._id || request.id || "";
                             assetRequestActionMutation.mutate({ request: request as SpaceAssetRequest, action: "reject", remarks: assetRemarksByRequest[requestId] || "" });
                           }}
                         >
-                          Reject
+                          {pendingAssetRequestId === (request._id || request.id) && assetRequestActionMutation.variables?.action === "reject" ? "Rejecting..." : "Reject"}
                         </Button>
                       </div>
                     </div>
