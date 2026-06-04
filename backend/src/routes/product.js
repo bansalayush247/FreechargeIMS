@@ -15,6 +15,7 @@ const ROUTES = require("../constants/routes");
 
 router.post(ROUTES.PRODUCTS.CREATE, authMiddleware, validateSpaceId, authorize(PERMISSIONS.CREATE_PRODUCT), validate(createProductSchema), productController.createProduct);
 router.get(ROUTES.PRODUCTS.LIST, authMiddleware, validateSpaceId, authorize(PERMISSIONS.VIEW_PRODUCT), productController.getProducts);
+router.get(ROUTES.PRODUCTS.GET_BY_ID, authMiddleware, validateSpaceId, authorize(PERMISSIONS.VIEW_PRODUCT), productController.getProductById);
 router.patch(ROUTES.PRODUCTS.UPDATE, authMiddleware, validateSpaceId, authorize(PERMISSIONS.UPDATE_PRODUCT), validate(updateProductSchema), productController.updateProduct);
 router.delete(ROUTES.PRODUCTS.DELETE, authMiddleware, validateSpaceId, authorize(PERMISSIONS.DELETE_PRODUCT), productController.deleteProduct);
 

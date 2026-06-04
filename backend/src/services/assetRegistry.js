@@ -1,10 +1,14 @@
 const assetRegistryRepository = require("../repositories/assetRegistry");
-const { assertActiveMembership } = require("./permissionResolver");
+const { assertActiveMembership, isGlobalSuperAdmin } = require("./permissionResolver");
 const AppError = require("../utils/appError");
 
 const getAssetRegistry = async (filters, context = {}) => {
   if (!context.spaceId) throw new AppError("Space ID is required", 400);
-  await assertActiveMembership(context.userId, context.spaceId);
+
+  const hasGlobalAccess = await isGlobalSuperAdmin(context.userId);
+  if (!hasGlobalAccess) {
+    await assertActiveMembership(context.userId, context.spaceId);
+  }
 
   return assetRegistryRepository.paginateBySpace({
     ...filters,

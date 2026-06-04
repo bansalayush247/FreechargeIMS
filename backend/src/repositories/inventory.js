@@ -25,7 +25,14 @@ const findById = async (id, spaceId) => {
     query.spaceId = spaceId;
   }
 
-  return InventoryItem.findOne(query).lean();
+  return InventoryItem.findOne(query)
+    .populate("productId", "name sku imageUrl category brand model")
+    .populate("warehouseId", "name code")
+    .populate("assignedUserId", "firstName lastName email employeeId")
+    .populate("assignedMerchantId", "name merchantCode contactName contactEmail")
+    .populate("createdBy", "firstName lastName email employeeId")
+    .populate("updatedBy", "firstName lastName email employeeId")
+    .lean();
 };
 
 // Handles find one.

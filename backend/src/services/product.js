@@ -47,6 +47,12 @@ const createProduct = async ({
 // Handles get products.
 const getProducts = async ({ page, limit }) => productRepository.getProducts({ page, limit });
 
+const getProductById = async (productId) => {
+  const product = await productRepository.findProductById(productId);
+  if (!product) throw new AppError("Product not found", 404);
+  return product;
+};
+
 // Handles update product.
 const updateProduct = async ({
   productId,
@@ -111,6 +117,7 @@ const deleteProduct = async ({
 module.exports = {
   createProduct,
   getProducts,
+  getProductById,
   updateProduct,
   deleteProduct,
 };

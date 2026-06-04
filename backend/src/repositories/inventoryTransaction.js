@@ -27,6 +27,9 @@ const findById = async (id, spaceId) => {
     .populate("toWarehouseId", "name code")
     .populate("fromUserId", "firstName lastName email employeeId")
     .populate("toUserId", "firstName lastName email employeeId")
+    .populate("fromMerchantId", "name merchantCode contactName contactEmail")
+    .populate("toMerchantId", "name merchantCode contactName contactEmail")
+    .populate("requestId", "requestNumber status requestType")
     .lean();
 };
 
@@ -36,6 +39,7 @@ const paginate = async (filters) => {
     page,
     limit,
     inventoryItemId,
+    productId,
     transactionType,
     performedBy,
     warehouseId,
@@ -53,6 +57,10 @@ const paginate = async (filters) => {
 
   if (inventoryItemId) {
     query.inventoryItemId = inventoryItemId;
+  }
+
+  if (productId) {
+    query.productId = productId;
   }
 
   if (transactionType) {
@@ -94,6 +102,9 @@ const paginate = async (filters) => {
       .populate("toWarehouseId", "name code")
       .populate("fromUserId", "firstName lastName email employeeId")
       .populate("toUserId", "firstName lastName email employeeId")
+      .populate("fromMerchantId", "name merchantCode contactName contactEmail")
+      .populate("toMerchantId", "name merchantCode contactName contactEmail")
+      .populate("requestId", "requestNumber status requestType")
       .sort({ transactionDate: -1 })
       .skip(skip)
       .limit(limit)
@@ -125,6 +136,10 @@ const getItemAuditTrail = async (inventoryItemId, spaceId) => {
     .populate("toWarehouseId", "name code")
     .populate("fromUserId", "firstName lastName email employeeId")
     .populate("toUserId", "firstName lastName email employeeId")
+    .populate("fromMerchantId", "name merchantCode contactName contactEmail")
+    .populate("toMerchantId", "name merchantCode contactName contactEmail")
+    .populate("requestId", "requestNumber status requestType")
+    .populate("productId", "name sku")
     .sort({ transactionDate: 1 })
     .lean();
 };

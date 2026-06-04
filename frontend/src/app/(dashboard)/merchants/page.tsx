@@ -1,18 +1,14 @@
 "use client";
 
+import { getApiItems } from "@/src/lib/api-data";
+
 import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/src/components/layout/page-header";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { apiClient } from "@/src/services/http/client";
 
-function getItems(payload: unknown) {
-  if (!payload || typeof payload !== "object") return [];
-  const root = "data" in payload ? (payload as { data?: unknown }).data : payload;
-  if (!root || typeof root !== "object") return [];
-  const items = (root as { items?: unknown[] }).items;
-  return Array.isArray(items) ? items : [];
-}
+const getItems = getApiItems;
 
 export default function MerchantsPage() {
   const { data, isLoading, isError } = useQuery({ queryKey: ["merchants"], queryFn: async () => (await apiClient.get("/merchants")).data });

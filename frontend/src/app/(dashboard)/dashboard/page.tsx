@@ -11,8 +11,10 @@ import { listNotifications } from "@/src/lib/notificationClient";
 import { useCurrentSpace } from "@/src/hooks/useCurrentSpace";
 import { useAuthorization } from "@/src/hooks/useAuthorization";
 import { BACKEND_PERMISSIONS } from "@/src/lib/authorization";
+import { getApiItems } from "@/src/lib/api-data";
 
 function readTotal(payload: unknown) {
+  if (Array.isArray(payload)) return payload.length;
   if (!payload || typeof payload !== "object") {
     return 0;
   }
@@ -34,7 +36,7 @@ function readTotal(payload: unknown) {
     return items.length;
   }
 
-  return 0;
+  return getApiItems(payload).length;
 }
 
 export default function DashboardPage() {

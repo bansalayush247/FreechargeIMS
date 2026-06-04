@@ -40,6 +40,7 @@ const getTransactionsSchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(10),
 
   inventoryItemId: Joi.string().hex().length(24).optional(),
+  productId: Joi.string().hex().length(24).optional(),
 
   transactionType: Joi.string()
     .valid(...INVENTORY_TRANSACTION_TYPE_VALUES)

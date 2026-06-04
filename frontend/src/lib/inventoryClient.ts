@@ -1,6 +1,6 @@
 import { apiClient } from "./api";
 
-export async function listInventory(options?: { spaceId?: string; page?: number; limit?: number }) {
+export async function listInventory(options?: { spaceId?: string; productId?: string; page?: number; limit?: number }) {
   const { spaceId, ...params } = options ?? {};
   const res = await apiClient.get(`/inventory-items`, { params, headers: spaceId ? { "x-space-id": spaceId } : undefined });
   return res.data;

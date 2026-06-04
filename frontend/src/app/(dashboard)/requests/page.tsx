@@ -1,5 +1,7 @@
 "use client";
 
+import { getApiItems } from "@/src/lib/api-data";
+
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/src/components/layout/page-header";
@@ -17,13 +19,7 @@ import { useAuth } from "@/src/features/auth/auth-provider";
 import { useAuthorization } from "@/src/hooks/useAuthorization";
 import { BACKEND_PERMISSIONS } from "@/src/lib/authorization";
 
-function getItems(payload: unknown) {
-  if (!payload || typeof payload !== "object") return [];
-  const root = "data" in payload ? (payload as { data?: unknown }).data : payload;
-  if (!root || typeof root !== "object") return [];
-  const items = (root as { items?: unknown[] }).items;
-  return Array.isArray(items) ? items : [];
-}
+const getItems = getApiItems;
 
 export default function RequestsPage() {
   const queryClient = useQueryClient();

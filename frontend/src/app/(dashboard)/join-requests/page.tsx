@@ -1,5 +1,7 @@
 "use client";
 
+import { getApiItems } from "@/src/lib/api-data";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/src/components/layout/page-header";
 import { Button } from "@/src/components/ui/button";
@@ -9,13 +11,7 @@ import { useCurrentSpace } from "@/src/hooks/useCurrentSpace";
 import { listJoinRequests, reviewJoinRequest } from "@/src/features/spaces/api";
 import { queryKeys } from "@/src/constants/query-keys";
 
-function getItems(payload: unknown) {
-  if (!payload || typeof payload !== "object") return [];
-  const root = "data" in payload ? (payload as { data?: unknown }).data : payload;
-  if (!root || typeof root !== "object") return [];
-  const items = (root as { items?: unknown[] }).items;
-  return Array.isArray(items) ? items : [];
-}
+const getItems = getApiItems;
 
 export default function JoinRequestsPage() {
   const queryClient = useQueryClient();

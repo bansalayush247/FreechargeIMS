@@ -1,4 +1,5 @@
 import { apiClient } from "@/src/lib/api";
+import { getApiItems } from "@/src/lib/api-data";
 
 export type RolePayload = { name: string; code: string; description?: string; permissions: string[] };
 
@@ -7,7 +8,7 @@ export async function listRoles(spaceId?: string) {
     params: { page: 1, limit: 100 },
     headers: spaceId ? { "x-space-id": spaceId } : undefined,
   });
-  return res.data?.data?.items ?? res.data?.data ?? [];
+  return getApiItems<any>(res.data);
 }
 
 export async function getRole(id: string, spaceId?: string) {

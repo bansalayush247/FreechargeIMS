@@ -1,8 +1,9 @@
 import { apiClient } from "@/src/lib/api";
+import { getApiItems } from "@/src/lib/api-data";
 
 export async function listMembers(spaceId?: string) {
   const res = await apiClient.get("/space-members", { headers: spaceId ? { "x-space-id": spaceId } : undefined });
-  return res.data?.data?.items ?? res.data?.data ?? [];
+  return getApiItems<any>(res.data);
 }
 
 export async function listUserRoles(spaceId?: string, params?: { page?: number; limit?: number; userId?: string; roleId?: string }) {
@@ -10,7 +11,7 @@ export async function listUserRoles(spaceId?: string, params?: { page?: number; 
     params,
     headers: spaceId ? { "x-space-id": spaceId } : undefined,
   });
-  return res.data?.data?.items ?? res.data?.data ?? [];
+  return getApiItems<any>(res.data);
 }
 
 export async function inviteMember(payload: { email: string; roleIds: string[] }, spaceId?: string) {

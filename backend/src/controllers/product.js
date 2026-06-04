@@ -35,6 +35,11 @@ const getProducts = asyncHandler(async (req, res) => {
   });
 });
 
+const getProductById = asyncHandler(async (req, res) => {
+  const product = await productService.getProductById(req.params.id);
+  return res.status(200).json({ success: true, message: "Product fetched successfully", data: product });
+});
+
 // Handles update product.
 const updateProduct = asyncHandler(async (req, res) => {
   const product = await productService.updateProduct({
@@ -76,6 +81,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
 module.exports = {
   createProduct,
   getProducts,
+  getProductById,
   updateProduct,
   deleteProduct,
 };

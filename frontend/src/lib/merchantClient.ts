@@ -1,4 +1,5 @@
 import { apiClient } from "@/src/lib/api";
+import { getApiItems } from "@/src/lib/api-data";
 
 export type MerchantOption = {
   _id?: string;
@@ -7,13 +8,6 @@ export type MerchantOption = {
   merchantCode?: string;
 };
 
-function unwrapItems(payload: unknown) {
-  const root = payload && typeof payload === "object" && "data" in payload ? (payload as { data?: unknown }).data : payload;
-  const items = root && typeof root === "object" && "items" in root ? (root as { items?: unknown }).items : root;
-
-  return Array.isArray(items) ? items as MerchantOption[] : [];
-}
-
 export async function listMerchants(options?: { spaceId?: string; page?: number; limit?: number }) {
   const { spaceId, ...params } = options ?? {};
   const res = await apiClient.get("/merchants", {
@@ -21,5 +15,5 @@ export async function listMerchants(options?: { spaceId?: string; page?: number;
     headers: spaceId ? { "x-space-id": spaceId } : undefined,
   });
 
-  return unwrapItems(res.data);
+  return getApiItems<MerchantOption>(res.data);
 }

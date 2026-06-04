@@ -1,18 +1,12 @@
 import type { Warehouse } from "@/src/features/warehouses/types";
+import { getApiItems } from "@/src/lib/api-data";
 import { apiClient } from "@/src/services/http/client";
-
-function unwrapItems(payload: unknown) {
-  const root = payload && typeof payload === "object" && "data" in payload ? (payload as { data?: unknown }).data : payload;
-  const items = root && typeof root === "object" && "items" in root ? (root as { items?: unknown }).items : [];
-
-  return Array.isArray(items) ? (items as Warehouse[]) : [];
-}
 
 export async function getWarehouses(spaceId?: string) {
   const response = await apiClient.get("/warehouse", {
     headers: spaceId ? { "x-space-id": spaceId } : undefined,
   });
-  return unwrapItems(response.data);
+  return getApiItems<Warehouse>(response.data);
 }
 
 export async function getWarehouse(id: string, spaceId?: string) {

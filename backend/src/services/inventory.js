@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 
 const inventoryRepository = require("../repositories/inventory");
+const inventoryTransactionRepository = require("../repositories/inventoryTransaction");
 const auditLogService = require("./auditLog");
 
 const Product = require("../models/product");
@@ -11,6 +12,7 @@ const AssetTagCounter = require("../models/assetTagCounter");
 const {PRODUCT_ASSET_TYPES,} = require("../constants/product");
 const { SPACE_CODES, SPACE_TYPES } = require("../constants/space");
 const { INVENTORY_STATUS } = require("../constants/inventory");
+const { INVENTORY_TRANSACTION_TYPES } = require("../constants/inventoryTransaction");
 
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
@@ -21,6 +23,32 @@ const {
   AUDIT_ACTIONS,
   AUDIT_ENTITY_TYPES,
 } = require("../constants/auditLog");
+
+const recordStockInTransaction = async ({
+  inventoryItem,
+  quantity,
+  userId,
+  spaceId,
+  previousStatus,
+  remarks,
+  session,
+}) => {
+  await inventoryTransactionRepository.create(
+    {
+      spaceId,
+      inventoryItemId: inventoryItem._id,
+      productId: inventoryItem.productId,
+      toWarehouseId: inventoryItem.warehouseId,
+      transactionType: INVENTORY_TRANSACTION_TYPES.STOCK_IN,
+      quantity,
+      remarks: remarks || "Inventory received",
+      previousStatus,
+      newStatus: normalizeInventoryStatus(inventoryItem.status),
+      performedBy: userId,
+    },
+    session
+  );
+};
 
 const ensureSpaceScopedReferences = (
   product,
@@ -391,6 +419,16 @@ const createInventoryItem = async (
 
         const updatedItem = await existingConsumable.save({ session });
 
+        await recordStockInTransaction({
+          inventoryItem: updatedItem,
+          quantity,
+          userId,
+          spaceId: context.spaceId,
+          previousStatus: normalizeInventoryStatus(beforeItem.status),
+          remarks: payload.remarks,
+          session,
+        });
+
         await auditLogService.recordAuditLog({
           spaceId: context.spaceId || null,
           actorId: userId,
@@ -423,6 +461,16 @@ const createInventoryItem = async (
 
       logger.info("Consumable inventory item created successfully", {
         inventoryItemId: inventoryItem._id,
+      });
+
+      await recordStockInTransaction({
+        inventoryItem,
+        quantity,
+        userId,
+        spaceId: context.spaceId,
+        previousStatus: "NOT_CREATED",
+        remarks: payload.remarks,
+        session,
       });
 
       await auditLogService.recordAuditLog({
@@ -478,6 +526,16 @@ const createInventoryItem = async (
 
     logger.info("Inventory item created successfully", {
       inventoryItemId: inventoryItem._id,
+    });
+
+    await recordStockInTransaction({
+      inventoryItem,
+      quantity: 1,
+      userId,
+      spaceId: context.spaceId,
+      previousStatus: "NOT_CREATED",
+      remarks: payload.remarks,
+      session,
     });
 
     await auditLogService.recordAuditLog({

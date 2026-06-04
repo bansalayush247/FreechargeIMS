@@ -1,4 +1,5 @@
 import { apiClient } from "@/src/services/http/client";
+import { getApiItems } from "@/src/lib/api-data";
 
 export type SpaceListItem = {
   _id?: string;
@@ -26,21 +27,14 @@ export type SpaceCreateInput = {
   merchantWorkflowDefinitionId?: string | null;
 };
 
-function unwrapItems(payload: unknown) {
-  const root = payload && typeof payload === "object" && "data" in payload ? (payload as { data?: unknown }).data : payload;
-  const items = root && typeof root === "object" && "items" in root ? (root as { items?: unknown }).items : root;
-
-  return Array.isArray(items) ? (items as SpaceListItem[]) : [];
-}
-
 export async function getSpaces() {
   const response = await apiClient.get("/spaces");
-  return unwrapItems(response.data);
+  return getApiItems<SpaceListItem>(response.data);
 }
 
 export async function getMySpaces() {
   const response = await apiClient.get("/spaces/mine");
-  return unwrapItems(response.data);
+  return getApiItems<SpaceListItem>(response.data);
 }
 
 export async function getSpaceById(spaceId: string) {
@@ -70,7 +64,7 @@ export async function deleteSpace(spaceId: string) {
 
 export async function listJoinRequests(spaceId: string) {
   const response = await apiClient.get(`/spaces/${spaceId}/join-requests`);
-  return response.data?.data?.items ?? response.data?.data ?? [];
+  return getApiItems<any>(response.data);
 }
 
 export async function reviewJoinRequest(spaceId: string, requestId: string, action: "approve" | "reject") {
@@ -84,5 +78,5 @@ export async function reviewJoinRequest(spaceId: string, requestId: string, acti
 
 export async function getMyJoinRequests(spaceId: string) {
   const response = await apiClient.get(`/spaces/${spaceId}/join-requests/my`);
-  return response.data?.data?.items ?? response.data?.data ?? [];
+  return getApiItems<any>(response.data);
 }

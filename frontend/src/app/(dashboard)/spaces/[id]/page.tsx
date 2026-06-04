@@ -1,5 +1,7 @@
 "use client";
 
+import { getApiItems } from "@/src/lib/api-data";
+
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -22,13 +24,7 @@ import { listInventory } from "@/src/lib/inventoryClient";
 import { queryKeys } from "@/src/constants/query-keys";
 import { getApiErrorMessage } from "@/src/services/http/client";
 
-function getItems(payload: unknown) {
-  if (!payload || typeof payload !== "object") return [];
-  const root = "data" in payload ? (payload as { data?: unknown }).data : payload;
-  if (!root || typeof root !== "object") return [];
-  const items = "items" in root ? (root as { items?: unknown[] }).items : root;
-  return Array.isArray(items) ? items : [];
-}
+const getItems = getApiItems;
 
 function normalizeLabel(value?: string) {
   return (value || "").trim().toUpperCase().replace(/[-\s]/g, "_");

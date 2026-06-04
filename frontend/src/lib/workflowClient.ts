@@ -1,4 +1,5 @@
 import { apiClient } from "@/src/lib/api";
+import { getApiItems } from "@/src/lib/api-data";
 
 function spaceHeaders(spaceId?: string) {
   return spaceId ? { "x-space-id": spaceId } : undefined;
@@ -6,7 +7,7 @@ function spaceHeaders(spaceId?: string) {
 
 export async function listWorkflowDefinitions(spaceId?: string) {
   const response = await apiClient.get("/workflows/definitions", { headers: spaceHeaders(spaceId) });
-  return response.data?.data?.items ?? response.data?.data ?? [];
+  return getApiItems<any>(response.data);
 }
 
 export async function getWorkflowDefinition(id: string, spaceId?: string) {
@@ -31,7 +32,7 @@ export async function deleteWorkflowDefinition(id: string, spaceId?: string) {
 
 export async function listWorkflowInstances(spaceId?: string) {
   const response = await apiClient.get("/workflows/instances", { headers: spaceHeaders(spaceId) });
-  return response.data?.data?.items ?? response.data?.data ?? [];
+  return getApiItems<any>(response.data);
 }
 
 export async function transitionWorkflow(instanceId: string, action: string, spaceId?: string) {
