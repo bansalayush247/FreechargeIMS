@@ -37,10 +37,12 @@ export default function RequestsPage() {
   const [requestedQuantity, setRequestedQuantity] = useState("1");
   const [businessJustification, setBusinessJustification] = useState("");
   const [requestMessage, setRequestMessage] = useState<string | null>(null);
+  const currentUserId = user?.id || user?._id;
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["asset-requests", activeSpaceId, user?.id],
-    queryFn: () => listAssetRequests({ spaceId: activeSpaceId ?? undefined, employeeId: user?.id ?? undefined, page: 1, limit: 25 }),
+    queryKey: ["asset-requests", "mine", activeSpaceId, currentUserId],
+    queryFn: () => listAssetRequests({ spaceId: activeSpaceId ?? undefined, employeeId: currentUserId, page: 1, limit: 25 }),
+    enabled: Boolean(activeSpaceId && currentUserId),
   });
 
   const requests = getItems(data);
@@ -61,7 +63,7 @@ export default function RequestsPage() {
       setRequestedQuantity("1");
       setBusinessJustification("");
       setRequestMessage("Request submitted.");
-      await queryClient.invalidateQueries({ queryKey: ["asset-requests", activeSpaceId, user?.id] });
+      await queryClient.invalidateQueries({ queryKey: ["asset-requests"] });
     },
     onError: (error) => setRequestMessage(getApiErrorMessage(error)),
   });

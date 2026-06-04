@@ -1,19 +1,23 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createRole, deleteRole, getRole, listRoles, updateRole, type RolePayload } from "@/src/lib/roleClient";
+import { useCurrentSpace } from "@/src/hooks/useCurrentSpace";
 
 export function useRoles() {
-  return useQuery({ queryKey: ["roles"], queryFn: () => listRoles() });
+  const { activeSpaceId } = useCurrentSpace();
+  return useQuery({ queryKey: ["roles", activeSpaceId], queryFn: () => listRoles(activeSpaceId || undefined), enabled: Boolean(activeSpaceId) });
 }
 export function useRole(id: string) {
-  return useQuery({ queryKey: ["roles", id], queryFn: () => getRole(id), enabled: Boolean(id) });
+  const { activeSpaceId } = useCurrentSpace();
+  return useQuery({ queryKey: ["roles", activeSpaceId, id], queryFn: () => getRole(id, activeSpaceId || undefined), enabled: Boolean(id && activeSpaceId) });
 }
 export function useRoleMutations() {
   const queryClient = useQueryClient();
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["roles"] });
+  const { activeSpaceId } = useCurrentSpace();
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["roles", activeSpaceId] });
   return {
-    create: useMutation({ mutationFn: (payload: RolePayload) => createRole(payload), onSuccess: refresh }),
-    update: useMutation({ mutationFn: ({ id, payload }: { id: string; payload: Partial<RolePayload> }) => updateRole(id, payload), onSuccess: refresh }),
-    remove: useMutation({ mutationFn: (id: string) => deleteRole(id), onSuccess: refresh }),
+    create: useMutation({ mutationFn: (payload: RolePayload) => createRole(payload, activeSpaceId || undefined), onSuccess: refresh }),
+    update: useMutation({ mutationFn: ({ id, payload }: { id: string; payload: Partial<Omit<RolePayload, "code">> }) => updateRole(id, payload, activeSpaceId || undefined), onSuccess: refresh }),
+    remove: useMutation({ mutationFn: (id: string) => deleteRole(id, activeSpaceId || undefined), onSuccess: refresh }),
   };
 }

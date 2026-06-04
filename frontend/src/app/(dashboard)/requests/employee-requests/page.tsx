@@ -17,7 +17,11 @@ function getItems(payload: unknown) {
 
 export default function EmployeeRequestsPage() {
   const { activeSpaceId } = useCurrentSpace();
-  const { data, isLoading, isError } = useQuery({ queryKey: ["asset-requests", activeSpaceId], queryFn: () => listAssetRequests({ spaceId: activeSpaceId ?? undefined, page: 1, limit: 50 }) });
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["asset-requests", "employee", activeSpaceId],
+    queryFn: () => listAssetRequests({ spaceId: activeSpaceId ?? undefined, requestType: "EMPLOYEE_ASSET", page: 1, limit: 50 }),
+    enabled: Boolean(activeSpaceId),
+  });
   const requests = getItems(data) as Array<{ _id?: string; id?: string; status?: string; productId?: { name?: string } | string; requestedQuantity?: number; businessJustification?: string }>;
 
   return (

@@ -49,7 +49,7 @@ export default function CreateRequestPage() {
       setRequestedQuantity("1");
       setBusinessJustification("");
       setMessage("Request submitted.");
-      await queryClient.invalidateQueries({ queryKey: ["asset-requests", activeSpaceId] });
+      await queryClient.invalidateQueries({ queryKey: ["asset-requests"] });
     },
     onError: (error) => setMessage(getApiErrorMessage(error)),
   });

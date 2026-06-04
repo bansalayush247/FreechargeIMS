@@ -75,6 +75,13 @@ const getRoles = async (spaceId, filters = {}) => {
   });
 };
 
+const getRoleById = async (id, spaceId) => {
+  await assertSpaceExists(spaceId);
+  const role = await roleRepository.findById(id);
+  if (!role || String(role.spaceId) !== String(spaceId)) throw new AppError("Role not found", 404);
+  return role;
+};
+
 const deleteRole = async (id, spaceId, userId, context = {}) => {
   const role = await roleRepository.findById(id);
   if (!role || String(role.spaceId) !== String(spaceId)) throw new AppError("Role not found", 404);
@@ -93,4 +100,4 @@ const deleteRole = async (id, spaceId, userId, context = {}) => {
   return deletedRole;
 };
 
-module.exports = { createRole, getRoles, getRoleById: roleRepository.findById, updateRole, deleteRole };
+module.exports = { createRole, getRoles, getRoleById, updateRole, deleteRole };

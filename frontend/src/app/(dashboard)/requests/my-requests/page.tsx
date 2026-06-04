@@ -19,9 +19,11 @@ function getItems(payload: unknown) {
 export default function MyRequestsPage() {
   const { user } = useAuth();
   const { activeSpaceId } = useCurrentSpace();
+  const currentUserId = user?.id || user?._id;
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["asset-requests", activeSpaceId, user?.id],
-    queryFn: () => listAssetRequests({ spaceId: activeSpaceId ?? undefined, employeeId: user?.id ?? undefined, page: 1, limit: 25 }),
+    queryKey: ["asset-requests", "mine", activeSpaceId, currentUserId],
+    queryFn: () => listAssetRequests({ spaceId: activeSpaceId ?? undefined, employeeId: currentUserId, page: 1, limit: 25 }),
+    enabled: Boolean(activeSpaceId && currentUserId),
   });
   const requests = getItems(data) as Array<{ _id?: string; id?: string; status?: string; productId?: { name?: string; sku?: string } | string; requestedQuantity?: number; businessJustification?: string; remarks?: string }>;
 
