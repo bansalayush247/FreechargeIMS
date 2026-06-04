@@ -4,6 +4,7 @@ const AssetRequest = require("../models/assetRequest");
 const AssetRequestApproval = require("../models/assetRequestApproval");
 const WorkflowDefinition = require("../models/workflowDefinition");
 const WorkflowInstance = require("../models/workflowInstance");
+const Space = require("../models/space");
 const Product = require("../models/product");
 const Merchant = require("../models/merchant");
 const InventoryItem = require("../models/inventory");
@@ -95,6 +96,27 @@ const generateRequestNumber = async () => {
 const ensureWorkflowDefinition = async (spaceId, requestType, userId) => {
   const preset = DEFAULT_WORKFLOWS[requestType];
   if (!preset) throw new AppError("Unsupported request type", 400);
+
+  const space = await Space.findOne({ _id: spaceId, isDeleted: false }).select("employeeWorkflowDefinitionId merchantWorkflowDefinitionId").lean();
+  const configuredDefinitionId = requestType === ASSET_REQUEST_TYPE.MERCHANT_ASSET
+    ? space?.merchantWorkflowDefinitionId
+    : space?.employeeWorkflowDefinitionId;
+
+  if (configuredDefinitionId) {
+    const configuredDefinition = await WorkflowDefinition.findOne({
+      _id: configuredDefinitionId,
+      spaceId,
+      entityType: WORKFLOW_ENTITY_TYPES.ASSET_REQUEST,
+      isActive: true,
+      isDeleted: false,
+    }).lean();
+
+    if (!configuredDefinition) throw new AppError("Configured asset request workflow is unavailable", 400);
+    if (configuredDefinition.steps.some((step) => !STEP_TO_STATUS[normalizeStepKey(step.stepKey)])) {
+      throw new AppError("Configured asset request workflow contains unsupported steps", 400);
+    }
+    return configuredDefinition;
+  }
 
   let definition = await WorkflowDefinition.findOne({ spaceId, code: preset.code, isDeleted: false }).lean();
   if (definition) return definition;

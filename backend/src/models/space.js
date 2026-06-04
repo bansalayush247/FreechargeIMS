@@ -27,6 +27,18 @@ const spaceSchema = new mongoose.Schema(
       default: "",
     },
 
+    employeeWorkflowDefinitionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "WorkflowDefinition",
+      default: null,
+    },
+
+    merchantWorkflowDefinitionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "WorkflowDefinition",
+      default: null,
+    },
+
     isActive: {
       type: Boolean,
       default: true,

@@ -2,6 +2,7 @@ const logger = require("../config/logger");
 const AppError = require("../utils/appError");
 const spaceService = require("../services/space");
 const asyncHandler = require("../utils/asyncHandler");
+const { isGlobalSuperAdmin } = require("../services/permissionResolver");
 
 const {
   createSpaceSchema,
@@ -37,6 +38,7 @@ const createSpace = asyncHandler(async (req, res) => {
     value,
     getUserId(req),
     getUserType(req),
+    await isGlobalSuperAdmin(getUserId(req)),
     getRequestContext(req)
   );
 
@@ -60,7 +62,11 @@ const getSpaces = asyncHandler(async (req, res) => {
     });
   }
 
-  const spaces = await spaceService.getSpaces(value, getUserType(req));
+  const spaces = await spaceService.getSpaces(
+    value,
+    getUserType(req),
+    await isGlobalSuperAdmin(getUserId(req))
+  );
 
   return res.status(200).json({
     success: true,
@@ -72,7 +78,18 @@ const getSpaces = asyncHandler(async (req, res) => {
 // Handles get spaces for current user (spaces where user is a member)
 const getMySpaces = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page || "1", 10);
-  const limit = parseInt(req.query.limit || "10", 10);
+  const globalSuperAdmin = await isGlobalSuperAdmin(getUserId(req));
+  const limit = parseInt(req.query.limit || (globalSuperAdmin ? "100" : "10"), 10);
+
+  if (globalSuperAdmin) {
+    const spaceRepo = require("../repositories/space");
+    const allSpaces = await spaceRepo.paginate({ page, limit });
+    return res.status(200).json({
+      success: true,
+      message: "All spaces fetched successfully for Super Admin",
+      data: allSpaces,
+    });
+  }
 
   // use spaceMember repository to find memberships for the current user
   const spaceMemberRepo = require("../repositories/spaceMember");
@@ -135,6 +152,7 @@ const updateSpace = asyncHandler(async (req, res) => {
     value,
     getUserId(req),
     getUserType(req),
+    await isGlobalSuperAdmin(getUserId(req)),
     getRequestContext(req)
   );
 
@@ -168,5 +186,4 @@ module.exports = {
   updateSpace,
   deleteSpace,
 };
-
 

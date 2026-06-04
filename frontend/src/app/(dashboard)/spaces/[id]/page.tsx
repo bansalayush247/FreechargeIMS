@@ -1,22 +1,26 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card";
+import { Input } from "@/src/components/ui/input";
+import { Label } from "@/src/components/ui/label";
+import { Select } from "@/src/components/ui/select";
 import { PageHeader } from "@/src/components/layout/page-header";
 import { MetricsCard } from "@/src/shared/components/metrics-card";
 import { StatusBadge } from "@/src/shared/components/status-badge";
 import { Timeline } from "@/src/shared/components/timeline";
-import { getSpaceById, listJoinRequests, reviewJoinRequest } from "@/src/features/spaces/api";
+import { deleteSpace, getSpaceById, listJoinRequests, reviewJoinRequest, updateSpace } from "@/src/features/spaces/api";
 import { useAuth } from "@/src/features/auth/auth-provider";
 import { BACKEND_PERMISSIONS, can } from "@/src/lib/permissions";
 import { listMembers, listUserRoles, replaceUserRoles } from "@/src/lib/spaceMemberClient";
 import { listRoles } from "@/src/lib/roleClient";
-import { fulfillAssetRequest, itApproveAssetRequest, listAssetRequests, managerApproveAssetRequest, rejectAssetRequest } from "@/src/lib/assetRequestClient";
+import { fulfillAssetRequest, itApproveAssetRequest, listAssetRequests, managerApproveAssetRequest, rejectAssetRequest, zonalApproveAssetRequest } from "@/src/lib/assetRequestClient";
 import { listInventory } from "@/src/lib/inventoryClient";
 import { queryKeys } from "@/src/constants/query-keys";
+import { getApiErrorMessage } from "@/src/services/http/client";
 
 function getItems(payload: unknown) {
   if (!payload || typeof payload !== "object") return [];
@@ -32,6 +36,7 @@ function normalizeLabel(value?: string) {
 
 export default function SpaceDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const spaceId = params?.id ?? "";
   const { user } = useAuth();
@@ -108,6 +113,7 @@ export default function SpaceDetailPage() {
       if (action === "approve") {
         if (stepKey === "WAREHOUSE_FULFILLMENT" || stepKey === "FULFILLMENT") return fulfillAssetRequest(requestId, { remarks }, spaceId);
         if (stepKey === "IT_APPROVAL") return itApproveAssetRequest(requestId, { remarks }, spaceId);
+        if (stepKey === "ZONAL_APPROVAL" || stepKey === "ZONAL_MANAGER_APPROVAL") return zonalApproveAssetRequest(requestId, { remarks }, spaceId);
         if (stepKey === "MANAGER_APPROVAL") return managerApproveAssetRequest(requestId, { remarks }, spaceId);
         return managerApproveAssetRequest(requestId, { remarks }, spaceId);
       }
@@ -118,6 +124,19 @@ export default function SpaceDetailPage() {
       await queryClient.invalidateQueries({ queryKey: ["space-asset-requests", spaceId] });
     },
   });
+  const [spaceName, setSpaceName] = useState("");
+  const [spaceCode, setSpaceCode] = useState("");
+  const [spaceType, setSpaceType] = useState<"EMPLOYEE" | "MERCHANT">("EMPLOYEE");
+  const [spaceDescription, setSpaceDescription] = useState("");
+  const [spaceActionMessage, setSpaceActionMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!space) return;
+    setSpaceName(space.name || "");
+    setSpaceCode(space.code || "");
+    setSpaceType(space.type === "MERCHANT" ? "MERCHANT" : "EMPLOYEE");
+    setSpaceDescription(space.description || "");
+  }, [space]);
   const pendingAssetRequestId = assetRequestActionMutation.isPending
     ? assetRequestActionMutation.variables?.request._id || assetRequestActionMutation.variables?.request.id || ""
     : "";
@@ -158,7 +177,30 @@ export default function SpaceDetailPage() {
     can(user, BACKEND_PERMISSIONS.UPDATE_ASSET_REQUEST, spaceId) ||
     isSpaceAdmin ||
     isInventoryManager;
+  const canUpdateSpace = can(user, BACKEND_PERMISSIONS.UPDATE_SPACE, spaceId);
+  const canDeleteSpace = can(user, BACKEND_PERMISSIONS.DELETE_SPACE, spaceId);
   const [selectedRoleByMember, setSelectedRoleByMember] = useState<Record<string, string>>({});
+
+  const updateSpaceMutation = useMutation({
+    mutationFn: () => updateSpace(spaceId, { name: spaceName.trim(), code: spaceCode.trim(), type: spaceType, description: spaceDescription.trim() }),
+    onSuccess: async () => {
+      setSpaceActionMessage("Space updated.");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["spaces", spaceId] }),
+        queryClient.invalidateQueries({ queryKey: ["spaces"] }),
+      ]);
+    },
+    onError: (error) => setSpaceActionMessage(getApiErrorMessage(error)),
+  });
+
+  const deleteSpaceMutation = useMutation({
+    mutationFn: () => deleteSpace(spaceId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["spaces"] });
+      router.push("/spaces");
+    },
+    onError: (error) => setSpaceActionMessage(getApiErrorMessage(error)),
+  });
 
   const roleUpdateMutation = useMutation({
     mutationFn: ({ userId, roleId }: { userId: string; roleId: string }) => replaceUserRoles(userId, [roleId], spaceId),
@@ -211,6 +253,55 @@ export default function SpaceDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {canUpdateSpace || canDeleteSpace ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Manage space</CardTitle>
+                <CardDescription>Update this space or remove it from active operations.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="manage-space-name">Name</Label>
+                  <Input id="manage-space-name" value={spaceName} onChange={(event) => setSpaceName(event.target.value)} disabled={!canUpdateSpace} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manage-space-code">Code</Label>
+                  <Input id="manage-space-code" value={spaceCode} onChange={(event) => setSpaceCode(event.target.value.toUpperCase())} disabled={!canUpdateSpace} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manage-space-type">Type</Label>
+                  <Select id="manage-space-type" value={spaceType} onChange={(event) => setSpaceType(event.target.value as "EMPLOYEE" | "MERCHANT")} disabled={!canUpdateSpace}>
+                    <option value="EMPLOYEE">Employee</option>
+                    <option value="MERCHANT">Merchant</option>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manage-space-description">Description</Label>
+                  <Input id="manage-space-description" value={spaceDescription} onChange={(event) => setSpaceDescription(event.target.value)} disabled={!canUpdateSpace} />
+                </div>
+                <div className="flex flex-wrap items-center gap-3 md:col-span-2">
+                  {canUpdateSpace ? (
+                    <Button disabled={!spaceName.trim() || !spaceCode.trim() || updateSpaceMutation.isPending} onClick={() => updateSpaceMutation.mutate()}>
+                      {updateSpaceMutation.isPending ? "Saving..." : "Save changes"}
+                    </Button>
+                  ) : null}
+                  {canDeleteSpace ? (
+                    <Button
+                      variant="outline"
+                      disabled={deleteSpaceMutation.isPending}
+                      onClick={() => {
+                        if (window.confirm(`Delete space "${space?.name || spaceId}"?`)) deleteSpaceMutation.mutate();
+                      }}
+                    >
+                      {deleteSpaceMutation.isPending ? "Deleting..." : "Delete space"}
+                    </Button>
+                  ) : null}
+                  {spaceActionMessage ? <span className="text-sm text-slate-600">{spaceActionMessage}</span> : null}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card>
             <CardHeader>

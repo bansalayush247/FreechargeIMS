@@ -6,7 +6,7 @@ import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { useCurrentSpace } from "@/src/hooks/useCurrentSpace";
-import { fulfillAssetRequest, listAssetRequests } from "@/src/lib/assetRequestClient";
+import { fulfillAssetRequest, listFulfillmentQueue } from "@/src/lib/assetRequestClient";
 
 function getItems(payload: unknown) {
   if (!payload || typeof payload !== "object") return [];
@@ -19,13 +19,17 @@ function getItems(payload: unknown) {
 export default function FulfillmentQueuePage() {
   const queryClient = useQueryClient();
   const { activeSpaceId } = useCurrentSpace();
-  const { data, isLoading, isError } = useQuery({ queryKey: ["asset-requests", activeSpaceId], queryFn: () => listAssetRequests({ spaceId: activeSpaceId ?? undefined, page: 1, limit: 50 }) });
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["asset-requests", "fulfillment-queue", activeSpaceId],
+    queryFn: () => listFulfillmentQueue({ spaceId: activeSpaceId ?? undefined, page: 1, limit: 50 }),
+    enabled: Boolean(activeSpaceId),
+  });
   const requests = getItems(data) as Array<{ _id?: string; id?: string; status?: string; productId?: { name?: string } | string; requestedQuantity?: number; businessJustification?: string }>;
-  const fulfillment = requests.filter((request) => /fulfill|approved|ready/i.test(request.status || ""));
+  const fulfillment = requests.filter((request) => ["PENDING_FULFILLMENT", "FULFILLMENT_PENDING", "FULFILLMENT_DELAYED"].includes(request.status || ""));
   const fulfillMutation = useMutation({
     mutationFn: (requestId: string) => fulfillAssetRequest(requestId, {}, activeSpaceId ?? undefined),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["asset-requests", activeSpaceId] });
+      await queryClient.invalidateQueries({ queryKey: ["asset-requests"] });
     },
   });
   const pendingRequestId = fulfillMutation.isPending ? fulfillMutation.variables : "";

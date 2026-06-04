@@ -16,6 +16,15 @@ export async function listAssetRequests(options?: {
   return res.data;
 }
 
+export async function listFulfillmentQueue(options?: { spaceId?: string; page?: number; limit?: number }) {
+  const { spaceId, ...params } = options ?? {};
+  const res = await apiClient.get("/asset-requests/fulfillment-queue", {
+    params,
+    headers: spaceId ? { "x-space-id": spaceId } : undefined,
+  });
+  return res.data;
+}
+
 export async function getAssetRequest(id: string, spaceId?: string) {
   const res = await apiClient.get(`/asset-requests/${id}`, { headers: spaceId ? { "x-space-id": spaceId } : undefined });
   return res.data;
@@ -46,6 +55,13 @@ export async function managerApproveAssetRequest(id: string, payload?: { remarks
 
 export async function itApproveAssetRequest(id: string, payload?: { remarks?: string }, spaceId?: string) {
   const res = await apiClient.patch(`/asset-requests/${id}/it-approve`, payload ?? {}, {
+    headers: spaceId ? { "x-space-id": spaceId } : undefined,
+  });
+  return res.data;
+}
+
+export async function zonalApproveAssetRequest(id: string, payload?: { remarks?: string }, spaceId?: string) {
+  const res = await apiClient.patch(`/asset-requests/${id}/zonal-approve`, payload ?? {}, {
     headers: spaceId ? { "x-space-id": spaceId } : undefined,
   });
   return res.data;

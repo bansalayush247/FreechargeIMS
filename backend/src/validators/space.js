@@ -1,5 +1,6 @@
 const Joi = require("joi");
 const { SPACE_TYPES } = require("../constants/space");
+const mongoId = Joi.string().hex().length(24);
 
 const normalizeType = (value) => {
   if (value.type) {
@@ -27,6 +28,8 @@ const createSpaceSchema = Joi.object({
   code: Joi.string().trim().uppercase().optional(),
   spaceCode: Joi.string().trim().uppercase().optional(),
   description: Joi.string().trim().allow("").optional(),
+  employeeWorkflowDefinitionId: mongoId.allow(null).optional(),
+  merchantWorkflowDefinitionId: mongoId.allow(null).optional(),
   isActive: Joi.boolean().optional(),
 })
   .or("type", "spaceType")
@@ -39,6 +42,8 @@ const updateSpaceSchema = Joi.object({
   code: Joi.string().trim().uppercase().optional(),
   spaceCode: Joi.string().trim().uppercase().optional(),
   description: Joi.string().trim().allow("").optional(),
+  employeeWorkflowDefinitionId: mongoId.allow(null).optional(),
+  merchantWorkflowDefinitionId: mongoId.allow(null).optional(),
   isActive: Joi.boolean().optional(),
 })
   .min(1)

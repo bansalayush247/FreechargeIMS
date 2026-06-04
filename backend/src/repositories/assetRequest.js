@@ -58,7 +58,7 @@ const fulfillmentQueue = async ({ page, limit, spaceId }) => {
   const query = {
     isDeleted: false,
     spaceId,
-    status: { $in: ["PENDING_FULFILLMENT", "FULFILLMENT_PENDING", "FULFILLMENT_DELAYED", "PARTIALLY_FULFILLED", "OUT_OF_STOCK", "PROCUREMENT_REQUIRED"] },
+    status: { $in: ["PENDING_FULFILLMENT", "FULFILLMENT_PENDING", "FULFILLMENT_DELAYED"] },
   };
 
   const [items, total] = await Promise.all([

@@ -7,6 +7,7 @@ const auditLogService = require("./auditLog");
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
 const { getEnforcer } = require("../config/casbin");
+const WorkflowDefinition = require("../models/workflowDefinition");
 
 const { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES} = require("../constants/auditLog");
 const { ROLE_CODES } = require("../constants/role");
@@ -77,6 +78,23 @@ const normalizeSpacePayload = (payload) => {
   return normalized;
 };
 
+const assertWorkflowSelections = async (spaceId, payload) => {
+  const selectedIds = [payload.employeeWorkflowDefinitionId, payload.merchantWorkflowDefinitionId].filter(Boolean);
+  if (!selectedIds.length) return;
+
+  const count = await WorkflowDefinition.countDocuments({
+    _id: { $in: selectedIds },
+    spaceId,
+    entityType: "ASSET_REQUEST",
+    isActive: true,
+    isDeleted: false,
+  });
+
+  if (count !== new Set(selectedIds.map(String)).size) {
+    throw new AppError("Selected workflow must be an active asset request workflow in this space", 400);
+  }
+};
+
 const isUserTypeSpaceScoped = (userType) =>
   Object.values(SPACE_TYPES).includes(userType);
 
@@ -111,12 +129,12 @@ const assertUniqueSpaceFields = async (
 };
 
 // Handles create space.
-const createSpace = async (payload, userId, userType, context = {}) => {
+const createSpace = async (payload, userId, userType, globalSuperAdmin = false, context = {}) => {
   logger.info("Creating space");
 
   const normalizedPayload = normalizeSpacePayload(payload);
 
-  if (normalizedPayload.type && normalizedPayload.type !== userType) {
+  if (!globalSuperAdmin && normalizedPayload.type && normalizedPayload.type !== userType) {
     throw new AppError("Space type must match your user type", 403);
   }
 
@@ -220,10 +238,10 @@ const createSpace = async (payload, userId, userType, context = {}) => {
 };
 
 // Handles get spaces.
-const getSpaces = async (filters, userType) => {
+const getSpaces = async (filters, userType, globalSuperAdmin = false) => {
   const query = { ...filters };
 
-  if (isUserTypeSpaceScoped(userType)) {
+  if (!globalSuperAdmin && isUserTypeSpaceScoped(userType)) {
     query.type = userType;
   }
 
@@ -247,6 +265,7 @@ const updateSpace = async (
   payload,
   userId,
   userType,
+  globalSuperAdmin = false,
   context = {}
 ) => {
   console.log("Updating space", id, payload);
@@ -254,11 +273,12 @@ const updateSpace = async (
 
   const normalizedPayload = normalizeSpacePayload(payload);
 
-  if (isUserTypeSpaceScoped(userType) && normalizedPayload.type && normalizedPayload.type !== userType) {
+  if (!globalSuperAdmin && isUserTypeSpaceScoped(userType) && normalizedPayload.type && normalizedPayload.type !== userType) {
     throw new AppError("Space type must match your user type", 403);
   }
 
   await assertUniqueSpaceFields(normalizedPayload, id);
+  await assertWorkflowSelections(id, normalizedPayload);
 
   const updatedSpace = await spaceRepository.updateById(id, {
     ...normalizedPayload,

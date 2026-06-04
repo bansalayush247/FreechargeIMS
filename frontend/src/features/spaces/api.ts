@@ -8,6 +8,8 @@ export type SpaceListItem = {
   code?: string;
   description?: string;
   isActive?: boolean;
+  employeeWorkflowDefinitionId?: string | null;
+  merchantWorkflowDefinitionId?: string | null;
 };
 
 export type JoinRequestInput = {
@@ -20,6 +22,8 @@ export type SpaceCreateInput = {
   code?: string;
   description?: string;
   isActive?: boolean;
+  employeeWorkflowDefinitionId?: string | null;
+  merchantWorkflowDefinitionId?: string | null;
 };
 
 function unwrapItems(payload: unknown) {

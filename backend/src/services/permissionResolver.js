@@ -9,6 +9,12 @@ const { ERRORS } = require("../constants/error");
 
 const resolveSubject = (userId, spaceId) => `${String(userId)}:${String(spaceId)}`;
 
+const isGlobalSuperAdmin = async (userId) => {
+  const enforcer = await getEnforcer();
+  const globalRoles = await enforcer.getRolesForUser(`${String(userId)}:SYSTEM`);
+  return globalRoles.includes("SUPER_ADMIN:SYSTEM");
+};
+
 const assertActiveMembership = async (userId, spaceId) => {
   const membership = await findByUserAndSpace(userId, spaceId);
   if (!membership || !membership.isActive) {
@@ -82,4 +88,5 @@ module.exports = {
   assertActiveMembership,
   authorizePermission,
   getAuthzSnapshotByUser,
+  isGlobalSuperAdmin,
 };

@@ -1,7 +1,40 @@
 import { apiClient } from "@/src/lib/api";
-export async function listWorkflowDefinitions() { const r = await apiClient.get("/workflows/definitions"); return r.data?.data?.items ?? r.data?.data ?? []; }
-export async function createWorkflowDefinition(payload: Record<string, unknown>) { const r = await apiClient.post("/workflows/definitions", payload); return r.data?.data ?? r.data; }
-export async function updateWorkflowDefinition(id: string, payload: Record<string, unknown>) { const r = await apiClient.patch(`/workflows/definitions/${id}`, payload); return r.data?.data ?? r.data; }
-export async function deleteWorkflowDefinition(id: string) { const r = await apiClient.delete(`/workflows/definitions/${id}`); return r.data?.data ?? r.data; }
-export async function listWorkflowInstances() { const r = await apiClient.get("/workflows/instances"); return r.data?.data?.items ?? r.data?.data ?? []; }
-export async function transitionWorkflow(instanceId: string, transition: string) { const r = await apiClient.patch(`/workflows/instances/${instanceId}/transition`, { transition }); return r.data?.data ?? r.data; }
+
+function spaceHeaders(spaceId?: string) {
+  return spaceId ? { "x-space-id": spaceId } : undefined;
+}
+
+export async function listWorkflowDefinitions(spaceId?: string) {
+  const response = await apiClient.get("/workflows/definitions", { headers: spaceHeaders(spaceId) });
+  return response.data?.data?.items ?? response.data?.data ?? [];
+}
+
+export async function getWorkflowDefinition(id: string, spaceId?: string) {
+  const response = await apiClient.get(`/workflows/definitions/${id}`, { headers: spaceHeaders(spaceId) });
+  return response.data?.data ?? response.data;
+}
+
+export async function createWorkflowDefinition(payload: Record<string, unknown>, spaceId?: string) {
+  const response = await apiClient.post("/workflows/definitions", payload, { headers: spaceHeaders(spaceId) });
+  return response.data?.data ?? response.data;
+}
+
+export async function updateWorkflowDefinition(id: string, payload: Record<string, unknown>, spaceId?: string) {
+  const response = await apiClient.patch(`/workflows/definitions/${id}`, payload, { headers: spaceHeaders(spaceId) });
+  return response.data?.data ?? response.data;
+}
+
+export async function deleteWorkflowDefinition(id: string, spaceId?: string) {
+  const response = await apiClient.delete(`/workflows/definitions/${id}`, { headers: spaceHeaders(spaceId) });
+  return response.data?.data ?? response.data;
+}
+
+export async function listWorkflowInstances(spaceId?: string) {
+  const response = await apiClient.get("/workflows/instances", { headers: spaceHeaders(spaceId) });
+  return response.data?.data?.items ?? response.data?.data ?? [];
+}
+
+export async function transitionWorkflow(instanceId: string, action: string, spaceId?: string) {
+  const response = await apiClient.patch(`/workflows/instances/${instanceId}/transition`, { action }, { headers: spaceHeaders(spaceId) });
+  return response.data?.data ?? response.data;
+}

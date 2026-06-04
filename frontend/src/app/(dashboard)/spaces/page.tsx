@@ -18,6 +18,7 @@ import { useSpaces } from "@/src/features/spaces/hooks/use-spaces";
 import { getApiErrorMessage } from "@/src/services/http/client";
 import { useAuthorization } from "@/src/hooks/useAuthorization";
 import { BACKEND_PERMISSIONS } from "@/src/lib/authorization";
+import { useAuth } from "@/src/features/auth/auth-provider";
 
 function getSpaceId(space: { _id?: string; id?: string }) {
   return space._id || space.id || "";
@@ -57,6 +58,7 @@ function DiscoverSpaceCard({
 
 export default function SpacesPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { activeSpaceId, setActiveSpaceId } = useCurrentSpace();
   const { data: spaces = [], isLoading, isError } = useSpaces();
   const { data: mySpaces = [] } = useMySpaces();
@@ -68,6 +70,7 @@ export default function SpacesPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const authz = useAuthorization();
   const canCreateSpace = authz.can(BACKEND_PERMISSIONS.CREATE_SPACE);
+  const isGlobalSuperAdmin = Boolean(user?.isGlobalSuperAdmin);
 
   const mySpaceIds = useMemo(() => new Set(mySpaces.map((space: { _id?: string; id?: string }) => getSpaceId(space))), [mySpaces]);
   const discoverSpaces = useMemo(() => spaces.filter((space: { _id?: string; id?: string }) => !mySpaceIds.has(getSpaceId(space))), [spaces, mySpaceIds]);
@@ -128,7 +131,7 @@ export default function SpacesPage() {
       <PageHeader
         eyebrow="Workspace"
         title="Spaces"
-        description="Browse available spaces, request access to ones you have not joined, or create a new space."
+        description={isGlobalSuperAdmin ? "Select and administer any operational space without joining it." : "Browse available spaces, request access to ones you have not joined, or create a new space."}
         actions={actionMessage ? <span className="text-sm text-slate-600">{actionMessage}</span> : undefined}
       />
 
@@ -170,8 +173,8 @@ export default function SpacesPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>My spaces</CardTitle>
-            <CardDescription>Spaces you already belong to.</CardDescription>
+            <CardTitle>{isGlobalSuperAdmin ? "All spaces" : "My spaces"}</CardTitle>
+            <CardDescription>{isGlobalSuperAdmin ? "Global Super Admin access across employee and merchant spaces." : "Spaces you already belong to."}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {mySpaces.length ? mySpaces.map((space: { _id?: string; id?: string; name?: string; type?: string; code?: string; description?: string }) => {
@@ -185,7 +188,7 @@ export default function SpacesPage() {
                       <p className="text-sm text-slate-600">{space.type || space.code || "Space"}</p>
                     </div>
                     <span className="rounded-full border border-slate-200 px-3 py-1 text-xs uppercase tracking-[0.16em] text-slate-600">
-                      {isCurrent ? "Current" : "Joined"}
+                      {isCurrent ? "Current" : isGlobalSuperAdmin ? "Available" : "Joined"}
                     </span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -202,7 +205,7 @@ export default function SpacesPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        {!isGlobalSuperAdmin ? <Card>
           <CardHeader>
             <CardTitle>Discover spaces</CardTitle>
             <CardDescription>Request access to spaces you have not joined yet.</CardDescription>
@@ -216,7 +219,7 @@ export default function SpacesPage() {
               <div className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4 text-sm text-slate-600">No discoverable spaces available.</div>
             )}
           </CardContent>
-        </Card>
+        </Card> : null}
       </div>
     </div>
   );

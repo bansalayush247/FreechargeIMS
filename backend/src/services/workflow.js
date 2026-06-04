@@ -4,6 +4,7 @@ const auditLogService = require("./auditLog");
 
 const AppError = require("../utils/appError");
 const logger = require("../config/logger");
+const Space = require("../models/space");
 
 const {
   WORKFLOW_STATUS,
@@ -163,6 +164,18 @@ const deleteWorkflowDefinition = async (
     id,
     spaceId
   );
+
+  const selectedBySpace = await Space.exists({
+    _id: spaceId,
+    isDeleted: false,
+    $or: [
+      { employeeWorkflowDefinitionId: id },
+      { merchantWorkflowDefinitionId: id },
+    ],
+  });
+  if (selectedBySpace) {
+    throw new AppError("Workflow is selected by this space and cannot be deleted", 400);
+  }
 
   const deletedWorkflowDefinition =
     await workflowDefinitionRepository.updateById(id, {
