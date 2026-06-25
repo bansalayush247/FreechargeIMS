@@ -70,9 +70,26 @@ const paginateBySpace = async ({ page, limit, assignedSpaceId, assignedToUserId,
   };
 };
 
+const findByRequestId = async (requestId, assignedSpaceId) => {
+  return AssetRegistry.find({
+    requestId,
+    assignedSpaceId,
+    status: ASSET_REGISTRY_STATUS.ASSIGNED,
+    isDeleted: false,
+  })
+    .populate("productId", "name sku trackingType")
+    .populate("assignedToUserId", "firstName lastName email employeeId")
+    .populate("assignedToMerchantId", "name merchantCode")
+    .populate("assignedByUserId", "firstName lastName email employeeId")
+    .populate("sourceInventoryItemId", "assetTag serialNumber status condition")
+    .sort({ assignedAt: 1 })
+    .lean();
+};
+
 module.exports = {
   create,
   findActiveByInventoryItemAndAssignee,
   paginateBySpace,
+  findByRequestId,
   ASSET_REGISTRY_STATUS,
 };

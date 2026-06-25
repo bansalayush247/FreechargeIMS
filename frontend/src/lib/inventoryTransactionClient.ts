@@ -7,7 +7,7 @@ export async function getInventoryItemAuditTrail(inventoryItemId: string, spaceI
   return res.data;
 }
 
-export async function listInventoryTransactions(params?: { page?: number; limit?: number; spaceId?: string; productId?: string }) {
+export async function listInventoryTransactions(params?: { page?: number; limit?: number; spaceId?: string; productId?: string; transactionType?: string }) {
   const { spaceId, ...query } = params ?? {};
   const res = await apiClient.get("/inventoryTransactions", {
     params: query,

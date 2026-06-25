@@ -1,6 +1,6 @@
 import { apiClient } from "@/src/lib/api";
 
-export async function listMyAssetRegistry(options?: { spaceId?: string; page?: number; limit?: number }) {
+export async function listMyAssetRegistry(options?: { spaceId?: string; page?: number; limit?: number; status?: string }) {
   const { spaceId, ...params } = options ?? {};
   const res = await apiClient.get("/asset-registry/me", {
     params,

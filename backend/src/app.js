@@ -1,7 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 
 const routes = require("./routes");
@@ -9,15 +8,17 @@ const { getAllowedOrigins } = require("./config/env");
 
 const errorMiddleware = require("./middleware/error");
 const notFoundMiddleware = require("./middleware/notFound");
-const responseLogger = require("./middleware/responseLogger");
+const { contextLogger, requestInputLogger } = require("./middleware/contextLogger");
 const rateLimiter = require("./middleware/rateLimiter");
 
 const app = express();
 const allowedOrigins = getAllowedOrigins();
 
+app.use(contextLogger);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(requestInputLogger);
 
 app.set("trust proxy", 1);
 
@@ -33,11 +34,6 @@ app.use(cors({
 }));
 app.use(helmet());
 app.use(rateLimiter());
-
-if (process.env.NODE_ENV !== "test") {
-  app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
-}
-app.use(responseLogger);
 
 app.get("/health", (req, res) => {
   res.status(200).json({

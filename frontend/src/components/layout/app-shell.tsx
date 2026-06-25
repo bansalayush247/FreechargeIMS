@@ -95,6 +95,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     refreshCurrentUser().catch(() => {});
   }, [joinedSpaceSignature, refreshCurrentUser]);
 
+  useEffect(() => {
+    if (!activeSpaceId) {
+      return;
+    }
+
+    refreshCurrentUser().catch(() => {});
+  }, [activeSpaceId, refreshCurrentUser]);
+
+  useEffect(() => {
+    const refreshAuthorization = () => {
+      if (document.visibilityState === "visible") {
+        refreshCurrentUser().catch(() => {});
+      }
+    };
+    const intervalId = window.setInterval(refreshAuthorization, 30_000);
+
+    window.addEventListener("focus", refreshAuthorization);
+    document.addEventListener("visibilitychange", refreshAuthorization);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshAuthorization);
+      document.removeEventListener("visibilitychange", refreshAuthorization);
+    };
+  }, [refreshCurrentUser]);
+
   return (
     <div className="min-h-screen text-slate-900">
       <header className="sticky top-0 z-30 border-b border-orange-100 bg-white/90 backdrop-blur-xl">

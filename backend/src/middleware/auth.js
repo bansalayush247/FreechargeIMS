@@ -6,6 +6,7 @@ const { HTTP_STATUS } = require("../constants/http");
 const { findActiveUserById } = require("../repositories/user");
 
 const { verifyAccessToken } = require("../services/auth.tokens");
+const { setContextUser } = require("./contextLogger");
 
 // Handles auth middleware.
 const authMiddleware = async (req, res, next) => {
@@ -40,6 +41,7 @@ const authMiddleware = async (req, res, next) => {
     }
 
     req.user = user;
+    setContextUser(user);
 
     next();
   } catch (error) {

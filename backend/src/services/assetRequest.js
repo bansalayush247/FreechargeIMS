@@ -295,13 +295,16 @@ const getAssetRequests = async (filters) => assetRequestRepository.paginate(filt
 
 const getFulfillmentQueue = async (filters) => assetRequestRepository.fulfillmentQueue(filters);
 
-const getAssetRequestById = async (id, context = {}) => {
-  const request = await assetRequestRepository.findById(id, context.spaceId);
-  if (!request) throw new AppError("Asset request not found", 404);
+  const getAssetRequestById = async (id, context = {}) => {
+    const request = await assetRequestRepository.findById(id, context.spaceId);
+    if (!request) throw new AppError("Asset request not found", 404);
 
-  const approvals = await assetRequestApprovalRepository.findByAssetRequestId(id, context.spaceId);
-  return { ...request, approvals };
-};
+    const [approvals, assignedAssets] = await Promise.all([
+      assetRequestApprovalRepository.findByAssetRequestId(id, context.spaceId),
+      assetRegistryRepository.findByRequestId(id, context.spaceId),
+    ]);
+    return { ...request, approvals, assignedAssets };
+  };
 
 const getActiveWorkflowInstance = async (request) => {
   const instance = await WorkflowInstance.findOne({
@@ -596,8 +599,12 @@ const fulfillRequestCore = async (id, payload, userId, context = {}) => {
   }
 
   const requestedAssetIds = Array.isArray(payload.inventoryAssetIds)
-    ? payload.inventoryAssetIds
+    ? [...new Set(payload.inventoryAssetIds.map(String))]
     : [];
+
+  if (requestedAssetIds.length && requestedAssetIds.length !== request.requestedQuantity) {
+    throw new AppError(`Select exactly ${request.requestedQuantity} serialized assets`, 400);
+  }
 
   const assetQuery = {
     productId: request.productId,

@@ -7,7 +7,7 @@ const findById = async (id, spaceId) => {
     .populate("spaceId", "name code")
     .populate("employeeId", "firstName lastName email employeeId")
     .populate("merchantId", "name merchantCode")
-    .populate("productId", "name sku")
+    .populate("productId", "name sku trackingType assetType")
     .populate("inventoryItemId", "_id serialNumber assetTag")
     .lean();
 };

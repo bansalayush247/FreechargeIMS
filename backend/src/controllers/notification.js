@@ -57,18 +57,10 @@ const getNotifications = asyncHandler(async (req, res) => {
     });
   }
 
-  const {
-    recipientUserId,
-    recipientEmail,
-    ...filters
-  } = value;
-
   const notifications =
     await notificationService.getNotifications({
-      ...filters,
+      ...value,
       spaceId: req.spaceId,
-      ownerUserId: getUserId(req),
-      ownerEmail: getUserEmail(req),
     });
 
   return res.status(200).json({

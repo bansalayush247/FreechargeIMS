@@ -56,7 +56,9 @@ export async function getNotification(id: string) {
   return res.data?.data ?? res.data;
 }
 
-export async function sendNotification(payload: Record<string, unknown>) {
-  const res = await apiClient.post("/notifications/send", payload);
+export async function sendNotification(payload: Record<string, unknown>, spaceId?: string) {
+  const res = await apiClient.post("/notifications/send", payload, {
+    headers: spaceId ? { "x-space-id": spaceId } : undefined,
+  });
   return res.data?.data ?? res.data;
 }

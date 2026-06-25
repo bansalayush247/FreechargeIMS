@@ -264,6 +264,23 @@ const runCreateTransaction = async (
       newStatus = INVENTORY_STATUS.DAMAGED;
       break;
 
+    case INVENTORY_TRANSACTION_TYPES.SEND_TO_REPAIR:
+      inventoryItem.status = INVENTORY_STATUS.UNDER_REPAIR;
+      newStatus = INVENTORY_STATUS.UNDER_REPAIR;
+      break;
+
+    case INVENTORY_TRANSACTION_TYPES.REPAIR_RETURN:
+      inventoryItem.status = INVENTORY_STATUS.REPAIRED;
+      inventoryItem.condition = "GOOD";
+      newStatus = INVENTORY_STATUS.REPAIRED;
+      break;
+
+    case INVENTORY_TRANSACTION_TYPES.REPAIR_FAILED:
+      inventoryItem.status = INVENTORY_STATUS.REPAIR_FAILED;
+      inventoryItem.condition = "DAMAGED";
+      newStatus = INVENTORY_STATUS.REPAIR_FAILED;
+      break;
+
     case INVENTORY_TRANSACTION_TYPES.RETIREMENT:
       inventoryItem.status = INVENTORY_STATUS.RETIRED;
       newStatus = INVENTORY_STATUS.RETIRED;
@@ -296,6 +313,7 @@ const runCreateTransaction = async (
         toUserId: payload.toUserId || null,
         fromMerchantId,
         toMerchantId: payload.toMerchantId || null,
+        requestId: payload.requestId || null,
         transactionType,
         remarks: payload.remarks,
         previousStatus,

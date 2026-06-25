@@ -1,6 +1,6 @@
 export const apiRoutes = {
   auth: "/auth",
   products: "/product",
-  warehouses: "/warehouse",
+  warehouses: "/warehouses",
   inventory: "/inventory",
 };

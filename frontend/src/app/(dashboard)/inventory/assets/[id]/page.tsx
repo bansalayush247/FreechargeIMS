@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   Boxes,
@@ -10,20 +10,22 @@ import {
   CalendarClock,
   CircleUserRound,
   ClipboardList,
-  History,
   MapPin,
   PackageCheck,
   UserRoundCheck,
+  Wrench,
 } from "lucide-react";
 import { PageHeader } from "@/src/components/layout/page-header";
 import { Badge } from "@/src/components/ui/badge";
-import { buttonVariants } from "@/src/components/ui/button";
+import { Button, buttonVariants } from "@/src/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import { useToast } from "@/src/components/toastProvider";
 import { useCurrentSpace } from "@/src/hooks/useCurrentSpace";
 import { getApiItems } from "@/src/lib/api-data";
 import { getInventoryItem } from "@/src/lib/inventoryClient";
-import { getInventoryItemAuditTrail } from "@/src/lib/inventoryTransactionClient";
+import { createInventoryTransaction, getInventoryItemAuditTrail } from "@/src/lib/inventoryTransactionClient";
+import { getApiErrorMessage } from "@/src/services/http/client";
 
 type Entity = {
   _id?: string;
@@ -97,6 +99,8 @@ function Detail({ label, value }: { label: string; value?: string | number }) {
 export default function InventoryItemPage() {
   const { id } = useParams<{ id: string }>();
   const { activeSpaceId } = useCurrentSpace();
+  const queryClient = useQueryClient();
+  const toast = useToast();
   const itemQuery = useQuery({
     queryKey: ["inventory-item", id, activeSpaceId],
     queryFn: () => getInventoryItem(id, activeSpaceId ?? undefined),
@@ -114,6 +118,32 @@ export default function InventoryItemPage() {
   const item = itemPayload as InventoryItem | undefined;
   const auditTrail = getApiItems<InventoryTransaction>(auditQuery.data);
   const currentAssignee = entityLabel(item?.assignedUserId) || entityLabel(item?.assignedMerchantId);
+  const repairMutation = useMutation({
+    mutationFn: ({ transactionType, remarks }: { transactionType: string; remarks: string }) =>
+      createInventoryTransaction(
+        {
+          inventoryItemId: id,
+          transactionType,
+          remarks,
+        },
+        activeSpaceId ?? undefined,
+      ),
+    onSuccess: async () => {
+      toast.show("success", "Repair status updated");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["inventory-item", id, activeSpaceId] }),
+        queryClient.invalidateQueries({ queryKey: ["inventory-item-audit", id, activeSpaceId] }),
+        queryClient.invalidateQueries({ queryKey: ["inventory-history", activeSpaceId] }),
+      ]);
+    },
+    onError: (error) => {
+      toast.show("error", getApiErrorMessage(error));
+    },
+  });
+
+  const runRepairAction = (transactionType: string, remarks: string) => {
+    repairMutation.mutate({ transactionType, remarks });
+  };
 
   return (
     <div className="space-y-6">
@@ -142,6 +172,37 @@ export default function InventoryItemPage() {
               <Detail label="Created by" value={entityLabel(item.createdBy)} />
               <Detail label="Created" value={formatDate(item.createdAt)} />
               <Detail label="Remarks" value={item.remarks || "-"} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Repair actions</CardTitle>
+              <CardDescription>Track a lightweight repair lifecycle through inventory transactions.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-3">
+              <Button
+                variant="outline"
+                onClick={() => runRepairAction("SEND_TO_REPAIR", "Asset sent to repair")}
+                disabled={repairMutation.isPending || item.status === "UNDER_REPAIR"}
+              >
+                <Wrench className="h-4 w-4" />
+                Send to repair
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => runRepairAction("REPAIR_RETURN", "Asset returned from repair")}
+                disabled={repairMutation.isPending || item.status !== "UNDER_REPAIR"}
+              >
+                Mark repaired
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => runRepairAction("REPAIR_FAILED", "Repair failed")}
+                disabled={repairMutation.isPending || item.status !== "UNDER_REPAIR"}
+              >
+                Repair failed
+              </Button>
             </CardContent>
           </Card>
 

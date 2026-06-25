@@ -67,7 +67,7 @@ export async function zonalApproveAssetRequest(id: string, payload?: { remarks?:
   return res.data;
 }
 
-export async function fulfillAssetRequest(id: string, payload?: { remarks?: string }, spaceId?: string) {
+export async function fulfillAssetRequest(id: string, payload?: { remarks?: string; inventoryAssetIds?: string[] }, spaceId?: string) {
   const res = await apiClient.patch(`/asset-requests/${id}/fulfill`, payload ?? {}, {
     headers: spaceId ? { "x-space-id": spaceId } : undefined,
   });

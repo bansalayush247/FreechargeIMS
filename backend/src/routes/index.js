@@ -16,6 +16,7 @@ const workflowRoutes = require("./workflow");
 const auditLogRoutes = require("./auditLog");
 const logsRoutes = require("./logs");
 const devSeedRoutes = require("./devSeed");
+const warehouseRoutes = require("./warehouse");
 
 const ROUTES = require("../constants/routes");
 
@@ -39,5 +40,6 @@ router.use(ROUTES.WORKFLOWS.BASE, workflowRoutes);
 router.use(ROUTES.AUDIT_LOGS.BASE, auditLogRoutes);
 router.use(ROUTES.LOGS.BASE, logsRoutes);
 router.use(ROUTES.DEV_SEED.BASE, devSeedRoutes);
+router.use(ROUTES.WAREHOUSE.BASE, warehouseRoutes);
 
 module.exports = router;
